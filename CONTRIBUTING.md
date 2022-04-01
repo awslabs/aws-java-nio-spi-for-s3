@@ -11,13 +11,21 @@ information to effectively respond to your bug report or contribution.
 
 We welcome you to use the GitHub issue tracker to report bugs or suggest features.
 
-When filing an issue, please check existing open, or recently closed, issues to make sure somebody else hasn't already
+When filing an issue, please check [existing open](https://github.com/aws/amazon-genomics-cli/issues), 
+or [recently closed](https://github.com/aws/amazon-genomics-cli/issues?utf8=%E2%9C%93&q=is%3Aissue%20is%3Aclosed%20), 
+issues to make sure somebody else hasn't already
 reported the issue. Please try to include as much information as you can. Details like these are incredibly useful:
 
-* A reproducible test case or series of steps
-* The version of our code being used
-* Any modifications you've made relevant to the bug
-* Anything unusual about your environment or deployment
+* Environment
+  * Java version
+  * OS version
+  * Location of this extension JAR (or if it was used to compile another application)
+  * IAM S3 permissions of the role used (mask sensitive information if any)
+  * Bucket ACL (mask sensitive information if any)
+* Steps to reproduce the error
+* Expected result
+* Actual result
+* AWS region(s) where the issue was observed and region of the bucket being read from
 
 
 ## Contributing via Pull Requests
@@ -31,17 +39,22 @@ To send us a pull request, please:
 
 1. Fork the repository.
 2. Modify the source; please focus on the specific change you are contributing. If you also reformat all the code, it will be hard for us to focus on your change.
-3. Ensure local tests pass.
-4. Commit to your fork using clear commit messages.
-5. Send us a pull request, answering any default questions in the pull request interface.
-6. Pay attention to any automated CI failures reported in the pull request, and stay involved in the conversation.
+3. Use only java 1.8 language features and ensure code will compile with sdk 1.8.0_322 (8.322) or later patch versions
+4. Ensure unit tests cover your change and demonstrate expected behavior
+5. Ensure unit tests do NOT require AWS credentials or S3 connectivity by using Mocks for any `S3Client` or `S3AsyncClient`. Remember, unit tests test this library and not the functionality of S3.
+6. Run `./gradlew check` to ensure local tests pass and test coverage reports are produced.
+7. Ensure test coverage is not degraded. Reports can be found at `build/reports/jacoco/test/html/index.html`.
+8. Send us a pull request, answering any default questions in the pull request interface.
+9. Pay attention to any automated CI failures reported in the pull request, and stay involved in the conversation.
 
 GitHub provides additional document on [forking a repository](https://help.github.com/articles/fork-a-repo/) and
 [creating a pull request](https://help.github.com/articles/creating-a-pull-request/).
 
 
 ## Finding contributions to work on
-Looking at the existing issues is a great way to find something to contribute on. As our projects, by default, use the default GitHub issue labels (enhancement/bug/duplicate/help wanted/invalid/question/wontfix), looking at any 'help wanted' issues is a great place to start.
+Looking at the existing issues is a great way to find something to contribute on. As our projects, by default, use the 
+default GitHub issue labels (enhancement/bug/duplicate/help wanted/invalid/question/wontfix), 
+looking at any ['help wanted'](https://github.com/aws/amazon-genomics-cli/labels/help%20wanted) issues is a great place to start.
 
 
 ## Code of Conduct
@@ -51,9 +64,14 @@ opensource-codeofconduct@amazon.com with any additional questions or comments.
 
 
 ## Security issue notifications
-If you discover a potential security issue in this project we ask that you notify AWS/Amazon Security via our [vulnerability reporting page](http://aws.amazon.com/security/vulnerability-reporting/). Please do **not** create a public github issue.
+If you discover a potential security issue in this project we ask that you notify AWS/Amazon Security via 
+our [vulnerability reporting page](http://aws.amazon.com/security/vulnerability-reporting/). 
+Please do **not** create a public Github issue.
 
 
 ## Licensing
+See the [LICENSE](https://github.com/aws/amazon-genomics-cli/blob/main/LICENSE) file for our 
+project's licensing. We will ask you to confirm the licensing of your contribution.
 
-See the [LICENSE](LICENSE) file for our project's licensing. We will ask you to confirm the licensing of your contribution.
+We may ask you to sign a [Contributor License Agreement (CLA)](http://en.wikipedia.org/wiki/Contributor_License_Agreement) 
+for larger changes.
