@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>S3DirectReadableByteChannel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">s3fs-spi</a> &gt; <a href="index.source.html" class="el_package">software.amazon.nio.spi.s3</a> &gt; <span class="el_source">S3DirectReadableByteChannel.java</span></div><h1>S3DirectReadableByteChannel.java</h1><pre class="source lang-java linenums">/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package software.amazon.nio.spi.s3;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.ResponseBytes;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
+import java.util.Objects;
+
+/**
+ * A delegate to provide byte reading from S3 to the delegating {@code S3SeekableByteChannel}. As reads are made
+ * on behalf of the {@code delegator} this class will update the delegators {@code position} appropriately.
+ */
+public class S3DirectReadableByteChannel implements ReadableByteChannel {
+
+    private final S3Client client;
+    private final S3Path path;
+    private final S3SeekableByteChannel delegator;
+
+
+<span class="nc" id="L30">    private final Logger logger = LoggerFactory.getLogger(this.getClass());</span>
+
+<span class="nc" id="L32">    public S3DirectReadableByteChannel(S3Path path, S3Client client, S3SeekableByteChannel delegator) {</span>
+<span class="nc" id="L33">        this.path = path;</span>
+<span class="nc" id="L34">        this.client = client;</span>
+<span class="nc" id="L35">        this.delegator = delegator;</span>
+<span class="nc" id="L36">    }</span>
+
+    @Override
+    public int read(ByteBuffer dst) throws IOException {
+<span class="nc" id="L40">        String key = path.getKey();</span>
+<span class="nc" id="L41">        Objects.requireNonNull(dst, &quot;The destination byte buffer of a read operation may not be null&quot;);</span>
+<span class="nc" id="L42">        synchronized (this) {</span>
+<span class="nc" id="L43">            logger.debug(&quot;channel position: {} of {}&quot;, delegator.position(), key);</span>
+
+<span class="nc" id="L45">            long size = delegator.size();</span>
+<span class="nc" id="L46">            logger.debug(&quot;{} size: {}&quot;, key, size);</span>
+
+<span class="nc bnc" id="L48" title="All 2 branches missed.">            if (delegator.position() &gt;= size) {</span>
+<span class="nc" id="L49">                logger.debug(&quot;completed reading from {}&quot;, key);</span>
+<span class="nc" id="L50">                return -1;</span>
+            }
+
+            /*
+             * Suppose that a byte sequence of length n is read, where
+             * 0 &lt;= n &lt;= r.
+             * This byte sequence will be transferred into the buffer of limit r so that the first
+             * byte in the sequence is at index p and the last byte is at index
+             * p + n - 1, where p is the buffer's position at the moment this method is
+             * invoked.  Upon return the buffer's position will be equal to
+             * p + n. Its limit will not have changed.
+             */
+
+<span class="nc" id="L63">            logger.debug(&quot;buffer position = {}, buffer limit = {}, buffer remaining: {}&quot;, dst.position(), dst.limit(), dst.remaining());</span>
+
+<span class="nc" id="L65">            long readTo = Math.min(dst.limit() - dst.position(), size - delegator.position()) - 1;</span>
+
+<span class="nc" id="L67">            String range = &quot;bytes=&quot; + delegator.position() + &quot;-&quot; + (delegator.position() + readTo);</span>
+<span class="nc" id="L68">            logger.debug(&quot;byte range for {} is '{}'&quot;, key, range);</span>
+
+<span class="nc" id="L70">            final ResponseBytes&lt;GetObjectResponse&gt; responseBytes = client.getObjectAsBytes(builder -&gt; builder</span>
+<span class="nc" id="L71">                    .bucket(path.bucketName())</span>
+<span class="nc" id="L72">                    .key(path.getKey())</span>
+<span class="nc" id="L73">                    .range(range));</span>
+
+<span class="nc" id="L75">            byte[] s3Bytes = responseBytes.asByteArray();</span>
+<span class="nc" id="L76">            logger.info(&quot;read {} bytes from {}&quot;, s3Bytes.length, key);</span>
+
+<span class="nc" id="L78">            delegator.position(delegator.position() + s3Bytes.length);</span>
+<span class="nc" id="L79">            logger.debug(&quot;new position of {} is: {}&quot;, key, delegator.position());</span>
+
+<span class="nc" id="L81">            int amountToWrite = Math.min(s3Bytes.length, dst.remaining());</span>
+<span class="nc" id="L82">            logger.debug(&quot;amount to write to buffer: {}, buffer remaining: {}&quot;, amountToWrite, dst.remaining());</span>
+
+<span class="nc" id="L84">            dst.put(s3Bytes, 0, amountToWrite);</span>
+<span class="nc" id="L85">            logger.debug(&quot;new buffer position is {}&quot;, dst.position());</span>
+
+<span class="nc" id="L87">            return s3Bytes.length;</span>
+        }
+    }
+
+    /**
+     * This channel is always open
+     */
+    @Override
+    public boolean isOpen() {
+<span class="nc" id="L96">        return true;</span>
+    }
+
+    /**
+     * No op, this channel doesn't close as there are no resources to release.
+     */
+    @Override
+<span class="nc" id="L103">    public void close() {}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

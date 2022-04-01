@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TimeOutUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">s3fs-spi</a> &gt; <a href="index.source.html" class="el_package">software.amazon.nio.spi.s3.util</a> &gt; <span class="el_source">TimeOutUtils.java</span></div><h1>TimeOutUtils.java</h1><pre class="source lang-java linenums">/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package software.amazon.nio.spi.s3.util;
+
+import org.slf4j.Logger;
+
+import java.util.Locale;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+
+import static java.lang.String.format;
+
+<span class="nc" id="L16">public class TimeOutUtils {</span>
+
+<span class="fc" id="L18">    public static long TIMEOUT_TIME_LENGTH_1 = 1L;</span>
+<span class="fc" id="L19">    public static long TIMEOUT_TIME_LENGTH_3 = 3L;</span>
+<span class="fc" id="L20">    public static long TIMEOUT_TIME_LENGTH_5 = 5L;</span>
+
+    public static String createTimeOutMessage(String operationName, long length, TimeUnit unit) {
+<span class="nc" id="L23">        return format(&quot;the %s operation timed out after %d %s, check your network connectivity and status of S3 service&quot;,</span>
+<span class="nc" id="L24">                  operationName, length, unit.toString().toLowerCase(Locale.ROOT));</span>
+    }
+
+    public static String createAndLogTimeOutMessage(Logger logger, String operationName, long length, TimeUnit unit) {
+<span class="nc" id="L28">        Objects.requireNonNull(logger);</span>
+<span class="nc" id="L29">        String msg = createTimeOutMessage(operationName, length, unit);</span>
+<span class="nc" id="L30">        logger.error(msg);</span>
+<span class="nc" id="L31">        return msg;</span>
+    }
+
+    public static RuntimeException logAndGenerateExceptionOnTimeOut(Logger logger, String operationName, long length, TimeUnit unit){
+<span class="nc" id="L35">        Objects.requireNonNull(logger);</span>
+<span class="nc" id="L36">        String msg = createAndLogTimeOutMessage(logger, operationName, length, unit);</span>
+<span class="nc" id="L37">        return new RuntimeException(msg);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

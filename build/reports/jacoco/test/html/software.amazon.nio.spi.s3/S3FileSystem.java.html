@@ -1,0 +1,448 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>S3FileSystem.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">s3fs-spi</a> &gt; <a href="index.source.html" class="el_package">software.amazon.nio.spi.s3</a> &gt; <span class="el_source">S3FileSystem.java</span></div><h1>S3FileSystem.java</h1><pre class="source lang-java linenums">/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package software.amazon.nio.spi.s3;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.channels.Channel;
+import java.nio.file.*;
+import java.nio.file.attribute.UserPrincipalLookupService;
+import java.nio.file.spi.FileSystemProvider;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
+
+/**
+ * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
+ */
+<span class="pc bpc" id="L28" title="1 of 2 branches missed.">public class S3FileSystem extends FileSystem {</span>
+<span class="fc" id="L29">    Logger logger = LoggerFactory.getLogger(this.getClass());</span>
+
+    // View required by Java NIO
+    public static final String BASIC_FILE_ATTRIBUTE_VIEW = &quot;basic&quot;;
+
+    private final String bucketName;
+    private final S3FileSystemProvider provider;
+<span class="fc" id="L36">    private boolean open = true;</span>
+<span class="fc" id="L37">    private final Set&lt;S3SeekableByteChannel&gt; openChannels = new HashSet&lt;&gt;();</span>
+
+    /**
+     * Create a filesystem that represents the bucket specified by the URI
+     * @param uriString a valid S3 URI to a bucket, e.g &quot;s3://mybucket&quot;
+     * @param s3FileSystemProvider the provider to be used with this fileSystem
+     */
+    protected S3FileSystem(String uriString, S3FileSystemProvider s3FileSystemProvider){
+<span class="fc" id="L45">        this(URI.create(uriString), s3FileSystemProvider);</span>
+<span class="fc" id="L46">    }</span>
+
+    protected S3FileSystem(URI uri, S3FileSystemProvider s3FileSystemProvider) {
+<span class="fc" id="L49">        super();</span>
+<span class="pc bpc" id="L50" title="2 of 4 branches missed.">        assert uri.getScheme().equals(S3FileSystemProvider.SCHEME);</span>
+<span class="fc" id="L51">        this.bucketName = uri.getAuthority();</span>
+<span class="fc" id="L52">        logger.debug(&quot;creating FileSystem for 's3://{}'&quot;, this.bucketName);</span>
+<span class="fc" id="L53">        this.provider = s3FileSystemProvider;</span>
+<span class="fc" id="L54">    }</span>
+
+    protected S3FileSystem(String bucketName){
+<span class="fc" id="L57">        this (URI.create(S3FileSystemProvider.SCHEME + &quot;://&quot; + bucketName), new S3FileSystemProvider());</span>
+<span class="fc" id="L58">    }</span>
+
+
+    /**
+     * Returns the provider that created this file system.
+     *
+     * @return The provider that created this file system.
+     */
+    @Override
+    public FileSystemProvider provider() {
+<span class="fc" id="L68">        return provider;</span>
+    }
+
+    /**
+     * Obtain the name of the bucket represented by this FileSystem instance
+     * @return the bucket name
+     */
+    public String bucketName() {
+<span class="fc" id="L76">        return bucketName;</span>
+    }
+
+    /**
+     * Closes this file system.
+     *
+     * &lt;p&gt; After a file system is closed then all subsequent access to the file
+     * system, either by methods defined by this class or on objects associated
+     * with this file system, throw {@link ClosedFileSystemException}. If the
+     * file system is already closed then invoking this method has no effect.
+     *
+     * &lt;p&gt; Closing a file system will close all open {@link
+     * Channel channels}, {@link DirectoryStream directory-streams},
+     * {@link WatchService watch-service}, and other closeable objects associated
+     * with this file system. The {@link FileSystems#getDefault default} file
+     * system cannot be closed.
+     *
+     */
+    @Override
+    public void close() throws IOException {
+<span class="nc" id="L96">        open = false;</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">        for (S3SeekableByteChannel channel : openChannels) {</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">            if(channel.isOpen()) {</span>
+<span class="nc" id="L99">                channel.close();</span>
+            }
+<span class="nc" id="L101">            deregisterClosedChannel(channel);</span>
+<span class="nc" id="L102">        }</span>
+<span class="nc" id="L103">    }</span>
+
+    /**
+     * Tells whether or not this file system is open.
+     *
+     * &lt;p&gt; File systems created by the default provider are always open.
+     *
+     * @return {@code true} if, and only if, this file system is open
+     */
+    @Override
+    public boolean isOpen() {
+<span class="nc" id="L114">        return open;</span>
+    }
+
+    /**
+     * Tells whether or not this file system allows only read-only access to
+     * its file stores.
+     *
+     * This is currently always false. The ability to write an individual object depend on the IAM role that is used by the principal
+     * and the ACL of the bucket, but S3 itself is not inherently read only.
+     *
+     * @return {@code false}
+     */
+    @Override
+    public boolean isReadOnly() {
+<span class="nc" id="L128">        return false;</span>
+    }
+
+    /**
+     * Returns the name separator '/', represented as a string.
+     *
+     * &lt;p&gt; The name separator is used to separate names in a path string. An
+     * implementation may support multiple name separators in which case this
+     * method returns an implementation specific &lt;em&gt;default&lt;/em&gt; name separator.
+     * This separator is used when creating path strings by invoking the {@link
+     * Path#toString() toString()} method.
+     *
+     * &lt;p&gt; In the case of the default provider, this method returns the same
+     * separator as {@link File#separator}.
+     *
+     * @return The name separator &quot;/&quot;
+     */
+    @Override
+    public String getSeparator() {
+<span class="nc" id="L147">        return S3Path.PATH_SEPARATOR;</span>
+    }
+
+    /**
+     * Returns an object to iterate over the paths of the root directories.
+     *
+     * &lt;p&gt; A file system provides access to a file store that may be composed
+     * of a number of distinct file hierarchies, each with its own top-level
+     * root directory. Unless denied by the security manager, each element in
+     * the returned iterator corresponds to the root directory of a distinct
+     * file hierarchy. The order of the elements is not defined. The file
+     * hierarchies may change during the lifetime of the Java virtual machine.
+     * For example, in some implementations, the insertion of removable media
+     * may result in the creation of a new file hierarchy with its own
+     * top-level directory.
+     *
+     * &lt;p&gt; When a security manager is installed, it is invoked to check access
+     * to the each root directory. If denied, the root directory is not returned
+     * by the iterator. In the case of the default provider, the {@link
+     * SecurityManager#checkRead(String)} method is invoked to check read access
+     * to each root directory. It is system dependent if the permission checks
+     * are done when the iterator is obtained or during iteration.
+     *
+     * @return An object to iterate over the root directories
+     */
+    @Override
+    public Iterable&lt;Path&gt; getRootDirectories() {
+<span class="nc" id="L174">        return S3Path.getPath(this, &quot;/&quot;);</span>
+    }
+
+    /**
+     * An S3 bucket has no partitions, size limits or limits on the number of objects stored so there are no FileStores.
+     *
+     * @return An immutable empty set
+     */
+    @Override
+    @SuppressWarnings(&quot;unchecked&quot;)
+    public Iterable&lt;FileStore&gt; getFileStores() {
+<span class="nc" id="L185">        return Collections.EMPTY_SET;</span>
+    }
+
+    /**
+     * Returns the set of the file attribute views supported by this {@code FileSystem}.
+     *
+     * This FileSystem currently supports only the &quot;basic&quot; file attribute view.
+     *
+     * @return An unmodifiable set of the names of the supported file attribute
+     * views
+     */
+    @Override
+    public Set&lt;String&gt; supportedFileAttributeViews() {
+<span class="nc" id="L198">        HashSet&lt;String&gt; views = new HashSet&lt;&gt;(2);</span>
+<span class="nc" id="L199">        views.add(BASIC_FILE_ATTRIBUTE_VIEW);</span>
+<span class="nc" id="L200">        return Collections.unmodifiableSet(views);</span>
+    }
+
+    /**
+     * Converts an S3 object path string, or a sequence of strings that when joined form
+     * a path string, to a {@code S3Path}.
+     *
+     * &lt;p&gt;If {@code more} does not specify any
+     * elements then the value of the {@code first} parameter is the path string
+     * to convert. If {@code more} specifies one or more elements then each
+     * non-empty string, including {@code first}, is considered to be a sequence
+     * of name elements (see {@link Path}) and is joined to form a path string.
+     * The details as to how the Strings are joined is provider specific but
+     * typically they will be joined using the {@link #getSeparator
+     * name-separator} as the separator. For example, if the name separator is
+     * &quot;{@code /}&quot; and {@code getPath(&quot;/foo&quot;,&quot;bar&quot;,&quot;gus&quot;)} is invoked, then the
+     * path string {@code &quot;/foo/bar/gus&quot;} is converted to a {@code Path}.
+     * A {@code Path} representing an empty path is returned if {@code first}
+     * is the empty string and {@code more} does not contain any non-empty
+     * strings.
+     *
+     * &lt;p&gt; The parsing and conversion to a path object is inherently
+     * implementation dependent. In the simplest case, the path string is rejected,
+     * and {@link InvalidPathException} thrown, if the path string contains
+     * characters that cannot be converted to characters that are &lt;em&gt;legal&lt;/em&gt;
+     * to the file store. For example, on UNIX systems, the NUL (&amp;#92;u0000)
+     * character is not allowed to be present in a path. An implementation may
+     * choose to reject path strings that contain names that are longer than those
+     * allowed by any file store, and where an implementation supports a complex
+     * path syntax, it may choose to reject path strings that are &lt;em&gt;badly
+     * formed&lt;/em&gt;.
+     *
+     * &lt;p&gt; In the case of the default provider, path strings are parsed based
+     * on the definition of paths at the platform or virtual file system level.
+     * For example, an operating system may not allow specific characters to be
+     * present in a file name, but a specific underlying file store may impose
+     * different or additional restrictions on the set of legal
+     * characters.
+     *
+     * &lt;p&gt; This method throws {@link InvalidPathException} when the path string
+     * cannot be converted to a path. Where possible, and where applicable,
+     * the exception is created with an {@link InvalidPathException#getIndex
+     * index} value indicating the first position in the {@code path} parameter
+     * that caused the path string to be rejected.
+     *
+     * @param first the path string or initial part of the path string
+     * @param more  additional strings to be joined to form the path string
+     * @return the resulting {@code Path}
+     * @throws InvalidPathException If the path string cannot be converted
+     */
+    @Override
+    public S3Path getPath(String first, String... more) {
+<span class="fc" id="L252">        return S3Path.getPath(this, first, more);</span>
+    }
+
+    /**
+     * Returns a {@code PathMatcher} that performs match operations on the
+     * {@code String} representation of {@link Path} objects by interpreting a
+     * given pattern.
+     * &lt;p&gt;
+     * The {@code syntaxAndPattern} parameter identifies the syntax and the
+     * pattern and takes the form:
+     * &lt;blockquote&gt;&lt;pre&gt;
+     * &lt;i&gt;syntax&lt;/i&gt;&lt;b&gt;:&lt;/b&gt;&lt;i&gt;pattern&lt;/i&gt;
+     * &lt;/pre&gt;&lt;/blockquote&gt;
+     * where {@code ':'} stands for itself.
+     *
+     * &lt;p&gt; A {@code FileSystem} implementation supports the &quot;{@code glob}&quot; and
+     * &quot;{@code regex}&quot; syntaxes, and may support others. The value of the syntax
+     * component is compared without regard to case.
+     *
+     * &lt;p&gt; When the syntax is &quot;{@code glob}&quot; then the {@code String}
+     * representation of the path is matched using a limited pattern language
+     * that resembles regular expressions but with a simpler syntax. For example:
+     *
+     * &lt;blockquote&gt;
+     * &lt;table border=&quot;0&quot; summary=&quot;Pattern Language&quot;&gt;
+     * &lt;tr&gt;
+     *   &lt;td&gt;{@code *.java}&lt;/td&gt;
+     *   &lt;td&gt;Matches a path that represents a file name ending in {@code .java}&lt;/td&gt;
+     * &lt;/tr&gt;
+     * &lt;tr&gt;
+     *   &lt;td&gt;{@code *.*}&lt;/td&gt;
+     *   &lt;td&gt;Matches file names containing a dot&lt;/td&gt;
+     * &lt;/tr&gt;
+     * &lt;tr&gt;
+     *   &lt;td&gt;{@code *.{java,class}}&lt;/td&gt;
+     *   &lt;td&gt;Matches file names ending with {@code .java} or {@code .class}&lt;/td&gt;
+     * &lt;/tr&gt;
+     * &lt;tr&gt;
+     *   &lt;td&gt;{@code foo.?}&lt;/td&gt;
+     *   &lt;td&gt;Matches file names starting with {@code foo.} and a single
+     *   character extension&lt;/td&gt;
+     * &lt;/tr&gt;
+     * &lt;tr&gt;
+     *   &lt;td&gt;&lt;tt&gt;&amp;#47;home&amp;#47;*&amp;#47;*&lt;/tt&gt;
+     *   &lt;td&gt;Matches &lt;tt&gt;&amp;#47;home&amp;#47;gus&amp;#47;data&lt;/tt&gt; on UNIX platforms&lt;/td&gt;
+     * &lt;/tr&gt;
+     * &lt;tr&gt;
+     *   &lt;td&gt;&lt;tt&gt;&amp;#47;home&amp;#47;**&lt;/tt&gt;
+     *   &lt;td&gt;Matches &lt;tt&gt;&amp;#47;home&amp;#47;gus&lt;/tt&gt; and
+     *   &lt;tt&gt;&amp;#47;home&amp;#47;gus&amp;#47;data&lt;/tt&gt; on UNIX platforms&lt;/td&gt;
+     * &lt;/tr&gt;
+     * &lt;tr&gt;
+     *   &lt;td&gt;&lt;tt&gt;C:&amp;#92;&amp;#92;*&lt;/tt&gt;
+     *   &lt;td&gt;Matches &lt;tt&gt;C:&amp;#92;foo&lt;/tt&gt; and &lt;tt&gt;C:&amp;#92;bar&lt;/tt&gt; on the Windows
+     *   platform (note that the backslash is escaped; as a string literal in the
+     *   Java Language the pattern would be &lt;tt&gt;&quot;C:&amp;#92;&amp;#92;&amp;#92;&amp;#92;*&quot;&lt;/tt&gt;) &lt;/td&gt;
+     * &lt;/tr&gt;
+     *
+     * &lt;/table&gt;
+     * &lt;/blockquote&gt;
+     *
+     * &lt;p&gt; The following rules are used to interpret glob patterns:
+     *
+     * &lt;ul&gt;
+     *   &lt;li&gt;&lt;p&gt; The {@code *} character matches zero or more {@link Character
+     *   characters} of a {@link Path#getName(int) name} component without
+     *   crossing directory boundaries. &lt;/p&gt;&lt;/li&gt;
+     *
+     *   &lt;li&gt;&lt;p&gt; The {@code **} characters matches zero or more {@link Character
+     *   characters} crossing directory boundaries. &lt;/p&gt;&lt;/li&gt;
+     *
+     *   &lt;li&gt;&lt;p&gt; The {@code ?} character matches exactly one character of a
+     *   name component.&lt;/p&gt;&lt;/li&gt;
+     *
+     *   &lt;li&gt;&lt;p&gt; The backslash character ({@code \}) is used to escape characters
+     *   that would otherwise be interpreted as special characters. The expression
+     *   {@code \\} matches a single backslash and &quot;\{&quot; matches a left brace
+     *   for example.  &lt;/p&gt;&lt;/li&gt;
+     *
+     *   &lt;li&gt;&lt;p&gt; The {@code [ ]} characters are a &lt;i&gt;bracket expression&lt;/i&gt; that
+     *   match a single character of a name component out of a set of characters.
+     *   For example, {@code [abc]} matches {@code &quot;a&quot;}, {@code &quot;b&quot;}, or {@code &quot;c&quot;}.
+     *   The hyphen ({@code -}) may be used to specify a range so {@code [a-z]}
+     *   specifies a range that matches from {@code &quot;a&quot;} to {@code &quot;z&quot;} (inclusive).
+     *   These forms can be mixed so [abce-g] matches {@code &quot;a&quot;}, {@code &quot;b&quot;},
+     *   {@code &quot;c&quot;}, {@code &quot;e&quot;}, {@code &quot;f&quot;} or {@code &quot;g&quot;}. If the character
+     *   after the {@code [} is a {@code !} then it is used for negation so {@code
+     *   [!a-c]} matches any character except {@code &quot;a&quot;}, {@code &quot;b&quot;}, or {@code
+     *   &quot;c&quot;}.
+     *   &lt;p&gt; Within a bracket expression the {@code *}, {@code ?} and {@code \}
+     *   characters match themselves. The ({@code -}) character matches itself if
+     *   it is the first character within the brackets, or the first character
+     *   after the {@code !} if negating.&lt;/p&gt;&lt;/li&gt;
+     *
+     *   &lt;li&gt;&lt;p&gt; The {@code { }} characters are a group of subpatterns, where
+     *   the group matches if any subpattern in the group matches. The {@code &quot;,&quot;}
+     *   character is used to separate the subpatterns. Groups cannot be nested.
+     *   &lt;/p&gt;&lt;/li&gt;
+     *
+     *   &lt;li&gt;&lt;p&gt; Leading period&lt;tt&gt;&amp;#47;&lt;/tt&gt;dot characters in file name are
+     *   treated as regular characters in match operations. For example,
+     *   the {@code &quot;*&quot;} glob pattern matches file name {@code &quot;.login&quot;}.
+     *   The {@link Files#isHidden} method may be used to test whether a file
+     *   is considered hidden.
+     *   &lt;/p&gt;&lt;/li&gt;
+     *
+     *   &lt;li&gt;&lt;p&gt; All other characters match themselves in an implementation
+     *   dependent manner. This includes characters representing any {@link
+     *   FileSystem#getSeparator name-separators}. &lt;/p&gt;&lt;/li&gt;
+     *
+     *   &lt;li&gt;&lt;p&gt; The matching of {@link Path#getRoot root} components is highly
+     *   implementation-dependent and is not specified. &lt;/p&gt;&lt;/li&gt;
+     *
+     * &lt;/ul&gt;
+     *
+     * &lt;p&gt; When the syntax is &quot;{@code regex}&quot; then the pattern component is a
+     * regular expression as defined by the {@link Pattern}
+     * class.
+     *
+     * &lt;p&gt;  For both the glob and regex syntaxes, the matching details, such as
+     * whether the matching is case sensitive, are implementation-dependent
+     * and therefore not specified.
+     *
+     * @param syntaxAndPattern The syntax and pattern
+     * @return A path matcher that may be used to match paths against the pattern
+     * @throws IllegalArgumentException      If the parameter does not take the form: {@code syntax:pattern}
+     * @throws PatternSyntaxException        If the pattern is invalid
+     * @throws UnsupportedOperationException If the pattern syntax is not known to the implementation
+     * @see Files#newDirectoryStream(Path, String)
+     */
+    @Override
+    public PathMatcher getPathMatcher(String syntaxAndPattern) {
+        //todo this assumes the JDK will be on a system where path matching of the default filesystem is Posix like.
+<span class="nc" id="L385">        return FileSystems.getDefault().getPathMatcher(syntaxAndPattern);</span>
+    }
+
+    /**
+     * Currently Not Implemented
+     *
+     * @return The {@code UserPrincipalLookupService} for this file system
+     * @throws UnsupportedOperationException If this {@code FileSystem} does not does have a lookup service
+     */
+    @Override
+    public UserPrincipalLookupService getUserPrincipalLookupService() {
+<span class="nc" id="L396">        throw new UnsupportedOperationException(&quot;This method is not yet supported. Please raise a feature request describing your use case&quot;);</span>
+    }
+
+    /**
+     * Currently not implemented
+     *
+     * @return a new watch service
+     * @throws UnsupportedOperationException If this {@code FileSystem} does not support watching file system
+     *                                       objects for changes and events. This exception is not thrown
+     *                                       by {@code FileSystems} created by the default provider.
+     */
+    @Override
+    public WatchService newWatchService() {
+<span class="nc" id="L409">        throw new UnsupportedOperationException(&quot;This method is not yet supported. Please raise a feature request describing your use case&quot;);</span>
+    }
+
+    /**
+     * The list of currently open channels. Exposed mainly for testing
+     * @return a read only view wrapping the set of currently open channels.
+     */
+    protected Set&lt;Channel&gt; getOpenChannels(){
+<span class="nc" id="L417">        return Collections.unmodifiableSet(openChannels);</span>
+    }
+
+    protected void registerOpenChannel(S3SeekableByteChannel channel){
+<span class="fc" id="L421">        openChannels.add(channel);</span>
+<span class="fc" id="L422">    }</span>
+
+    protected boolean deregisterClosedChannel(S3SeekableByteChannel closedChannel){
+<span class="nc bnc" id="L425" title="All 4 branches missed.">        assert !closedChannel.isOpen();</span>
+
+<span class="nc" id="L427">        return openChannels.remove(closedChannel);</span>
+    }
+
+    /**
+     * Tests if two S3 filesystems are equal
+     * @param o the object to test for equality
+     * @return true if {@code o} is not null, is an {@code S3FileSystem} and uses the same {@code S3FileSystemProvider} class
+     */
+    @Override
+    public boolean equals(Object o) {
+<span class="nc bnc" id="L437" title="All 2 branches missed.">        if (this == o) return true;</span>
+<span class="nc bnc" id="L438" title="All 4 branches missed.">        if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="nc" id="L439">        S3FileSystem that = (S3FileSystem) o;</span>
+<span class="nc bnc" id="L440" title="All 4 branches missed.">        return bucketName.equals(that.bucketName) &amp;&amp; provider.getClass().getName().equals(that.provider.getClass().getName());</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="nc" id="L445">        return Objects.hash(bucketName, provider.getClass().getName());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

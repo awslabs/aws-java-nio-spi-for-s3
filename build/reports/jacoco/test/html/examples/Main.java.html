@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Main.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">s3fs-spi</a> &gt; <a href="index.source.html" class="el_package">examples</a> &gt; <span class="el_source">Main.java</span></div><h1>Main.java</h1><pre class="source lang-java linenums">/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package examples;
+
+import software.amazon.nio.spi.s3.S3Path;
+
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+/**
+ * Demo class that will read text from S3 URIs that you provide on the command line. Your standard AWS credential chain
+ * is used for permissions.
+ */
+<span class="nc bnc" id="L20" title="All 2 branches missed.">public class Main {</span>
+    public static void main(String[] args) throws IOException {
+
+<span class="nc bnc" id="L23" title="All 2 branches missed.">        if(args.length == 0){</span>
+<span class="nc" id="L24">            System.out.println(&quot;Provide one or more S3 URIs to read from.&quot;);</span>
+<span class="nc" id="L25">            System.exit(1);</span>
+        }
+
+<span class="nc bnc" id="L28" title="All 2 branches missed.">        for (String pathString : args) {</span>
+
+            // if the URI starts with &quot;s3:&quot; then Paths will use the s3fs spi to handle the paths and reading
+<span class="nc" id="L31">            final Path path = Paths.get(URI.create(pathString));</span>
+
+            // proves that the correct path type is being used
+<span class="nc bnc" id="L34" title="All 4 branches missed.">            assert path instanceof S3Path;</span>
+
+<span class="nc" id="L36">            System.out.println(&quot;*** READING FROM &quot;+path.toUri()+&quot; ***&quot;);</span>
+<span class="nc" id="L37">            Files.readAllLines(path)</span>
+<span class="nc" id="L38">                    .forEach(System.out::println);</span>
+<span class="nc" id="L39">            System.out.println(&quot;*** FINISHED READING OBJECT ***\n&quot;);</span>
+        }
+<span class="nc" id="L41">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

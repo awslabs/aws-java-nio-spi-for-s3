@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>S3SeekableByteChannel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">s3fs-spi</a> &gt; <a href="index.source.html" class="el_package">software.amazon.nio.spi.s3</a> &gt; <span class="el_source">S3SeekableByteChannel.java</span></div><h1>S3SeekableByteChannel.java</h1><pre class="source lang-java linenums">/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package software.amazon.nio.spi.s3;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
+import software.amazon.nio.spi.s3.util.TimeOutUtils;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.channels.WritableByteChannel;
+import java.nio.file.StandardOpenOption;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+public class S3SeekableByteChannel implements SeekableByteChannel {
+
+    private long position;
+    private final S3AsyncClient s3Client;
+    private final S3Path path;
+    private final ReadableByteChannel readDelegate;
+    //private final WritableByteChannel writeDelegate; // placeholder for when we implement writes.
+
+<span class="fc" id="L34">    private long size = -1L;</span>
+
+<span class="fc" id="L36">    private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());</span>
+
+<span class="fc" id="L38">    protected S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, long startAt) throws IOException{</span>
+<span class="fc" id="L39">        position = startAt;</span>
+<span class="fc" id="L40">        path = s3Path;</span>
+<span class="fc" id="L41">        this.s3Client = s3Client;</span>
+<span class="fc" id="L42">        s3Path.getFileSystem().registerOpenChannel(this);</span>
+
+        // later we will add a constructor that allows providing delegates for composition
+<span class="fc" id="L45">        logger.info(&quot;using S3ReadAheadByteChannel as read delegate for path '{}'&quot;, s3Path.toUri());</span>
+<span class="fc" id="L46">        S3NioSpiConfiguration config = new S3NioSpiConfiguration();</span>
+<span class="fc" id="L47">        readDelegate = new S3ReadAheadByteChannel(s3Path, config.getMaxFragmentSize(), config.getMaxFragmentNumber(), s3Client, this);</span>
+<span class="fc" id="L48">    }</span>
+
+    /**
+     * Open a new byte channel
+     * @param s3Path the path that the channel will read from
+     * @param startAt the byte offset to start at (0 is the beginning).
+     */
+    protected S3SeekableByteChannel(S3Path s3Path, long startAt) throws IOException {
+<span class="nc" id="L56">        this(s3Path, S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName()), startAt);</span>
+<span class="nc" id="L57">    }</span>
+
+    /**
+     * Equivalent to: {@code new S3SeekableByteChannel(s3Path, 0L)}
+     * @param s3Path the path to open the byte channel for.
+     */
+    protected S3SeekableByteChannel(S3Path s3Path) throws IOException {
+<span class="nc" id="L64">        this(s3Path, S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName()), 0L);</span>
+<span class="nc" id="L65">    }</span>
+
+    /**
+     * Reads a sequence of bytes from this channel into the given buffer.
+     *
+     * &lt;p&gt; Bytes are read starting at this channel's current position, and
+     * then the position is updated with the number of bytes actually read.
+     * Otherwise, this method behaves exactly as specified in the {@link
+     * ReadableByteChannel} interface.
+     *
+     * @param dst the destination buffer
+     * @return the number of bytes read or -1 if no more bytes can be read.
+     */
+    @Override
+    public int read(ByteBuffer dst) throws IOException {
+<span class="nc" id="L80">        return readDelegate.read(dst);</span>
+    }
+
+    /**
+     * Writes a sequence of bytes to this channel from the given buffer.
+     *
+     * &lt;p&gt; Bytes are written starting at this channel's current position, unless
+     * the channel is connected to an entity such as a file that is opened with
+     * the {@link StandardOpenOption#APPEND APPEND} option, in
+     * which case the position is first advanced to the end. The entity to which
+     * the channel is connected is grown, if necessary, to accommodate the
+     * written bytes, and then the position is updated with the number of bytes
+     * actually written. Otherwise, this method behaves exactly as specified by
+     * the {@link WritableByteChannel} interface.
+     *
+     * @param src the src of the bytes to write to this channel
+     */
+    @Override
+    public int write(ByteBuffer src) {
+<span class="nc" id="L99">        throw new UnsupportedOperationException(&quot;this channel is read only&quot;);</span>
+    }
+
+    /**
+     * Returns this channel's position.
+     *
+     * @return This channel's position,
+     * a non-negative integer counting the number of bytes
+     * from the beginning of the entity to the current position
+     */
+    @Override
+    public long position() {
+<span class="nc" id="L111">        synchronized (this) {</span>
+<span class="nc" id="L112">            return position;</span>
+        }
+    }
+
+    /**
+     * Sets this channel's position.
+     *
+     * &lt;p&gt; Setting the position to a value that is greater than the current size
+     * is legal but does not change the size of the entity.  A later attempt to
+     * read bytes at such a position will immediately return an end-of-file
+     * indication.  A later attempt to write bytes at such a position will cause
+     * the entity to grow to accommodate the new bytes; the values of any bytes
+     * between the previous end-of-file and the newly-written bytes are
+     * unspecified.
+     *
+     * &lt;p&gt; Setting the channel's position is not recommended when connected to
+     * an entity, typically a file, that is opened with the {@link
+     * StandardOpenOption#APPEND APPEND} option. When opened for
+     * append, the position is first advanced to the end before writing.
+     *
+     * @param newPosition The new position, a non-negative integer counting
+     *                    the number of bytes from the beginning of the entity
+     * @return This channel
+     * @throws ClosedChannelException   If this channel is closed
+     * @throws IllegalArgumentException If the new position is negative
+     * @throws IOException              If some other I/O error occurs
+     */
+    @Override
+    public SeekableByteChannel position(long newPosition) throws IOException {
+<span class="nc bnc" id="L141" title="All 2 branches missed.">        if (newPosition &lt; 0) throw new IllegalArgumentException(&quot;newPosition cannot be &lt; 0&quot;);</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">        if (!isOpen()) {</span>
+<span class="nc" id="L143">            throw new ClosedChannelException();</span>
+        }
+
+<span class="nc" id="L146">        synchronized (this) {</span>
+<span class="nc" id="L147">            position = newPosition;</span>
+<span class="nc" id="L148">            return this;</span>
+        }
+    }
+
+    /**
+     * Returns the current size of entity to which this channel is connected.
+     *
+     * @return The current size, measured in bytes
+     * @throws IOException            If some other I/O error occurs
+     */
+    @Override
+    public long size() throws IOException {
+<span class="pc bpc" id="L160" title="1 of 2 branches missed.">        if (size &lt; 0) {</span>
+
+<span class="fc" id="L162">            long timeOut = TimeOutUtils.TIMEOUT_TIME_LENGTH_1;</span>
+<span class="fc" id="L163">            TimeUnit unit = TimeUnit.MINUTES;</span>
+
+<span class="fc" id="L165">            logger.debug(&quot;requesting size of '{}'&quot;, path.toUri());</span>
+<span class="fc" id="L166">            synchronized (this) {</span>
+                final HeadObjectResponse headObjectResponse;
+                try {
+<span class="pc" id="L169">                    headObjectResponse = s3Client.headObject(builder -&gt; builder</span>
+<span class="nc" id="L170">                            .bucket(path.bucketName())</span>
+<span class="pc" id="L171">                            .key(path.getKey())).get(timeOut, unit);</span>
+<span class="nc" id="L172">                } catch (InterruptedException e){</span>
+<span class="nc" id="L173">                    Thread.currentThread().interrupt();</span>
+<span class="nc" id="L174">                    throw new RuntimeException(e);</span>
+<span class="nc" id="L175">                } catch (ExecutionException e) {</span>
+<span class="nc" id="L176">                    throw new IOException(e);</span>
+<span class="nc" id="L177">                } catch (TimeoutException e){</span>
+<span class="nc" id="L178">                    throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(logger, &quot;size&quot;, timeOut, unit);</span>
+<span class="fc" id="L179">                }</span>
+
+<span class="fc" id="L181">                logger.debug(&quot;size of '{}' is '{}'&quot;, path.toUri(), headObjectResponse.contentLength());</span>
+<span class="fc" id="L182">                this.size = headObjectResponse.contentLength();</span>
+<span class="fc" id="L183">            }</span>
+        }
+<span class="fc" id="L185">        return this.size;</span>
+    }
+
+    /**
+     * Truncates the entity, to which this channel is connected, to the given
+     * size.
+     *
+     * &lt;p&gt; If the given size is less than the current size then the entity is
+     * truncated, discarding any bytes beyond the new end. If the given size is
+     * greater than or equal to the current size then the entity is not modified.
+     * In either case, if the current position is greater than the given size
+     * then it is set to that size.
+     *
+     * &lt;p&gt; An implementation of this interface may prohibit truncation when
+     * connected to an entity, typically a file, opened with the {@link
+     * StandardOpenOption#APPEND APPEND} option.
+     *
+     * @param size The new size, a non-negative byte count
+     * @return This channel
+     */
+    @Override
+    public SeekableByteChannel truncate(long size) {
+<span class="nc" id="L207">        throw new UnsupportedOperationException(&quot;this channel is read only&quot;);</span>
+    }
+
+    /**
+     * Tells whether this channel is open.
+     *
+     * @return &lt;tt&gt;true&lt;/tt&gt; if, and only if, this channels delegate is open
+     */
+    @Override
+    public boolean isOpen() {
+<span class="nc" id="L217">        logger.debug(&quot;read delegate is: '{}'&quot;, readDelegate);</span>
+<span class="nc" id="L218">        synchronized (this) {</span>
+<span class="nc" id="L219">            return readDelegate.isOpen();</span>
+        }
+    }
+
+    /**
+     * Closes this channel.
+     *
+     * &lt;p&gt; After a channel is closed, any further attempt to invoke I/O
+     * operations upon it will cause a {@link ClosedChannelException} to be
+     * thrown.
+     *
+     * &lt;p&gt; If this channel is already closed then invoking this method has no
+     * effect.
+     *
+     * &lt;p&gt; This method may be invoked at any time.  If some other thread has
+     * already invoked it, however, then another invocation will block until
+     * the first invocation is complete, after which it will return without
+     * effect. &lt;/p&gt;
+     *
+     */
+    @Override
+    public void close() throws IOException {
+<span class="nc" id="L241">        synchronized (this){</span>
+<span class="nc" id="L242">            readDelegate.close();</span>
+<span class="nc" id="L243">            path.getFileSystem().deregisterClosedChannel(this);</span>
+<span class="nc" id="L244">        }</span>
+<span class="nc" id="L245">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

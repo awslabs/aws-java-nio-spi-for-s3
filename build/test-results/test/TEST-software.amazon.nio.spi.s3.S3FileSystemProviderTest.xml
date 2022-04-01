@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="software.amazon.nio.spi.s3.S3FileSystemProviderTest" tests="22" skipped="0" failures="0" errors="0" timestamp="2022-04-01T15:53:32" hostname="88665a2eaed7.ant.amazon.com" time="2.304">
+  <properties/>
+  <testcase name="newFileSystem" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="1.852"/>
+  <testcase name="getFileAttributeViewIllegalArg" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.014"/>
+  <testcase name="getFileStore" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.002"/>
+  <testcase name="delete" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.002"/>
+  <testcase name="getFileAttributeView" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.005"/>
+  <testcase name="checkAccessWhenNoSuchFile" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.04"/>
+  <testcase name="isHidden" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.002"/>
+  <testcase name="checkWriteAccess" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.001"/>
+  <testcase name="getPath" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.037"/>
+  <testcase name="checkAccessWhenAccessDenied" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.008"/>
+  <testcase name="copy" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.004"/>
+  <testcase name="move" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.004"/>
+  <testcase name="testReadAttributes" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.015"/>
+  <testcase name="getScheme" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.009"/>
+  <testcase name="isSameFile" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.017"/>
+  <testcase name="newDirectoryStream" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.088"/>
+  <testcase name="newByteChannel" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.18"/>
+  <testcase name="readAttributes" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.001"/>
+  <testcase name="getFileSystem" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.001"/>
+  <testcase name="setAttribute" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.002"/>
+  <testcase name="createDirectory" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.002"/>
+  <testcase name="checkAccessWithoutException" classname="software.amazon.nio.spi.s3.S3FileSystemProviderTest" time="0.004"/>
+  <system-out><![CDATA[11:53:35.109 [Test worker] INFO  s.a.nio.spi.s3.S3SeekableByteChannel - using S3ReadAheadByteChannel as read delegate for path 's3://foo/baa'
+11:53:35.151 [Test worker] INFO  s.a.n.spi.s3.S3ReadAheadByteChannel - max read ahead fragments '50' with size '5242880' bytes
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

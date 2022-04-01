@@ -1,0 +1,816 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>S3Path.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">s3fs-spi</a> &gt; <a href="index.source.html" class="el_package">software.amazon.nio.spi.s3</a> &gt; <span class="el_source">S3Path.java</span></div><h1>S3Path.java</h1><pre class="source lang-java linenums">/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package software.amazon.nio.spi.s3;
+
+import software.amazon.awssdk.services.s3.model.S3Object;
+
+import java.io.File;
+import java.io.IOError;
+import java.net.URI;
+import java.nio.file.*;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Objects;
+
+import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
+
+public class S3Path implements Path {
+
+    public static final String PATH_SEPARATOR = &quot;/&quot;;
+
+    private final S3FileSystem fileSystem;
+    private final PosixLikePathRepresentation pathRepresentation;
+
+<span class="fc" id="L28">    private S3Path(S3FileSystem fileSystem, PosixLikePathRepresentation pathRepresentation){</span>
+<span class="fc" id="L29">        this.fileSystem = fileSystem;</span>
+<span class="fc" id="L30">        this.pathRepresentation = pathRepresentation;</span>
+<span class="fc" id="L31">    }</span>
+
+    /**
+     * Construct a path using the same filesystem (bucket) as this path
+     */
+    private S3Path from(String path){
+<span class="fc" id="L37">        return getPath(this.fileSystem, path);</span>
+    }
+
+    /**
+     * Construct a path from an S3 object in the bucket represented by the filesystem
+     * @param fs the filesystem that holds (or will hold) the object represented by {@code s3Object}
+     * @param s3Object the object
+     * @return a new {@code S3Path}
+     */
+    public static S3Path getPath(S3FileSystem fs, S3Object s3Object){
+<span class="fc" id="L47">        return getPath(fs, s3Object.key());</span>
+    }
+
+
+    /**
+     * Construct a Path in the parent FileSystem using the POSIX style.
+     * The path string is assumed to follow the POSIX form
+     * with the &quot;root&quot; of the bucket being represented by &quot;/&quot;. The supplied path should not
+     * be a URI. It should not start with the string &quot;s3:&quot;. For example, if this S3FileSystem
+     * represents &quot;{@code s3://my-bucket}&quot; then &quot;{@code s3://my-bucket/foo.txt}&quot; should be addressed by the path
+     * &quot;/foo.txt&quot; or by a path relative to the current working directory following POSIX conventions.
+     * Further, although folders or directories don't technically exist in S3
+     * the presence of a directory is implicit if &quot;{@code s3://my-bucket/someFolder/}&quot; contains
+     * objects and the Path to this folder is therefore valid.
+     *
+     * &lt;p&gt;This library &lt;b&gt;DOES NOT&lt;/b&gt; support S3 Paths that are not compliant with POSIX conventions. For example,
+     * the URI {@code s3://my-bucket/../foo.txt} is legal in S3 but due to POSIX conventions it will be
+     * unreachable through this API due to the special meaning of the .. directory alias in POSIX.&lt;/p&gt;
+     *
+     * @param fsForBucket the filesystem for the bucket that holds this path
+     * @param first the path string or initial part of the path string, may not be null. It may not be empty unless more is also null has zero length
+     * @param more additional strings to be joined to form the path string
+     * @throws InvalidPathException if the Path cannot be constructed
+     * @return a new S3Path
+     */
+    public static S3Path getPath(S3FileSystem fsForBucket, String first, String... more) {
+<span class="pc bpc" id="L73" title="1 of 2 branches missed.">        if(fsForBucket == null)  throw new IllegalArgumentException(&quot;The S3FileSystem may not be null&quot;);</span>
+<span class="pc bpc" id="L74" title="1 of 2 branches missed.">        if(first == null ){</span>
+<span class="nc" id="L75">          throw new IllegalArgumentException(&quot;first element of the path may not be null&quot;);</span>
+        }
+
+<span class="fc" id="L78">        first = first.trim();</span>
+
+<span class="pc bpc" id="L80" title="5 of 6 branches missed.">        if((first.isEmpty()) &amp;&amp; !(more == null || more.length == 0)) throw new IllegalArgumentException(&quot;The first element of the path may not be empty when more exists&quot;);</span>
+<span class="pc bpc" id="L81" title="1 of 2 branches missed.">        if( first.startsWith(S3FileSystemProvider.SCHEME+&quot;:/&quot;)) {</span>
+<span class="nc" id="L82">            first = first.replaceFirst(S3FileSystemProvider.SCHEME+&quot;:/&quot;, &quot;&quot;);</span>
+        }
+
+<span class="fc" id="L85">        return new S3Path(fsForBucket, PosixLikePathRepresentation.of(first, more));</span>
+    }
+
+    /**
+     * Returns the file system that created this object.
+     *
+     * @return the file system that created this object
+     */
+    @Override
+    public S3FileSystem getFileSystem() {
+<span class="fc" id="L95">        return fileSystem;</span>
+    }
+
+    /**
+     * The name of the S3 bucket that represents the root (&quot;/&quot;) of this Path
+     * @return the bucketName, equivalent to &lt;code&gt;getFileSystem().bucketName()&lt;/code&gt;
+     */
+    public String bucketName() {
+<span class="fc" id="L103">        return fileSystem.bucketName();</span>
+    }
+
+    /**
+     * Tells whether this path is absolute.
+     *
+     * &lt;p&gt; An absolute path is complete in that it doesn't need to be combined
+     * with other path information in order to locate a file.
+     *
+     * @return {@code true} if, and only if, this path is absolute
+     */
+    @Override
+    public boolean isAbsolute() {
+<span class="fc" id="L116">        return pathRepresentation.isAbsolute();</span>
+    }
+
+    /**
+     * Is the path inferred to be an S3 directory?
+     * @return true if the path can be inferrred to be a directory
+     */
+    public boolean isDirectory() {
+<span class="fc" id="L124">        return pathRepresentation.isDirectory();</span>
+    }
+
+    /**
+     * If the path is absolute then returns the root of the path (e.g. &quot;/&quot;) otherwise {@code null}
+     *
+     * @return a path representing the root component of this path,
+     * or {@code null}
+     */
+    @Override
+    public S3Path getRoot() {
+<span class="pc bpc" id="L135" title="1 of 2 branches missed.">        return isAbsolute() ? new S3Path(fileSystem, PosixLikePathRepresentation.ROOT) : null;</span>
+    }
+
+    /**
+     * Returns the name of the file or directory denoted by this path as a
+     * {@code Path} object. The file name is the &lt;em&gt;farthest&lt;/em&gt; element from
+     * the root in the directory hierarchy.
+     *
+     * @return a path representing the name of the file or directory, or
+     * {@code null} if this path has zero elements
+     */
+    @Override
+    public S3Path getFileName() {
+<span class="nc" id="L148">        final List&lt;String&gt; elements = pathRepresentation.elements();</span>
+<span class="nc" id="L149">        int size = elements.size();</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">        if(size == 0) return null;</span>
+
+<span class="nc bnc" id="L152" title="All 2 branches missed.">        if(pathRepresentation.hasTrailingSeparator()) {</span>
+<span class="nc" id="L153">            return from(elements.get(size -1) + PATH_SEPARATOR);</span>
+        } else {
+<span class="nc" id="L155">            return from(elements.get(size -1));</span>
+        }
+    }
+
+    /**
+     * Returns the &lt;em&gt;parent path&lt;/em&gt;, or {@code null} if this path does not
+     * have a parent.
+     *
+     * &lt;p&gt; The parent of this path object consists of this path's root
+     * component, if any, and each element in the path except for the
+     * &lt;em&gt;farthest&lt;/em&gt; from the root in the directory hierarchy. This method
+     * does not access the file system; the path or its parent may not exist.
+     * Furthermore, this method does not eliminate special names such as &quot;.&quot;
+     * and &quot;..&quot; that may be used in some implementations. On UNIX for example,
+     * the parent of &quot;{@code /a/b/c}&quot; is &quot;{@code /a/b}&quot;, and the parent of
+     * {@code &quot;x/y/.}&quot; is &quot;{@code x/y}&quot;. This method may be used with the {@link
+     * #normalize normalize} method, to eliminate redundant names, for cases where
+     * &lt;em&gt;shell-like&lt;/em&gt; navigation is required.
+     *
+     * &lt;p&gt; If this path has one or more elements, and no root component, then
+     * this method is equivalent to evaluating the expression:
+     * &lt;blockquote&gt;&lt;pre&gt;
+     * subpath(0,&amp;nbsp;getNameCount()-1);
+     * &lt;/pre&gt;&lt;/blockquote&gt;
+     *
+     * @return a path representing the path's parent
+     */
+    @Override
+    public S3Path getParent() {
+<span class="nc" id="L184">        int size = pathRepresentation.elements().size();</span>
+<span class="nc bnc" id="L185" title="All 4 branches missed.">        if (this.equals(getRoot()) || size &lt; 1) return null;</span>
+<span class="nc bnc" id="L186" title="All 4 branches missed.">        if (pathRepresentation.isAbsolute() &amp;&amp; size == 1) return getRoot();</span>
+<span class="nc" id="L187">        return subpath(0, getNameCount()-1);</span>
+    }
+
+    /**
+     * Returns the number of name elements in the path.
+     *
+     * @return the number of elements in the path, or {@code 0} if this path
+     * only represents a root component
+     */
+    @Override
+    public int getNameCount() {
+<span class="fc" id="L198">        return pathRepresentation.elements().size();</span>
+    }
+
+    /**
+     * Returns a name element of this path as a {@code Path} object.
+     *
+     * &lt;p&gt; The {@code index} parameter is the index of the name element to return.
+     * The element that is &lt;em&gt;closest&lt;/em&gt; to the root in the directory hierarchy
+     * has the index {@code 0}. The element that is &lt;em&gt;farthest&lt;/em&gt; from the root
+     * has the index {@link #getNameCount count}{@code -1}.
+     *
+     * @param index the index of the element
+     * @return the name element
+     * @throws IllegalArgumentException if {@code index} is negative, {@code index} is greater than or
+     *                                  equal to the number of elements, or this path has zero name
+     *                                  elements
+     */
+    @Override
+    public S3Path getName(int index) {
+<span class="nc" id="L217">        final List&lt;String&gt; elements = pathRepresentation.elements();</span>
+<span class="nc bnc" id="L218" title="All 4 branches missed.">        if(index &lt; 0 || index &gt;= elements.size()) throw new IllegalArgumentException(&quot;index must be &gt;= 0 and &lt;= the number of path elements&quot;);</span>
+<span class="nc" id="L219">        return subpath(index, index+1);</span>
+    }
+
+    /**
+     * Returns a relative {@code Path} that is a subsequence of the name
+     * elements of this path.
+     *
+     * &lt;p&gt; The {@code beginIndex} and {@code endIndex} parameters specify the
+     * subsequence of name elements. The name that is &lt;em&gt;closest&lt;/em&gt; to the root
+     * in the directory hierarchy has the index {@code 0}. The name that is
+     * &lt;em&gt;farthest&lt;/em&gt; from the root has the index {@link #getNameCount
+     * count}{@code -1}. The returned {@code Path} object has the name elements
+     * that begin at {@code beginIndex} and extend to the element at index {@code
+     * endIndex-1}.
+     *
+     * @param beginIndex the index of the first element, inclusive
+     * @param endIndex   the index of the last element, exclusive
+     * @return a new {@code Path} object that is a subsequence of the name
+     * elements in this {@code Path}
+     * @throws IllegalArgumentException if {@code beginIndex} is negative, or greater than or equal to
+     *                                  the number of elements. If {@code endIndex} is less than or
+     *                                  equal to {@code beginIndex}, or larger than the number of elements.
+     */
+    @Override
+    public S3Path subpath(int beginIndex, int endIndex) {
+<span class="fc" id="L244">        final int size = pathRepresentation.elements().size();</span>
+<span class="pc bpc" id="L245" title="1 of 2 branches missed.">        if(beginIndex &lt; 0) throw new IllegalArgumentException(&quot;begin index may not be &lt; 0&quot;);</span>
+<span class="pc bpc" id="L246" title="1 of 2 branches missed.">        if(beginIndex &gt;= size) throw new IllegalArgumentException(&quot;begin index may not be &gt;= the number of path elements&quot;);</span>
+<span class="pc bpc" id="L247" title="1 of 2 branches missed.">        if(endIndex &gt; size) throw new IllegalArgumentException(&quot;end index may not be &gt; the number of path elements&quot;);</span>
+<span class="pc bpc" id="L248" title="1 of 2 branches missed.">        if(endIndex &lt;= beginIndex) throw new IllegalArgumentException(&quot;end index may not be &lt;= the begin index&quot;);</span>
+
+<span class="fc" id="L250">        String path = String.join(PATH_SEPARATOR, pathRepresentation.elements().subList(beginIndex, endIndex));</span>
+<span class="pc bpc" id="L251" title="3 of 4 branches missed.">        if (this.isAbsolute() &amp;&amp; beginIndex == 0) path = PATH_SEPARATOR+path;</span>
+
+<span class="pc bpc" id="L253" title="2 of 4 branches missed.">        if (endIndex == size &amp;&amp; !pathRepresentation.hasTrailingSeparator()) {</span>
+<span class="fc" id="L254">            return from(path);</span>
+        } else {
+<span class="nc" id="L256">            return from(path+PATH_SEPARATOR);</span>
+        }
+    }
+
+    /**
+     * Tests if this path starts with the given path.
+     *
+     * &lt;p&gt; This path &lt;em&gt;starts&lt;/em&gt; with the given path if this path's root
+     * component &lt;em&gt;starts&lt;/em&gt; with the root component of the given path,
+     * and this path starts with the same name elements as the given path.
+     * If the given path has more name elements than this path then {@code false}
+     * is returned.
+     *
+     * &lt;p&gt; If this path does
+     * not have a root component and the given path has a root component then
+     * this path does not start with the given path.
+     *
+     * &lt;p&gt; If the given path is associated with a different {@code FileSystem} (s3 bucket)
+     * to this path then {@code false} is returned.
+     *
+     * @param other the given path
+     * @return {@code true} if this path starts with the given path; otherwise
+     * {@code false}
+     */
+    @Override
+    public boolean startsWith(Path other) {
+<span class="nc bnc" id="L282" title="All 2 branches missed.">        return this.equals(other) ||</span>
+<span class="nc bnc" id="L283" title="All 2 branches missed.">                this.fileSystem.equals(other.getFileSystem()) &amp;&amp;</span>
+<span class="nc bnc" id="L284" title="All 2 branches missed.">                this.isAbsolute() == other.isAbsolute() &amp;&amp;</span>
+<span class="nc bnc" id="L285" title="All 2 branches missed.">                this.getNameCount() &gt;= other.getNameCount() &amp;&amp;</span>
+<span class="nc bnc" id="L286" title="All 2 branches missed.">                this.subpath(0, other.getNameCount()).equals(other);</span>
+    }
+
+    /**
+     * Tests if this path starts with a {@code Path}, constructed by converting
+     * the given path string, in exactly the manner specified by the {@link
+     * #startsWith(Path) startsWith(Path)} method.
+     *
+     * @param other the given path string
+     * @return {@code true} if this path starts with the given path; otherwise
+     * {@code false}
+     * @throws InvalidPathException If the path string cannot be converted to a Path.
+     */
+    @Override
+    public boolean startsWith(String other) {
+<span class="nc" id="L301">        return startsWith(from(other));</span>
+    }
+
+    /**
+     * Tests if this path ends with the given path.
+     *
+     * &lt;p&gt; If the given path has &lt;em&gt;N&lt;/em&gt; elements, and no root component,
+     * and this path has &lt;em&gt;N&lt;/em&gt; or more elements, then this path ends with
+     * the given path if the last &lt;em&gt;N&lt;/em&gt; elements of each path, starting at
+     * the element farthest from the root, are equal.
+     *
+     * &lt;p&gt; If the given path has a root component then this path ends with the
+     * given path if the root component of this path &lt;em&gt;ends with&lt;/em&gt; the root
+     * component of the given path, and the corresponding elements of both paths
+     * are equal. If the two paths are equal then they can be said to end with each other. If this path
+     * does not have a root component and the given path has a root component
+     * then this path does not end with the given path.
+     *
+     * &lt;p&gt; If the given path is associated with a different {@code FileSystem}
+     * to this path then {@code false} is returned.
+     *
+     * @param other the given path
+     * @return {@code true} if this path ends with the given path; otherwise
+     * {@code false}
+     */
+    @Override
+    public boolean endsWith(Path other) {
+<span class="pc bpc" id="L328" title="1 of 2 branches missed.">        return this.equals(other) ||</span>
+<span class="pc bpc" id="L329" title="1 of 2 branches missed.">                this.fileSystem == other.getFileSystem() &amp;&amp;</span>
+<span class="pc bpc" id="L330" title="1 of 2 branches missed.">                this.getNameCount() &gt;= other.getNameCount() &amp;&amp;</span>
+<span class="fc bfc" id="L331" title="All 2 branches covered.">                this.subpath(this.getNameCount() - other.getNameCount(), this.getNameCount()).equals(other);</span>
+    }
+
+    /**
+     * Tests if this path ends with a {@code Path}, constructed by converting
+     * the given path string, in exactly the manner specified by the {@link
+     * #endsWith(Path) endsWith(Path)} method. On UNIX for example, the path
+     * &quot;{@code foo/bar}&quot; ends with &quot;{@code foo/bar}&quot; and &quot;{@code bar}&quot;. It does
+     * not end with &quot;{@code r}&quot; or &quot;{@code /bar}&quot;. Note that trailing separators
+     * are not taken into account, and so invoking this method on the {@code
+     * Path}&quot;{@code foo/bar}&quot; with the {@code String} &quot;{@code bar/}&quot; returns
+     * {@code true}.
+     *
+     * @param other the given path string
+     * @return {@code true} if this path ends with the given path; otherwise
+     * {@code false}
+     * @throws InvalidPathException If the path string cannot be converted to a Path.
+     */
+    @Override
+    public boolean endsWith(String other) {
+<span class="fc" id="L351">        return endsWith(from(other));</span>
+    }
+
+    /**
+     * Returns a path that is this path with redundant name elements eliminated.
+     * All occurrences of &quot;{@code .}&quot; are considered redundant. If a &quot;{@code ..}&quot; is preceded by a
+     * non-&quot;{@code ..}&quot; name then both names are considered redundant (the
+     * process to identify such names is repeated until it is no longer
+     * applicable).
+     *
+     * &lt;p&gt; This method does not access the file system; the path may not locate
+     * a file that exists. Eliminating &quot;{@code ..}&quot; and a preceding name from a
+     * path may result in the path that locates a different file than the original
+     * path. This can arise when the preceding name is a symbolic link.
+     *
+     * @return the resulting path or this path if it does not contain
+     * redundant name elements; an empty path is returned if this path
+     * does have a root component and all name elements are redundant
+     * @see #getParent
+     * @see #toRealPath
+     */
+    @Override
+    public S3Path normalize() {
+<span class="fc bfc" id="L374" title="All 2 branches covered.">        if (pathRepresentation.isRoot()) {</span>
+<span class="fc" id="L375">            return this;</span>
+        }
+
+<span class="fc" id="L378">        boolean directory = pathRepresentation.isDirectory();</span>
+
+<span class="fc" id="L380">        final List&lt;String&gt; elements = pathRepresentation.elements();</span>
+<span class="fc" id="L381">        final LinkedList&lt;String&gt; realElements = new LinkedList&lt;&gt;();</span>
+
+<span class="fc bfc" id="L383" title="All 2 branches covered.">        for (String element : elements) {</span>
+<span class="fc bfc" id="L384" title="All 2 branches covered.">            if (element.equals(&quot;.&quot;)) continue;</span>
+<span class="pc bpc" id="L385" title="1 of 2 branches missed.">            if (element.equals(&quot;..&quot;)){</span>
+<span class="nc bnc" id="L386" title="All 2 branches missed.">                if (!realElements.isEmpty()){</span>
+<span class="nc" id="L387">                    realElements.removeLast();</span>
+                }
+                continue;
+            }
+
+<span class="pc bpc" id="L392" title="1 of 2 branches missed.">            if (directory) {</span>
+<span class="nc" id="L393">                realElements.addLast(element + &quot;/&quot;);</span>
+            } else {
+<span class="fc" id="L395">                realElements.addLast(element);</span>
+            }
+<span class="fc" id="L397">        }</span>
+<span class="fc" id="L398">        return S3Path.getPath(fileSystem, String.join(PATH_SEPARATOR, realElements));</span>
+    }
+
+    /**
+     * Resolve the given path against this path.
+     *
+     * &lt;p&gt; If the {@code other} parameter is an {@link #isAbsolute() absolute}
+     * path then this method trivially returns {@code other}. If {@code other}
+     * is an &lt;i&gt;empty path&lt;/i&gt; then this method trivially returns this path.
+     * Otherwise, this method considers this path to be a directory and resolves
+     * the given path against this path by
+     * &lt;em&gt;joining&lt;/em&gt; the given path to this path with the addition of a separator ('/') and returns a resulting path
+     * that {@link #endsWith ends} with the given (other) path.
+     *
+     * @param other the path to resolve against this path
+     * @return the resulting path
+     * @throws ProviderMismatchException if {@code other} is {@code null} or if it is not an instance of {@code S3Path}
+     * @throws IllegalArgumentException if {@code other} is NOT and instance of an {@code S3Path}
+     * @see #relativize
+     */
+    @Override
+    public S3Path resolve(Path other) {
+<span class="nc bnc" id="L420" title="All 2 branches missed.">        if(!(other instanceof S3Path)) throw new ProviderMismatchException(&quot;a non s3 path cannot be resolved against and S3Path&quot;);</span>
+<span class="nc" id="L421">        S3Path s3Other = (S3Path) other;</span>
+
+<span class="nc bnc" id="L423" title="All 2 branches missed.">        if(!this.bucketName().equals(s3Other.bucketName())) throw new IllegalArgumentException(&quot;S3Paths cannot be resolved when they are from different buckets&quot;);</span>
+
+<span class="nc bnc" id="L425" title="All 2 branches missed.">        if (s3Other.isAbsolute()) return s3Other;</span>
+<span class="nc bnc" id="L426" title="All 2 branches missed.">        if (s3Other.isEmpty()) return this;</span>
+
+        String concatenatedPath;
+<span class="nc bnc" id="L429" title="All 2 branches missed.">        if (!this.pathRepresentation.hasTrailingSeparator()) {</span>
+<span class="nc" id="L430">            concatenatedPath = this + PATH_SEPARATOR + s3Other;</span>
+        } else {
+<span class="nc" id="L432">            concatenatedPath = this.toString() + s3Other;</span>
+        }
+
+<span class="nc" id="L435">        return from(concatenatedPath);</span>
+    }
+
+    /**
+     * Converts a given path string to a {@code S3Path} and resolves it against
+     * this {@code S3Path} in exactly the manner specified by the {@link
+     * #resolve(Path) resolve} method.
+     *
+     * @param other the path string to resolve against this path
+     * @return the resulting path
+     * @throws InvalidPathException if the path string cannot be converted to a Path.
+     * @see FileSystem#getPath
+     */
+    @Override
+    public S3Path resolve(String other) {
+<span class="nc" id="L450">        return resolve(from(other));</span>
+    }
+
+    /**
+     * Resolves the given path against this path's {@link #getParent parent}
+     * path. This is useful where a file name needs to be &lt;i&gt;replaced&lt;/i&gt; with
+     * another file name. For example, suppose that the name separator is
+     * &quot;{@code /}&quot; and a path represents &quot;{@code dir1/dir2/foo}&quot;, then invoking
+     * this method with the {@code Path} &quot;{@code bar}&quot; will result in the {@code
+     * Path} &quot;{@code dir1/dir2/bar}&quot;. If this path does not have a parent path,
+     * or {@code other} is {@link #isAbsolute() absolute}, then this method
+     * returns {@code other}. If {@code other} is an empty path then this method
+     * returns this path's parent, or where this path doesn't have a parent, the
+     * empty path.
+     *
+     * @param other the path to resolve against this path's parent
+     * @return the resulting path
+     * @see #resolve(Path)
+     */
+    @Override
+    public S3Path resolveSibling(Path other) {
+<span class="nc" id="L471">        return getParent().resolve(other);</span>
+    }
+
+    /**
+     * Converts a given path string to a {@code Path} and resolves it against
+     * this path's {@link #getParent parent} path in exactly the manner
+     * specified by the {@link #resolveSibling(Path) resolveSibling} method.
+     *
+     * @param other the path string to resolve against this path's parent
+     * @return the resulting path
+     * @throws InvalidPathException if the path string cannot be converted to a Path.
+     * @see FileSystem#getPath
+     */
+    @Override
+    public S3Path resolveSibling(String other) {
+<span class="nc" id="L486">        return getParent().resolve(other);</span>
+    }
+
+    /**
+     * Constructs a relative path between this path and a given path.
+     *
+     * &lt;p&gt; Relativization is the inverse of {@link #resolve(Path) resolution}.
+     * This method attempts to construct a {@link #isAbsolute relative} path
+     * that when {@link #resolve(Path) resolved} against this path, yields a
+     * path that locates the same file as the given path. For example, on UNIX,
+     * if this path is {@code &quot;/a/b&quot;} and the given path is {@code &quot;/a/b/c/d&quot;}
+     * then the resulting relative path would be {@code &quot;c/d&quot;}. Where this
+     * path and the given path do not have a {@link #getRoot root} component,
+     * then a relative path can be constructed. A relative path cannot be
+     * constructed if only one of the paths have a root component. Where both
+     * paths have a root component then it is implementation dependent if a
+     * relative path can be constructed. If this path and the given path are
+     * {@link #equals equal} then an &lt;i&gt;empty path&lt;/i&gt; is returned.
+     *
+     * &lt;p&gt; For any two {@link #normalize normalized} paths &lt;i&gt;p&lt;/i&gt; and
+     * &lt;i&gt;q&lt;/i&gt;, where &lt;i&gt;q&lt;/i&gt; does not have a root component,
+     * &lt;blockquote&gt;
+     * &lt;i&gt;p&lt;/i&gt;&lt;tt&gt;.relativize(&lt;/tt&gt;&lt;i&gt;p&lt;/i&gt;&lt;tt&gt;.resolve(&lt;/tt&gt;&lt;i&gt;q&lt;/i&gt;&lt;tt&gt;)).equals(&lt;/tt&gt;&lt;i&gt;q&lt;/i&gt;&lt;tt&gt;)&lt;/tt&gt;
+     * &lt;/blockquote&gt;
+     *
+     * @param other the path to relativize against this path
+     * @return the resulting relative path, or an empty path if both paths are
+     * equal
+     * @throws IllegalArgumentException if {@code other} is not a {@code Path} that can be relativized
+     *                                  against this path
+     */
+    @Override
+    public S3Path relativize(Path other) {
+<span class="nc bnc" id="L519" title="All 2 branches missed.">        if(!(other instanceof S3Path)) throw new IllegalArgumentException(&quot;path is not an S3Path&quot;);</span>
+
+<span class="nc bnc" id="L521" title="All 2 branches missed.">        if(this.equals(other)) return from(&quot;&quot;);</span>
+
+<span class="nc bnc" id="L523" title="All 2 branches missed.">        if(this.isAbsolute() != other.isAbsolute()) throw new IllegalArgumentException(&quot;to obtain a relative path both must be absolute or both must be relative&quot;);</span>
+<span class="nc bnc" id="L524" title="All 2 branches missed.">        if(!Objects.equals(this.bucketName(), ((S3Path) other).bucketName())) throw new IllegalArgumentException(&quot;cannot relativize S3Paths from different buckets&quot;);</span>
+
+<span class="nc" id="L526">        S3Path otherPath = (S3Path) other;</span>
+<span class="nc bnc" id="L527" title="All 2 branches missed.">        if(this.isEmpty()) return otherPath;</span>
+
+<span class="nc" id="L529">        int nameCount = this.getNameCount();</span>
+<span class="nc" id="L530">        int otherNameCount = other.getNameCount();</span>
+
+<span class="nc" id="L532">        int limit = Math.min(nameCount, otherNameCount);</span>
+<span class="nc" id="L533">        int differenceCount = getDifferenceCount(other, limit);</span>
+
+<span class="nc" id="L535">        int parentDirCount = nameCount - differenceCount;</span>
+<span class="nc bnc" id="L536" title="All 2 branches missed.">        if (differenceCount &lt; otherNameCount) {</span>
+<span class="nc" id="L537">            return getRelativePathFromDifference(otherPath, otherNameCount, differenceCount, parentDirCount);</span>
+        }
+
+<span class="nc" id="L540">        char[] relativePath = new char[parentDirCount*3 - 1];</span>
+<span class="nc" id="L541">        int index = 0;</span>
+<span class="nc bnc" id="L542" title="All 2 branches missed.">        while (parentDirCount &gt; 0) {</span>
+<span class="nc" id="L543">            relativePath[index++] = '.';</span>
+<span class="nc" id="L544">            relativePath[index++] = '.';</span>
+<span class="nc bnc" id="L545" title="All 2 branches missed.">            if (parentDirCount &gt; 1)</span>
+<span class="nc" id="L546">                relativePath[index++] = '/';</span>
+<span class="nc" id="L547">            parentDirCount--;</span>
+        }
+
+<span class="nc" id="L550">        return new S3Path(getFileSystem(), new PosixLikePathRepresentation(relativePath));</span>
+    }
+
+    private S3Path getRelativePathFromDifference(S3Path otherPath, int otherNameCount, int differenceCount, int parentDirCount) {
+<span class="nc" id="L554">        Objects.requireNonNull(otherPath);</span>
+<span class="nc" id="L555">        S3Path remainingSubPath = otherPath.subpath(differenceCount, otherNameCount);</span>
+
+<span class="nc bnc" id="L557" title="All 2 branches missed.">        if (parentDirCount == 0) return remainingSubPath;</span>
+
+        // we need to pop up some directories (each of which needs three characters ../) then append the remaining sub-path
+<span class="nc" id="L560">        int relativePathSize = parentDirCount * 3 + remainingSubPath.pathRepresentation.toString().length();</span>
+
+<span class="nc bnc" id="L562" title="All 2 branches missed.">        if (otherPath.isEmpty()) relativePathSize--;</span>
+
+<span class="nc" id="L564">        char[] relativePath = new char[relativePathSize];</span>
+<span class="nc" id="L565">        int index = 0;</span>
+<span class="nc bnc" id="L566" title="All 2 branches missed.">        while (parentDirCount &gt; 0) {</span>
+<span class="nc" id="L567">            relativePath[index++] = '.';</span>
+<span class="nc" id="L568">            relativePath[index++] = '.';</span>
+<span class="nc bnc" id="L569" title="All 2 branches missed.">            if (otherPath.isEmpty()) {</span>
+<span class="nc bnc" id="L570" title="All 2 branches missed.">                if (parentDirCount &gt; 1) relativePath[index++] = '/';</span>
+            } else {
+<span class="nc" id="L572">                relativePath[index++] = '/';</span>
+            }
+<span class="nc" id="L574">            parentDirCount--;</span>
+        }
+<span class="nc" id="L576">        System.arraycopy(remainingSubPath.pathRepresentation.chars(), 0, relativePath, index, remainingSubPath.pathRepresentation.chars().length);</span>
+
+<span class="nc" id="L578">        return new S3Path(getFileSystem(), new PosixLikePathRepresentation(relativePath));</span>
+    }
+
+    private int getDifferenceCount(Path other, int limit) {
+<span class="nc" id="L582">        int i = 0;</span>
+<span class="nc bnc" id="L583" title="All 2 branches missed.">        while (i &lt; limit) {</span>
+<span class="nc bnc" id="L584" title="All 2 branches missed.">            if (!this.getName(i).equals(other.getName(i)))</span>
+<span class="nc" id="L585">                break;</span>
+<span class="nc" id="L586">            i++;</span>
+        }
+<span class="nc" id="L588">        return i;</span>
+    }
+
+    private boolean isEmpty(){
+<span class="nc" id="L592">        return pathRepresentation.toString().isEmpty();</span>
+    }
+
+    /**
+     * Returns a URI to represent this path.
+     *
+     * &lt;p&gt; This method constructs an absolute and normalized {@link URI} with a {@link
+     * URI#getScheme() scheme} equal to the URI scheme that identifies the
+     * provider (s3).
+     *
+     * @return the URI representing this path
+     * @throws IOError           if an I/O error occurs obtaining the absolute path, or where a
+     *                           file system is constructed to access the contents of a file as
+     *                           a file system, and the URI of the enclosing file system cannot be
+     *                           obtained
+     * @throws SecurityException In the case of the default provider, and a security manager
+     *                           is installed, the {@link #toAbsolutePath toAbsolutePath} method
+     *                           throws a security exception.
+     */
+    @Override
+    public URI toUri() {
+<span class="fc" id="L613">        return URI.create(</span>
+<span class="fc" id="L614">                fileSystem.provider().getScheme() + &quot;://&quot;</span>
+<span class="fc" id="L615">                        + bucketName()</span>
+<span class="fc" id="L616">                        + this.toAbsolutePath().toRealPath(NOFOLLOW_LINKS));</span>
+    }
+
+    /**
+     * Returns a {@code Path} object representing the absolute path of this
+     * path.
+     *
+     * &lt;p&gt; If this path is already {@link Path#isAbsolute absolute} then this
+     * method simply returns this path. Otherwise, this method resolves the path
+     * by resolving the path against the root (the top level of the bucket). The resulting path may contain redundancies
+     * and may point to a non-existent location.
+     *
+     * @return a {@code Path} object representing the absolute path
+     */
+    @Override
+    public S3Path toAbsolutePath() {
+<span class="fc bfc" id="L632" title="All 2 branches covered.">        if (isAbsolute()) return this;</span>
+
+<span class="fc" id="L634">        return new S3Path(fileSystem, PosixLikePathRepresentation.of(PATH_SEPARATOR, pathRepresentation.toString()));</span>
+    }
+
+    /**
+     * Returns the &lt;em&gt;real&lt;/em&gt; path of an existing file.
+     *
+     * &lt;p&gt; If this path is relative then its absolute path is first obtained,
+     * as if by invoking the {@link #toAbsolutePath toAbsolutePath} method.
+     * When deriving the &lt;em&gt;real path&lt;/em&gt;, and a
+     * &quot;{@code ..}&quot; (or equivalent) is preceded by a non-&quot;{@code ..}&quot; name then
+     * an implementation will cause both names to be removed.
+     *
+     * @param options options indicating how symbolic links are handled. S3 has no links so this will be ignored.
+     * @return an absolute path represent the &lt;em&gt;real&lt;/em&gt; path of the file
+     * located by this object
+     */
+    @Override
+    public S3Path toRealPath(LinkOption... options) {
+<span class="fc" id="L652">        S3Path p = this;</span>
+<span class="fc bfc" id="L653" title="All 2 branches covered.">        if(!isAbsolute()) p = toAbsolutePath();</span>
+
+<span class="fc" id="L655">        return S3Path.getPath(fileSystem, PATH_SEPARATOR, p.normalize().toString());</span>
+    }
+
+    /**
+     * S3 Objects cannot be represented in the local file system
+     * @throws UnsupportedOperationException always
+     */
+    @Override
+    public File toFile() {
+<span class="nc" id="L664">        throw new UnsupportedOperationException(&quot;S3 Objects cannot be represented in the local (default) file system&quot;);</span>
+    }
+
+    /**
+     * Currently not implemented
+     * @throws UnsupportedOperationException always
+     */
+    @Override
+    public WatchKey register(WatchService watcher, WatchEvent.Kind&lt;?&gt;[] events, WatchEvent.Modifier... modifiers) throws UnsupportedOperationException {
+<span class="nc" id="L673">        throw new UnsupportedOperationException(&quot;This method is not yet supported. Please raise a feature request describing your use case&quot;);</span>
+    }
+
+    /**
+     * Currently not implemented
+     * @throws UnsupportedOperationException always
+     */
+    @Override
+    public WatchKey register(WatchService watcher, WatchEvent.Kind&lt;?&gt;... events) throws UnsupportedOperationException {
+<span class="nc" id="L682">        throw new UnsupportedOperationException(&quot;This method is not yet supported. Please raise a feature request describing your use case&quot;);</span>
+    }
+
+    /**
+     * Returns an iterator over the name elements of this path.
+     *
+     * &lt;p&gt; The first element returned by the iterator represents the name
+     * element that is closest to the root in the directory hierarchy, the
+     * second element is the next closest, and so on. The last element returned
+     * is the name of the file or directory denoted by this path. The {@link
+     * #getRoot root} component, if present, is not returned by the iterator.
+     *
+     * @return an iterator over the name elements of this path.
+     */
+    @Override
+    public Iterator&lt;Path&gt; iterator() {
+<span class="nc" id="L698">        return new S3PathIterator(pathRepresentation.elements().iterator(), pathRepresentation.isAbsolute(), pathRepresentation.hasTrailingSeparator());</span>
+    }
+
+    /**
+     * Compares two abstract paths lexicographically. The ordering defined by
+     * this method is provider specific, and in the case of the default
+     * provider, platform specific. This method does not access the file system
+     * and neither file is required to exist.
+     *
+     * &lt;p&gt; This method may not be used to compare paths that are associated
+     * with different file system providers.
+     *
+     * @param other the path compared to this path.
+     * @return zero if the argument is {@link #equals equal} to this path, a
+     * value less than zero if this path is lexicographically less than
+     * the argument, or a value greater than zero if this path is
+     * lexicographically greater than the argument
+     * @throws ClassCastException if the paths are associated with different providers
+     */
+    @Override
+    public int compareTo(Path other) {
+<span class="nc bnc" id="L719" title="All 2 branches missed.">        if(!(other instanceof S3Path)) throw new ClassCastException(&quot;compared paths must be from the same provider&quot;);</span>
+
+<span class="nc" id="L721">        S3Path o = (S3Path) other;</span>
+<span class="nc bnc" id="L722" title="All 2 branches missed.">        if(o.fileSystem != this.fileSystem) throw new ClassCastException(&quot;compared S3 paths must be from the same bucket&quot;);</span>
+<span class="nc" id="L723">        return this.toRealPath(NOFOLLOW_LINKS).toString().compareTo(</span>
+<span class="nc" id="L724">                o.toRealPath(NOFOLLOW_LINKS).toString());</span>
+    }
+
+    /**
+     * Tests this path for equality with the given object.
+     *
+     * {@code true} if {@code other} is also an {@code S3Path} from the same bucket and the two paths have the same
+     * real path.
+     * @param other the object to which this object is to be compared
+     * @return {@code true} if, and only if, the given object is a {@code Path}
+     * that is identical to this {@code Path}
+     */
+    @Override
+    public boolean equals(Object other) {
+<span class="pc bpc" id="L738" title="1 of 2 branches missed.">        if (this == other) return true;</span>
+
+<span class="pc bpc" id="L740" title="1 of 2 branches missed.">        return other instanceof S3Path</span>
+<span class="pc bpc" id="L741" title="1 of 2 branches missed.">                &amp;&amp; Objects.equals(((S3Path) other).bucketName(), this.bucketName())</span>
+<span class="fc bfc" id="L742" title="All 2 branches covered.">                &amp;&amp; Objects.equals(((S3Path) other).toRealPath(NOFOLLOW_LINKS).pathRepresentation,</span>
+<span class="fc" id="L743">                        this.toRealPath(NOFOLLOW_LINKS).pathRepresentation);</span>
+    }
+
+    /**
+     * Computes a hash code for this path.
+     *
+     * &lt;p&gt; The hash code is based upon the components of the path, and
+     * satisfies the general contract of the {@link Object#hashCode
+     * Object.hashCode} method.
+     *
+     * @return the hash-code value for this path
+     */
+    @Override
+    public int hashCode() {
+<span class="nc" id="L757">        return toRealPath(NOFOLLOW_LINKS).pathRepresentation.hashCode();</span>
+    }
+
+    /**
+     * Returns the string representation of this path.
+     *
+     * @return the string representation of this path
+     */
+    @Override
+    public String toString() {
+<span class="fc" id="L767">        return pathRepresentation.toString();</span>
+    }
+
+    /**
+     * The key of the object for S3. Essentially the &quot;real path&quot; with the &quot;/&quot; prefix removed.
+     * @return the key
+     */
+    public String getKey(){
+<span class="nc bnc" id="L775" title="All 2 branches missed.">        if(isEmpty()) return &quot;&quot;;</span>
+<span class="nc" id="L776">        return toRealPath(NOFOLLOW_LINKS).toString().substring(1);</span>
+    }
+
+    private final class S3PathIterator implements Iterator&lt;Path&gt; {
+        private final Iterator&lt;String&gt; delegate;
+        boolean first;
+        boolean isAbsolute;
+        boolean hasTrailingSeparator;
+
+<span class="nc" id="L785">        public S3PathIterator(Iterator&lt;String&gt; delegate, boolean isAbsolute, boolean hasTrailingSeparator){</span>
+<span class="nc" id="L786">            this.delegate = delegate;</span>
+<span class="nc" id="L787">            this.isAbsolute = isAbsolute;</span>
+<span class="nc" id="L788">            this.hasTrailingSeparator = hasTrailingSeparator;</span>
+<span class="nc" id="L789">            first = true;</span>
+<span class="nc" id="L790">        }</span>
+
+        @Override
+        public Path next() {
+<span class="nc" id="L794">            String pathString = delegate.next();</span>
+<span class="nc bnc" id="L795" title="All 4 branches missed.">            if(isAbsolute() &amp;&amp; first){</span>
+<span class="nc" id="L796">                first = false;</span>
+<span class="nc" id="L797">                pathString = PATH_SEPARATOR+pathString;</span>
+<span class="nc bnc" id="L798" title="All 4 branches missed.">                if (!hasNext() &amp;&amp; hasTrailingSeparator) {</span>
+<span class="nc" id="L799">                    pathString = pathString+PATH_SEPARATOR;</span>
+                }
+            }
+
+<span class="nc bnc" id="L803" title="All 4 branches missed.">            if(hasNext() || hasTrailingSeparator) {</span>
+<span class="nc" id="L804">                pathString = pathString+PATH_SEPARATOR;</span>
+            }
+<span class="nc" id="L806">            return from(pathString);</span>
+        }
+
+        @Override
+        public boolean hasNext() {
+<span class="nc" id="L811">            return delegate.hasNext();</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>
