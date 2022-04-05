@@ -1,2 +1,0 @@
-Ž11:53:35.109 [Test worker] INFO  s.a.nio.spi.s3.S3SeekableByteChannel - using S3ReadAheadByteChannel as read delegate for path 's3://foo/baa'
-11:53:35.151 [Test worker] INFO  s.a.n.spi.s3.S3ReadAheadByteChannel - max read ahead fragments '50' with size '5242880' bytes
