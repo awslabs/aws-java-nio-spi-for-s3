@@ -502,12 +502,6 @@ public class S3Path implements Path {
      * relative path can be constructed. If this path and the given path are
      * {@link #equals equal} then an <i>empty path</i> is returned.
      *
-     * <p> For any two {@link #normalize normalized} paths <i>p</i> and
-     * <i>q</i>, where <i>q</i> does not have a root component,
-     * <blockquote>
-     * <i>p</i><tt>.relativize(</tt><i>p</i><tt>.resolve(</tt><i>q</i><tt>)).equals(</tt><i>q</i><tt>)</tt>
-     * </blockquote>
-     *
      * @param other the path to relativize against this path
      * @return the resulting relative path, or an empty path if both paths are
      * equal

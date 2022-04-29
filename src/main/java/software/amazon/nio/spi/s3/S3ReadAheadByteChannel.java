@@ -54,8 +54,8 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
      * The channel is backed by a cache that holds the buffered fragments of the object identified
      * by the {@code path}.
      * @param path the path to the S3 object being read
-     * @param maxFragmentSize the maximum amount of bytes in a read ahead fragment. Must be >= 1.
-     * @param maxNumberFragments the maximum number of read ahead fragments to hold. Must be >= 2.
+     * @param maxFragmentSize the maximum amount of bytes in a read ahead fragment. Must be {@code >= 1}.
+     * @param maxNumberFragments the maximum number of read ahead fragments to hold. Must be {@code >= 2}.
      * @param client the client used to read from the {@code path}
      * @param delegator the {@code S3SeekableByteChannel} that delegates reading to this object.
      * @throws IOException if a problem occurs initializing the cached fragments
@@ -215,6 +215,6 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
      * @return the index of the fragment in which {@code byteNumber} will be found.
      */
     protected Integer fragmentIndexForByteNumber(long byteNumber){
-        return Math.toIntExact(Math.floorDiv(byteNumber, maxFragmentSize));
+        return Math.toIntExact(Math.floorDiv(byteNumber, (long)maxFragmentSize));
     }
 }

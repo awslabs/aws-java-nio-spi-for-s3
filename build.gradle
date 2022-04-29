@@ -19,7 +19,7 @@ repositories {
     mavenCentral()
 }
 
-group = 'software.aws.haig'
+group = 'software.aws.healthai'
 archivesBaseName = 'nio-spi-for-s3'
 version = '1.0.0'
 
@@ -28,14 +28,19 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
 dependencies {
     // Use JUnit test framework.
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:4.3.1'
 
-    // This dependency is used internally, and not exposed to consumers on their own compile classpath.
-    implementation 'software.amazon.awssdk:bom:2.17.129'
-    implementation 'software.amazon.awssdk:s3:2.17.129'
+    implementation platform('software.amazon.awssdk:bom:2.17.129')
+
+    implementation 'software.amazon.awssdk:s3'
     implementation 'org.slf4j:slf4j-api:1.7.36'
     implementation 'ch.qos.logback:logback-classic:1.2.10'
     implementation 'ch.qos.logback:logback-core:1.2.10'
@@ -47,6 +52,19 @@ publishing {
     publications {
         s3fsSpiLibrary(MavenPublication) {
             from components.java
+            pom {
+                name = 'AWS Java NIO SPI for S3'
+                description = 'A Java NIO.2 service provider for S3, allowing Java NIO operations to be performed on paths using the `s3` scheme. This\n' +
+                        'package implements the service provider interface (SPI) defined for Java NIO.2 in JDK 1.7 providing "plug-in" non-blocking\n' +
+                        'access to S3 objects for Java applications using Java NIO.2 for file access.'
+                url = 'https://github.com/awslabs/aws-java-nio-spi-for-s3'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+            }
         }
     }
 }

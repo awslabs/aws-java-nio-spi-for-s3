@@ -265,50 +265,12 @@ public class S3FileSystem extends FileSystem {
      * where {@code ':'} stands for itself.
      *
      * <p> A {@code FileSystem} implementation supports the "{@code glob}" and
-     * "{@code regex}" syntaxes, and may support others. The value of the syntax
+     * "{@code regex}" syntaxes. The value of the syntax
      * component is compared without regard to case.
      *
      * <p> When the syntax is "{@code glob}" then the {@code String}
      * representation of the path is matched using a limited pattern language
-     * that resembles regular expressions but with a simpler syntax. For example:
-     *
-     * <blockquote>
-     * <table border="0" summary="Pattern Language">
-     * <tr>
-     *   <td>{@code *.java}</td>
-     *   <td>Matches a path that represents a file name ending in {@code .java}</td>
-     * </tr>
-     * <tr>
-     *   <td>{@code *.*}</td>
-     *   <td>Matches file names containing a dot</td>
-     * </tr>
-     * <tr>
-     *   <td>{@code *.{java,class}}</td>
-     *   <td>Matches file names ending with {@code .java} or {@code .class}</td>
-     * </tr>
-     * <tr>
-     *   <td>{@code foo.?}</td>
-     *   <td>Matches file names starting with {@code foo.} and a single
-     *   character extension</td>
-     * </tr>
-     * <tr>
-     *   <td><tt>&#47;home&#47;*&#47;*</tt>
-     *   <td>Matches <tt>&#47;home&#47;gus&#47;data</tt> on UNIX platforms</td>
-     * </tr>
-     * <tr>
-     *   <td><tt>&#47;home&#47;**</tt>
-     *   <td>Matches <tt>&#47;home&#47;gus</tt> and
-     *   <tt>&#47;home&#47;gus&#47;data</tt> on UNIX platforms</td>
-     * </tr>
-     * <tr>
-     *   <td><tt>C:&#92;&#92;*</tt>
-     *   <td>Matches <tt>C:&#92;foo</tt> and <tt>C:&#92;bar</tt> on the Windows
-     *   platform (note that the backslash is escaped; as a string literal in the
-     *   Java Language the pattern would be <tt>"C:&#92;&#92;&#92;&#92;*"</tt>) </td>
-     * </tr>
-     *
-     * </table>
-     * </blockquote>
+     * that resembles regular expressions but with a simpler syntax.
      *
      * <p> The following rules are used to interpret glob patterns:
      *
@@ -348,7 +310,7 @@ public class S3FileSystem extends FileSystem {
      *   character is used to separate the subpatterns. Groups cannot be nested.
      *   </p></li>
      *
-     *   <li><p> Leading period<tt>&#47;</tt>dot characters in file name are
+     *   <li><p> Leading period dot characters in file name are
      *   treated as regular characters in match operations. For example,
      *   the {@code "*"} glob pattern matches file name {@code ".login"}.
      *   The {@link Files#isHidden} method may be used to test whether a file

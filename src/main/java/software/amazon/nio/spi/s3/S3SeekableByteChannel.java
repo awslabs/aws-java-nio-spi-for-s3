@@ -210,7 +210,7 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
     /**
      * Tells whether this channel is open.
      *
-     * @return <tt>true</tt> if, and only if, this channels delegate is open
+     * @return {@code true} if, and only if, this channels delegate is open
      */
     @Override
     public boolean isOpen() {
