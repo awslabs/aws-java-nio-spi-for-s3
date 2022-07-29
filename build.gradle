@@ -33,6 +33,11 @@ java {
     withJavadocJar()
 }
 
+compileJava {
+    // see https://docs.gradle.org/6.6/userguide/building_java_projects.html#sec:java_cross_compilation
+    options.release = 8
+}
+
 dependencies {
     // Use JUnit test framework.
     testImplementation 'junit:junit:4.13.2'
