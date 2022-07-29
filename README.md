@@ -9,21 +9,38 @@ access to S3 objects for Java applications using Java NIO.2 for file access.
 There are several ways that this package can be used to provide Java NIO operations on S3 objects:
 
 1. Use this libraries jar as one of your applications compile dependencies
-2. Include the libraries "shadowJar" in your `$JAVA_HOME/jre/lib/ext/` directory
-3. Include this library on your class path at runtime
-4. Include the library as an extension at runtime `-Djava.ext.dirs=$JAVA_HOME/jre/lib/ext:/path/to/extension/`
+2. Include the libraries "shadowJar" in your `$JAVA_HOME/jre/lib/ext/` directory (not supported for Java 9 and above)
+3. Include this library on your class path at runtime  (best option for Java 9 and above)
+4. Include the library as an extension at runtime `-Djava.ext.dirs=$JAVA_HOME/jre/lib/ext:/path/to/extension/` (not supported for Java 9 and above)
 
 ## Example usage
 
 Assuming that `myExecutatbleJar` is a Java application that has been built to read from `java.nio.file.Path`s and
 this library has been exposed by one of the mechanisms above then S3 URIs may be used to identify inputs. For example:
 
-```java 
+``` 
 java -jar myExecutableJar --input s3://some-bucket/input/file
 ```
 
 If this library is exposed as an extension (see above), then no code changes or recompilation of `myExecutable` are
 required.
+
+### Using this package as a provider for Java 9 and above
+
+With the introduction of modules in Java 9 the extension mechanism was retired. Providers should now be supplied as java modules.
+For backward compatability we have not yet made this change so to ensure that the provider in this package is recognized
+by the JVM you need to supply the JAR on your classpath using the `-classpath` flag. For example to use this provider with `org.example.myapp.Main` from `myApp.jar`
+you would type the following:
+
+```
+java -classpath build/libs/nio-spi-for-s3-1.1.0-all.jar:myApp.jar org.example.myapp.Main
+```
+
+As a concrete example, using Java 9+ with the popular genomics application [GATK](https://gatk.broadinstitute.org/hc/en-us), you could do the following:
+
+```
+java -classpath build/libs/nio-spi-for-s3-1.1.0-all.jar:gatk-package-4.2.2.0-local.jar org.broadinstitute.hellbender.Main CountReads -I s3://<some-bucket>/ena/PRJEB3381/ERR194158/ERR194158.hg38.bam
+```
 
 ## AWS Credentials
 
