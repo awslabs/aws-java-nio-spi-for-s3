@@ -12,8 +12,10 @@ plugins {
     id 'maven-publish'
     id 'jacoco'
     id 'com.github.johnrengelman.shadow' version '7.1.2'
-    id 'com.bmuschko.nexus'
+    id 'io.codearte.nexus-staging' version '0.11.0'
 }
+
+apply plugin: 'com.bmuschko.nexus'
 
 repositories {
     // Use Maven Central for resolving dependencies.
@@ -56,22 +58,51 @@ dependencies {
 
 publishing {
     publications {
-        s3fsSpiLibrary(MavenPublication) {
+        maven(MavenPublication) {
             from components.java
             pom {
                 name = 'AWS Java NIO SPI for S3'
                 description = 'A Java NIO.2 service provider for S3, allowing Java NIO operations to be performed on paths using the `s3` scheme. This\n' +
                         'package implements the service provider interface (SPI) defined for Java NIO.2 in JDK 1.7 providing "plug-in" non-blocking\n' +
                         'access to S3 objects for Java applications using Java NIO.2 for file access.'
-                url = 'https://github.com/awslabs/aws-java-nio-spi-for-s3'
+                url 'https://github.com/sigpwned/aws-java-nio-spi-for-s3'
+                inceptionYear '2022'
+
+                scm {
+                    url 'https://github.com/sigpwned/aws-java-nio-spi-for-s3/tree/main'
+                    connection 'scm:git:ssh://git@github.com/sigpwned/aws-java-nio-spi-for-s3.git'
+                    developerConnection 'scm:git:ssh://git@github.com/sigpwned/aws-java-nio-spi-for-s3.git'
+                }
+        
                 licenses {
                     license {
-                        name = 'The Apache License, Version 2.0'
-                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                        name 'Apache License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution 'repo'
+                    }
+                }
+        
+                developers {
+                    developer {
+                        id 'markjschreiber'
+                        name 'Mark Schreiber'
+                        email 'markjschreiber@gmail.com'
+                    }
+                    developer {
+                        id 'sigpwned'
+                        name 'Andy Boothe'
+                        email 'andy@sigpwned.com'
                     }
                 }
             }
+        }
+    }
 
+    repositories {
+        maven {
+            def releasesRepoUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+            def snapshotsRepoUrl = 'https://oss.sonatype.org/content/repositories/snapshots/'
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
         }
     }
 }
@@ -88,50 +119,16 @@ jacocoTestReport {
     }
 }
 
-modifyPom {
-    project {
-        name 'nio-spi-for-s3'
-        description 'AWS Java NIO SPI for S3'
-        url 'https://github.com/sigpwned/aws-java-nio-spi-for-s3'
-        inceptionYear '2022'
+signing {
+    sign publishing.publications.mavenJava
+}
 
-        scm {
-            url 'https://github.com/sigpwned/aws-java-nio-spi-for-s3/tree/main'
-            connection 'scm:git:ssh://git@github.com/sigpwned/aws-java-nio-spi-for-s3.git'
-            developerConnection 'scm:git:ssh://git@github.com/sigpwned/aws-java-nio-spi-for-s3.git'
-        }
-
-        licenses {
-            license {
-                name 'Apache License, Version 2.0'
-                url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                distribution 'repo'
-            }
-        }
-
-        developers {
-            developer {
-                id 'markjschreiber'
-                name 'Mark Schreiber'
-                email 'markjschreiber@gmail.com'
-            }
-            developer {
-                id 'sigpwned'
-                name 'Andy Boothe'
-                email 'andy@sigpwned.com'
-            }
-        }
+javadoc {
+    if(JavaVersion.current().isJava9Compatible()) {
+        options.addBooleanOption('html5', true)
     }
 }
 
-extraArchive {
-    sources = true
-    tests = true
-    javadoc = true
-}
 
-nexus {
-    sign = true
-    repositoryUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
-    snapshotRepositoryUrl = 'https://oss.sonatype.org/content/repositories/snapshots/'
-}
+
+
