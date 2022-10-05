@@ -1,0 +1,9 @@
+# Probably a usertoken from Maven Central
+mavenUsername=<MAVEN CENTRAL USERNAME GOES HERE>
+mavenPassword=<MAVEN CENTRAL PASSWORD GOES HERE>
+
+signing.keyId=<KEY ID GOES HERE>
+signing.password=<KEY PASSWORD GOES HERE>
+# Generated using: $ gpg --keyring secring.gpg --export-secret-keys > /path/to/home/.gnupg/secring.gpg
+signing.secretKeyRingFile=/path/to/home/.gnupg/secring.gpg
+
