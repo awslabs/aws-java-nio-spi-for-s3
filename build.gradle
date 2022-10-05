@@ -12,6 +12,7 @@ plugins {
     id 'maven-publish'
     id 'jacoco'
     id 'com.github.johnrengelman.shadow' version '7.1.2'
+    id 'com.bmuschko.nexus'
 }
 
 repositories {
@@ -85,4 +86,52 @@ jacocoTestReport {
         xml.required = true
         xml.outputLocation = file("build/reports/coverage.xml")
     }
+}
+
+modifyPom {
+    project {
+        name 'nio-spi-for-s3'
+        description 'AWS Java NIO SPI for S3'
+        url 'https://github.com/sigpwned/aws-java-nio-spi-for-s3'
+        inceptionYear '2022'
+
+        scm {
+            url 'https://github.com/sigpwned/aws-java-nio-spi-for-s3/tree/main'
+            connection 'scm:git:ssh://git@github.com/sigpwned/aws-java-nio-spi-for-s3.git'
+            developerConnection 'scm:git:ssh://git@github.com/sigpwned/aws-java-nio-spi-for-s3.git'
+        }
+
+        licenses {
+            license {
+                name 'Apache License, Version 2.0'
+                url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                distribution 'repo'
+            }
+        }
+
+        developers {
+            developer {
+                id 'markjschreiber'
+                name 'Mark Schreiber'
+                email 'markjschreiber@gmail.com'
+            }
+            developer {
+                id 'sigpwned'
+                name 'Andy Boothe'
+                email 'andy@sigpwned.com'
+            }
+        }
+    }
+}
+
+extraArchive {
+    sources = true
+    tests = true
+    javadoc = true
+}
+
+nexus {
+    sign = true
+    repositoryUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+    snapshotRepositoryUrl = 'https://oss.sonatype.org/content/repositories/snapshots/'
 }
