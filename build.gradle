@@ -15,8 +15,6 @@ plugins {
     id 'io.codearte.nexus-staging' version '0.11.0'
 }
 
-apply plugin: 'com.bmuschko.nexus'
-
 repositories {
     // Use Maven Central for resolving dependencies.
     mavenCentral()
