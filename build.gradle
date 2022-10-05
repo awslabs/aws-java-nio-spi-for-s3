@@ -10,9 +10,9 @@ plugins {
     // Apply the java-library plugin for API and implementation separation.
     id 'java-library'
     id 'maven-publish'
+    id 'signing'
     id 'jacoco'
     id 'com.github.johnrengelman.shadow' version '7.1.2'
-    id 'io.codearte.nexus-staging' version '0.11.0'
 }
 
 repositories {
@@ -63,33 +63,33 @@ publishing {
                 description = 'A Java NIO.2 service provider for S3, allowing Java NIO operations to be performed on paths using the `s3` scheme. This\n' +
                         'package implements the service provider interface (SPI) defined for Java NIO.2 in JDK 1.7 providing "plug-in" non-blocking\n' +
                         'access to S3 objects for Java applications using Java NIO.2 for file access.'
-                url 'https://github.com/sigpwned/aws-java-nio-spi-for-s3'
-                inceptionYear '2022'
+                url = 'https://github.com/sigpwned/aws-java-nio-spi-for-s3'
+                inceptionYear = '2022'
 
                 scm {
-                    url 'https://github.com/sigpwned/aws-java-nio-spi-for-s3/tree/main'
-                    connection 'scm:git:ssh://git@github.com/sigpwned/aws-java-nio-spi-for-s3.git'
-                    developerConnection 'scm:git:ssh://git@github.com/sigpwned/aws-java-nio-spi-for-s3.git'
+                    url = 'https://github.com/sigpwned/aws-java-nio-spi-for-s3/tree/main'
+                    connection = 'scm:git:ssh://git@github.com/sigpwned/aws-java-nio-spi-for-s3.git'
+                    developerConnection = 'scm:git:ssh://git@github.com/sigpwned/aws-java-nio-spi-for-s3.git'
                 }
         
                 licenses {
                     license {
-                        name 'Apache License, Version 2.0'
-                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                        distribution 'repo'
+                        name = 'Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution = 'repo'
                     }
                 }
         
                 developers {
                     developer {
-                        id 'markjschreiber'
-                        name 'Mark Schreiber'
-                        email 'markjschreiber@gmail.com'
+                        id = 'markjschreiber'
+                        name = 'Mark Schreiber'
+                        email = 'markjschreiber@gmail.com'
                     }
                     developer {
-                        id 'sigpwned'
-                        name 'Andy Boothe'
-                        email 'andy@sigpwned.com'
+                        id = 'sigpwned'
+                        name = 'Andy Boothe'
+                        email = 'andy@sigpwned.com'
                     }
                 }
             }
@@ -118,7 +118,7 @@ jacocoTestReport {
 }
 
 signing {
-    sign publishing.publications.mavenJava
+    sign publishing.publications.maven
 }
 
 javadoc {
