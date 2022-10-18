@@ -34,11 +34,17 @@ public class S3ClientStore {
 
     private static final S3ClientStore instance = new S3ClientStore();
 
+    /**
+     * Default client using the "https://s3.us-east-1.amazonaws.com" endpoint
+     */
     public static final S3Client DEFAULT_CLIENT = S3Client.builder()
             .endpointOverride(URI.create("https://s3.us-east-1.amazonaws.com"))
             .region(Region.US_EAST_1)
             .build();
 
+    /**
+     * Default asynchronous client using the "https://s3.us-east-1.amazonaws.com" endpoint
+     */
     public static final S3AsyncClient DEFAULT_ASYNC_CLIENT = S3AsyncClient.builder()
             .endpointOverride(URI.create("https://s3.us-east-1.amazonaws.com"))
             .region(Region.US_EAST_1)
@@ -80,8 +86,17 @@ public class S3ClientStore {
 
     private S3ClientStore(){}
 
+    /**
+     * Get the ClientStore instance
+     * @return a singleton
+     */
     public static S3ClientStore getInstance() { return instance; }
 
+    /**
+     * Get an existing client or generate a new client for the named bucket if one doesn't exist
+     * @param bucketName the bucket name. If this value is null or empty a default client is returned
+     * @return a client
+     */
     public S3Client getClientForBucketName( String bucketName ) {
         logger.debug("obtaining client for bucket '{}'", bucketName);
         if (bucketName == null || bucketName.trim().equals("")) {
@@ -91,6 +106,11 @@ public class S3ClientStore {
         return bucketToClientMap.computeIfAbsent(bucketName, this::generateClient);
     }
 
+    /**
+     * Get an existing async client or generate a new client for the named bucket if one doesn't exist
+     * @param bucketName the bucket name. If this value is null or empty a default client is returned
+     * @return a client
+     */
     public S3AsyncClient getAsyncClientForBucketName( String bucketName ) {
         logger.debug("obtaining async client for bucket '{}'", bucketName);
         if (bucketName == null || bucketName.trim().equals("")) {
@@ -101,7 +121,7 @@ public class S3ClientStore {
     }
 
     /**
-     * Generate a client for the named bucket using a default client to determine the location of the named client
+     * Generate a client for the named bucket using a default client to determine the location of the named bucket
      * @param bucketName the named of the bucket to make the client for
      * @return an S3 client appropriate for the region of the named bucket
      */
@@ -109,6 +129,11 @@ public class S3ClientStore {
         return this.generateClient(bucketName, DEFAULT_CLIENT);
     }
 
+    /**
+     * Generate an asynchronous client for the named bucket using a default client to determine the location of the named bucket
+     * @param bucketName the named of the bucket to make the client for
+     * @return an asynchronous S3 client appropriate for the region of the named bucket
+     */
     protected S3AsyncClient generateAsyncClient(String bucketName){
         return this.generateAsyncClient(bucketName, DEFAULT_CLIENT);
     }
@@ -165,7 +190,7 @@ public class S3ClientStore {
     }
 
     /**
-     * Generate an asynchronouse client for the named bucket using a default client to determine the location of the named client
+     * Generate an asynchronous client for the named bucket using a default client to determine the location of the named client
      * @param bucketName the named of the bucket to make the client for
      * @param locationClient the client used to determine the location of the named bucket, recommend using DEFAULT_CLIENT
      * @return an S3 client appropriate for the region of the named bucket

@@ -28,7 +28,9 @@ import java.util.regex.PatternSyntaxException;
 public class S3FileSystem extends FileSystem {
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    // View required by Java NIO
+    /**
+     * View required by Java NIO
+     */
     public static final String BASIC_FILE_ATTRIBUTE_VIEW = "basic";
 
     private final String bucketName;
@@ -45,6 +47,11 @@ public class S3FileSystem extends FileSystem {
         this(URI.create(uriString), s3FileSystemProvider);
     }
 
+    /**
+     * Create a filesystem that represents the bucket specified by the URI
+     * @param uri a valid S3 URI to a bucket, e.g <code>URI.create("s3://mybucket")</code>
+     * @param s3FileSystemProvider the provider to be used with this fileSystem
+     */
     protected S3FileSystem(URI uri, S3FileSystemProvider s3FileSystemProvider) {
         super();
         assert uri.getScheme().equals(S3FileSystemProvider.SCHEME);
@@ -53,6 +60,10 @@ public class S3FileSystem extends FileSystem {
         this.provider = s3FileSystemProvider;
     }
 
+    /**
+     * Create a filesystem that represents the named bucket.
+     * @param bucketName the name of the bucket. Must not be null or empty
+     */
     protected S3FileSystem(String bucketName){
         this (URI.create(S3FileSystemProvider.SCHEME + "://" + bucketName), new S3FileSystemProvider());
     }
@@ -117,7 +128,7 @@ public class S3FileSystem extends FileSystem {
     /**
      * Tells whether or not this file system allows only read-only access to
      * its file stores.
-     *
+     * <br>
      * This is currently always false. The ability to write an individual object depend on the IAM role that is used by the principal
      * and the ACL of the bucket, but S3 itself is not inherently read only.
      *
@@ -187,7 +198,7 @@ public class S3FileSystem extends FileSystem {
 
     /**
      * Returns the set of the file attribute views supported by this {@code FileSystem}.
-     *
+     * <br>
      * This FileSystem currently supports only the "basic" file attribute view.
      *
      * @return An unmodifiable set of the names of the supported file attribute

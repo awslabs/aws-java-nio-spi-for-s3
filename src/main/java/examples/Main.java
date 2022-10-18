@@ -18,6 +18,11 @@ import java.nio.file.Paths;
  * is used for permissions.
  */
 public class Main {
+    /**
+     * Demo main method
+     * @param args one or more S3 URIs to read
+     * @throws IOException if something goes wrong
+     */
     public static void main(String[] args) throws IOException {
 
         if(args.length == 0){

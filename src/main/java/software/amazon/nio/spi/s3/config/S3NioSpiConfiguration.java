@@ -15,11 +15,26 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 
+/**
+ * Object to hold configuration of the S3 NIO SPI
+ */
 public class S3NioSpiConfiguration {
 
+    /**
+     * The name of the maximum fragment size property
+     */
     public static final String S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY = "s3.spi.read.max-fragment-size";
+    /**
+     * The default value of the maximum fragment size property
+     */
     public static final String S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT = "5242880";
+    /**
+     * The name of the maximum fragment number property
+     */
     public static final String S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY = "s3.spi.read.max-fragment-number";
+    /**
+     * The default value of the maximum fragment size property
+     */
     public static final String S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT = "50";
 
     private final Properties properties;
@@ -46,21 +61,36 @@ public class S3NioSpiConfiguration {
 
     }
 
+    /**
+     * Create a new, empty configuration
+     */
     public S3NioSpiConfiguration(){
         this(new Properties());
     }
 
+    /**
+     * Create a new configuration with overrides
+     * @param overrides the overrides
+     */
     protected S3NioSpiConfiguration(Properties overrides) {
         Objects.requireNonNull(overrides);
         overrides.stringPropertyNames()
                 .forEach(key -> properties.setProperty(key, overrides.getProperty(key)));
     }
 
+    /**
+     * Get the value of the Maximum Fragment Size
+     * @return the configured value or the default if not overridden
+     */
     public int getMaxFragmentSize(){
         return parseIntProperty(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY,
                 Integer.parseInt(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT));
     }
 
+    /**
+     * Get the value of the Maximum Fragment Number
+     * @return the configured value or the default if not overridden
+     */
     public int getMaxFragmentNumber(){
         return parseIntProperty(S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY,
                 Integer.parseInt(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT));
@@ -77,6 +107,11 @@ public class S3NioSpiConfiguration {
         }
     }
 
+    /**
+     * Generates an environment variable name from a property name. E.g 'some.property' becomes 'SOME_PROPERTY'
+     * @param propertyName the name to convert
+     * @return the converted name
+     */
     protected String convertPropertyNameToEnvVar(String propertyName){
         if(propertyName == null || propertyName.trim().isEmpty()) return "";
 

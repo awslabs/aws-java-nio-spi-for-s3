@@ -28,6 +28,9 @@ import java.util.stream.Stream;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MINUTES;
 
+/**
+ * Representation of {@link BasicFileAttributes} for an S3 object
+ */
 public class S3BasicFileAttributes implements BasicFileAttributes {
 
     private final S3Path path;
@@ -39,10 +42,20 @@ public class S3BasicFileAttributes implements BasicFileAttributes {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
+    /**
+     * Constructor for the attributes of a path
+     * @param path the path to represent the attributes of
+     */
     protected S3BasicFileAttributes(S3Path path){
         this(path, S3ClientStore.getInstance().getAsyncClientForBucketName(path.bucketName()));
     }
 
+    /**
+     * Constructor for the attributes of a path. A client is provided to perform any necessary S3 operations. This
+     * method is suitable for Mocking by providing a Mocked client.
+     * @param path the path to represent the attributes of
+     * @param client the client to use for any S3 operations
+     */
     protected S3BasicFileAttributes(S3Path path, S3AsyncClient client){
         this.path = path;
         this.client = client;
@@ -211,10 +224,19 @@ public class S3BasicFileAttributes implements BasicFileAttributes {
         }
     }
 
+    /**
+     * Construct a <code>Map</code> representation of this object
+     * @return a map
+     */
     protected Map<String, Object> asMap(){
         return asMap(x -> true);
     }
 
+    /**
+     * Construct a <code>Map</code> representation of this object with properties filtered
+     * @param attributeFilter a filter to include properties in the resulting Map
+     * @return a map filtered to only contain keys that pass the attributeFilter
+     */
     protected Map<String, Object> asMap(Predicate<String> attributeFilter){
         HashMap<String, Object> map = new HashMap<>();
         Arrays.stream(this.getClass().getMethods())

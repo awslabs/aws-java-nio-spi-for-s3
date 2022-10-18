@@ -40,12 +40,15 @@ import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExcepti
  * Service-provider class for S3 when represented as an NIO filesystem. The methods defined by the Files class will
  * delegate to an instance of this class when referring to an object in S3. This class will in turn make calls to the
  * S3 service.
- *
+ * <br>
  * This class should never be used directly. It is invoked by the service loader when, for example, the java.nio.file.Files
  * class is used to address an object beginning with the scheme "s3".
  */
 public class S3FileSystemProvider extends FileSystemProvider {
 
+    /**
+     * Constant for the S3 scheme "s3"
+     */
     public static final String SCHEME = "s3";
 
     Logger logger = LoggerFactory.getLogger(this.getClass().getName());
@@ -142,7 +145,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * FileSystems#getDefault default} file system, no permission check is
      * required.
      *
-     * @param uri The URI to convert
+     * @param uri The URI to convert. Must not be null.
      * @return The resulting {@code Path}
      * @throws IllegalArgumentException    If the URI scheme does not identify this provider or other
      *                                     preconditions on the uri parameter do not hold
@@ -407,7 +410,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * machine has appropriate privileges that would allow it to access the file
      * according to all the access modes specified in the {@code modes} parameter
      * as follows:
-     *
+     * <br>
      * <table class="striped">
      * <caption style="display:none">Access Modes</caption>
      * <thead>
