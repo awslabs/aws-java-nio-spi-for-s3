@@ -53,8 +53,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     public static final String SCHEME = "s3";
 
-    private static final Long MULTIPART_UPLOAD_THRESHOLD = 1024L * 500; // 500 MB
-
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
 
