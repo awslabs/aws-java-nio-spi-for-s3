@@ -477,11 +477,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
             for (List<ObjectIdentifier> keyList : keys) {
                 for (ObjectIdentifier objectIdentifier : keyList) {
-                    if (!copyOptions.contains(StandardCopyOption.REPLACE_EXISTING) && exists(s3Client, s3TargetPath)) {
+                    S3Path resolvedS3TargetPath = s3TargetPath.resolve(objectIdentifier.key().replaceFirst(prefix + S3Path.PATH_SEPARATOR, ""));
+
+                    if (!copyOptions.contains(StandardCopyOption.REPLACE_EXISTING) && exists(s3Client, resolvedS3TargetPath)) {
                         throw new FileAlreadyExistsException("File already exists at the target key");
                     }
-
-                    S3Path resolvedS3TargetPath = s3TargetPath.resolve(objectIdentifier.key().replaceFirst(prefix + S3Path.PATH_SEPARATOR, ""));
 
                     try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(s3Client).build()) {
                         s3TransferManager.copy(CopyRequest.builder()
@@ -508,8 +508,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
             return true;
         } catch (ExecutionException e) {
             logger.debug("Could not retrieve object head information", e);
+            return false;
         }
-        return false;
     }
 
     /**
