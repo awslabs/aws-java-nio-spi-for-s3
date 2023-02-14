@@ -48,6 +48,7 @@ dependencies {
 
     implementation 'software.amazon.awssdk:s3'
     implementation 'software.amazon.awssdk:s3-transfer-manager:2.19.26'
+    implementation 'software.amazon.awssdk.crt:aws-crt:0.21.7'
     implementation 'org.slf4j:slf4j-api:1.7.36'
     implementation 'ch.qos.logback:logback-classic:1.2.10'
     implementation 'ch.qos.logback:logback-core:1.2.10'

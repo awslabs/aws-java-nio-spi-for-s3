@@ -200,14 +200,18 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * version of the public method
      */
     protected SeekableByteChannel newByteChannel(S3AsyncClient client, Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
+        if (Objects.isNull(options)) {
+            options = Collections.emptySet();
+        }
+
         final S3Path s3Path = getPath(path.toUri());
         final S3SeekableByteChannel channel;
 
         if (client == null) {
-            channel = new S3SeekableByteChannel(s3Path);
-        } else {
-            channel = new S3SeekableByteChannel(s3Path, client, 0L);
+            client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
         }
+
+        channel = new S3SeekableByteChannel(s3Path, client, options);
         s3Path.getFileSystem().registerOpenChannel(channel);
         return channel;
     }
@@ -490,7 +494,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
                                         .destinationBucket(resolvedS3TargetPath.bucketName())
                                         .destinationKey(resolvedS3TargetPath.getKey())
                                         .build())
-                                .build()).completionFuture().get();
+                                .build()).completionFuture().join();
                     }
                 }
             }
@@ -499,12 +503,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
     }
 
-    private boolean exists(S3AsyncClient s3Client, S3Path path) throws InterruptedException, TimeoutException {
+    protected boolean exists(S3AsyncClient s3Client, S3Path path) throws InterruptedException, TimeoutException {
         try {
             s3Client.headObject(HeadObjectRequest.builder().bucket(path.bucketName()).key(path.getKey()).build())
                     .get(TIMEOUT_TIME_LENGTH_1, MINUTES);
             return true;
-        } catch (ExecutionException e) {
+        } catch (ExecutionException | NoSuchKeyException e) {
             logger.debug("Could not retrieve object head information", e);
             return false;
         }

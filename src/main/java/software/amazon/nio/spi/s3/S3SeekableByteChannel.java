@@ -7,61 +7,58 @@ package software.amazon.nio.spi.s3;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
-import software.amazon.nio.spi.s3.util.TimeOutUtils;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
+import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.SeekableByteChannel;
-import java.nio.channels.WritableByteChannel;
+import java.nio.channels.*;
+import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public class S3SeekableByteChannel implements SeekableByteChannel {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(S3SeekableByteChannel.class);
+
     private long position;
     private final S3AsyncClient s3Client;
     private final S3Path path;
     private final ReadableByteChannel readDelegate;
-    //private final WritableByteChannel writeDelegate; // placeholder for when we implement writes.
+    private final S3WritableByteChannel writeDelegate;
 
+    private boolean closed;
     private long size = -1L;
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
+    protected S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client) throws IOException {
+        this(s3Path, s3Client, Collections.emptySet());
+    }
 
-    protected S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, long startAt) throws IOException{
-        position = startAt;
+    protected S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, Set<? extends OpenOption> options) throws IOException {
+        position = 0L;
         path = s3Path;
+        closed = false;
         this.s3Client = s3Client;
         s3Path.getFileSystem().registerOpenChannel(this);
 
         // later we will add a constructor that allows providing delegates for composition
-        logger.info("using S3ReadAheadByteChannel as read delegate for path '{}'", s3Path.toUri());
+
         S3NioSpiConfiguration config = new S3NioSpiConfiguration();
-        readDelegate = new S3ReadAheadByteChannel(s3Path, config.getMaxFragmentSize(), config.getMaxFragmentNumber(), s3Client, this);
-    }
-
-    /**
-     * Open a new byte channel
-     * @param s3Path the path that the channel will read from
-     * @param startAt the byte offset to start at (0 is the beginning).
-     */
-    protected S3SeekableByteChannel(S3Path s3Path, long startAt) throws IOException {
-        this(s3Path, S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName()), startAt);
-    }
-
-    /**
-     * Equivalent to: {@code new S3SeekableByteChannel(s3Path, 0L)}
-     * @param s3Path the path to open the byte channel for.
-     */
-    protected S3SeekableByteChannel(S3Path s3Path) throws IOException {
-        this(s3Path, S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName()), 0L);
+        if (options.contains(StandardOpenOption.WRITE)) {
+            LOGGER.info("using S3WritableByteChannel as write delegate for path '{}'", s3Path.toUri());
+            readDelegate = null;
+            writeDelegate = new S3WritableByteChannel(s3Path, s3Client, options);
+        } else {
+            LOGGER.info("using S3ReadAheadByteChannel as read delegate for path '{}'", s3Path.toUri());
+            readDelegate = new S3ReadAheadByteChannel(s3Path, config.getMaxFragmentSize(), config.getMaxFragmentNumber(), s3Client, this);
+            writeDelegate = null;
+        }
     }
 
     /**
@@ -77,6 +74,12 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
      */
     @Override
     public int read(ByteBuffer dst) throws IOException {
+        validateOpen();
+
+        if (readDelegate == null) {
+            throw new NonReadableChannelException();
+        }
+
         return readDelegate.read(dst);
     }
 
@@ -95,8 +98,17 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
      * @param src the src of the bytes to write to this channel
      */
     @Override
-    public int write(ByteBuffer src) {
-        throw new UnsupportedOperationException("this channel is read only");
+    public int write(ByteBuffer src) throws IOException {
+        validateOpen();
+
+        if (writeDelegate == null) {
+            throw new NonWritableChannelException();
+        }
+
+        int length = src.remaining();
+        this.position += length;
+
+        return writeDelegate.write(src);
     }
 
     /**
@@ -107,7 +119,9 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
      * from the beginning of the entity to the current position
      */
     @Override
-    public long position() {
+    public long position() throws IOException {
+        validateOpen();
+
         synchronized (this) {
             return position;
         }
@@ -138,9 +152,16 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
      */
     @Override
     public SeekableByteChannel position(long newPosition) throws IOException {
-        if (newPosition < 0) throw new IllegalArgumentException("newPosition cannot be < 0");
+        if (newPosition < 0)
+            throw new IllegalArgumentException("newPosition cannot be < 0");
+
         if (!isOpen()) {
             throw new ClosedChannelException();
+        }
+
+        // this is only valid to read channels
+        if (readDelegate == null) {
+            throw new NonReadableChannelException();
         }
 
         synchronized (this) {
@@ -153,32 +174,34 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
      * Returns the current size of entity to which this channel is connected.
      *
      * @return The current size, measured in bytes
-     * @throws IOException            If some other I/O error occurs
+     * @throws IOException If some other I/O error occurs
      */
     @Override
     public long size() throws IOException {
+        validateOpen();
+
         if (size < 0) {
 
             long timeOut = TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
             TimeUnit unit = TimeUnit.MINUTES;
 
-            logger.debug("requesting size of '{}'", path.toUri());
+            LOGGER.debug("requesting size of '{}'", path.toUri());
             synchronized (this) {
                 final HeadObjectResponse headObjectResponse;
                 try {
                     headObjectResponse = s3Client.headObject(builder -> builder
                             .bucket(path.bucketName())
                             .key(path.getKey())).get(timeOut, unit);
-                } catch (InterruptedException e){
+                } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     throw new RuntimeException(e);
                 } catch (ExecutionException e) {
                     throw new IOException(e);
-                } catch (TimeoutException e){
-                    throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(logger, "size", timeOut, unit);
+                } catch (TimeoutException e) {
+                    throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(LOGGER, "size", timeOut, unit);
                 }
 
-                logger.debug("size of '{}' is '{}'", path.toUri(), headObjectResponse.contentLength());
+                LOGGER.debug("size of '{}' is '{}'", path.toUri(), headObjectResponse.contentLength());
                 this.size = headObjectResponse.contentLength();
             }
         }
@@ -204,7 +227,7 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
      */
     @Override
     public SeekableByteChannel truncate(long size) {
-        throw new UnsupportedOperationException("this channel is read only");
+        throw new UnsupportedOperationException("Currently not supported");
     }
 
     /**
@@ -214,9 +237,8 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
      */
     @Override
     public boolean isOpen() {
-        logger.debug("read delegate is: '{}'", readDelegate);
         synchronized (this) {
-            return readDelegate.isOpen();
+            return !this.closed;
         }
     }
 
@@ -234,13 +256,24 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
      * already invoked it, however, then another invocation will block until
      * the first invocation is complete, after which it will return without
      * effect. </p>
-     *
      */
     @Override
     public void close() throws IOException {
-        synchronized (this){
-            readDelegate.close();
+        synchronized (this) {
+            if (readDelegate != null) {
+                readDelegate.close();
+            }
+            if (writeDelegate != null) {
+                writeDelegate.close();
+            }
+            closed = true;
             path.getFileSystem().deregisterClosedChannel(this);
+        }
+    }
+
+    private void validateOpen() throws ClosedChannelException {
+        if (this.closed) {
+            throw new ClosedChannelException();
         }
     }
 }

@@ -260,11 +260,8 @@ public class S3ClientStore {
         Region region = regionString.equals("") ? Region.US_EAST_1 : Region.of(regionString);
         logger.debug("bucket region is: '{}'", region.id());
 
-        return S3AsyncClient.builder()
+        return S3AsyncClient.crtBuilder()
                 .region(region)
-                .overrideConfiguration(conf -> conf.retryPolicy(builder -> builder
-                        .retryCondition(retryCondition)
-                        .backoffStrategy(backoffStrategy)))
                 .build();
     }
 
