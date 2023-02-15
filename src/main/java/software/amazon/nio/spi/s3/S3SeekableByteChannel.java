@@ -74,6 +74,13 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
         this.s3Client = s3Client;
         s3Path.getFileSystem().registerOpenChannel(this);
 
+        if (options.contains(StandardOpenOption.WRITE) && options.contains(StandardOpenOption.READ)) {
+            throw new IOException("This channel does not support read and write access simultaneously");
+        }
+        if (options.contains(StandardOpenOption.SYNC) || options.contains(StandardOpenOption.DSYNC)) {
+            throw new IOException("The SYNC/DSYNC options is not supported");
+        }
+
         // later we will add a constructor that allows providing delegates for composition
 
         S3NioSpiConfiguration config = new S3NioSpiConfiguration();
@@ -82,10 +89,12 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
             readDelegate = null;
             writeDelegate = new S3WritableByteChannel(s3Path, s3Client, options);
             position = 0L;
-        } else {
+        } else if (options.contains(StandardOpenOption.READ)) {
             LOGGER.info("using S3ReadAheadByteChannel as read delegate for path '{}'", s3Path.toUri());
             readDelegate = new S3ReadAheadByteChannel(s3Path, config.getMaxFragmentSize(), config.getMaxFragmentNumber(), s3Client, this);
             writeDelegate = null;
+        } else {
+            throw new IOException("Invalid channel mode");
         }
     }
 
