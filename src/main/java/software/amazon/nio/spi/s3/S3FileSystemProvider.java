@@ -665,10 +665,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * Composable and testable version of {@code checkAccess} that uses the provided client to check access
      */
     protected void checkAccess(S3AsyncClient s3Client, Path path, AccessMode... modes) throws IOException, ExecutionException, InterruptedException {
-        if (Arrays.asList(modes).contains(AccessMode.WRITE)) {
-            throw new UnsupportedOperationException("WRITE is not currently supported. Please raise a feature request if you want this.");
-        }
-
         assert path instanceof S3Path;
         S3Path s3Path = (S3Path) path.toRealPath(NOFOLLOW_LINKS);
         final String bucketName = s3Path.getFileSystem().bucketName();

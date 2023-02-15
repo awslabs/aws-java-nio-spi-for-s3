@@ -281,9 +281,13 @@ public class S3FileSystemProviderTest {
         provider.checkAccess(mockClient, foo);
     }
 
-    @Test(expected = UnsupportedOperationException.class) // TODO
-    public void checkWriteAccess() throws IOException {
-        provider.checkAccess(fs.getPath("foo"), AccessMode.WRITE);
+    @Test
+    public void checkWriteAccess() throws IOException, ExecutionException, InterruptedException {
+        when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
+                HeadObjectResponse.builder()
+                        .sdkHttpResponse(SdkHttpResponse.builder().statusCode(200).build())
+                        .build()));
+        provider.checkAccess(mockClient, fs.getPath("foo"), AccessMode.WRITE);
     }
 
     @Test
