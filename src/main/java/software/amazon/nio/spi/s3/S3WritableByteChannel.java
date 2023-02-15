@@ -36,7 +36,7 @@ public class S3WritableByteChannel implements WritableByteChannel {
                 throw new FileAlreadyExistsException("File at path:" + path + " already exists");
             }
             if (!exists && !options.contains(StandardOpenOption.CREATE_NEW) && !options.contains(StandardOpenOption.CREATE)) {
-                throw new NoSuchFileException("File at path:" + path + " does exist yet");
+                throw new NoSuchFileException("File at path:" + path + " does not exist yet");
             }
 
             tempFile = Files.createTempFile("aws-s3-nio-", ".tmp");
