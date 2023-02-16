@@ -43,6 +43,8 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
     private final int maxNumberFragments;
     private final int numFragmentsInObject;
     private final long size;
+    private final Long timeout;
+    private final TimeUnit timeUnit;
     private boolean open;
     private final Cache<Integer, CompletableFuture<ByteBuffer>> readAheadBuffersCache;
 
@@ -53,19 +55,22 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
      * Construct a new {@code S3ReadAheadByteChannel} which is used by its parent delegator to perform read operations.
      * The channel is backed by a cache that holds the buffered fragments of the object identified
      * by the {@code path}.
-     * @param path the path to the S3 object being read
-     * @param maxFragmentSize the maximum amount of bytes in a read ahead fragment. Must be {@code >= 1}.
+     *
+     * @param path               the path to the S3 object being read
+     * @param maxFragmentSize    the maximum amount of bytes in a read ahead fragment. Must be {@code >= 1}.
      * @param maxNumberFragments the maximum number of read ahead fragments to hold. Must be {@code >= 2}.
-     * @param client the client used to read from the {@code path}
-     * @param delegator the {@code S3SeekableByteChannel} that delegates reading to this object.
+     * @param client             the client used to read from the {@code path}
+     * @param delegator          the {@code S3SeekableByteChannel} that delegates reading to this object.
      * @throws IOException if a problem occurs initializing the cached fragments
      */
-    public S3ReadAheadByteChannel(S3Path path, int maxFragmentSize, int maxNumberFragments, S3AsyncClient client, S3SeekableByteChannel delegator) throws IOException {
+    public S3ReadAheadByteChannel(S3Path path, int maxFragmentSize, int maxNumberFragments, S3AsyncClient client, S3SeekableByteChannel delegator, Long timeout, TimeUnit timeUnit) throws IOException {
         Objects.requireNonNull(path);
         Objects.requireNonNull(client);
         Objects.requireNonNull(delegator);
-        if(maxFragmentSize < 1) throw new IllegalArgumentException("maxFragmentSize must be >= 1");
-        if(maxNumberFragments < 2) throw new IllegalArgumentException("maxNumberFragments must be >= 2");
+        if (maxFragmentSize < 1)
+            throw new IllegalArgumentException("maxFragmentSize must be >= 1");
+        if (maxNumberFragments < 2)
+            throw new IllegalArgumentException("maxNumberFragments must be >= 2");
 
         logger.info("max read ahead fragments '{}' with size '{}' bytes", maxNumberFragments, maxFragmentSize);
         this.client = client;
@@ -73,10 +78,12 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
         this.delegator = delegator;
         this.size = delegator.size();
         this.maxFragmentSize = maxFragmentSize;
-        this.numFragmentsInObject = (int) Math.ceil((float) size / (float)maxFragmentSize);
+        this.numFragmentsInObject = (int) Math.ceil((float) size / (float) maxFragmentSize);
         this.readAheadBuffersCache = Caffeine.newBuilder().maximumSize(maxNumberFragments).recordStats().build();
         this.maxNumberFragments = maxNumberFragments;
         this.open = true;
+        this.timeout = timeout != null ? timeout : TimeOutUtils.TIMEOUT_TIME_LENGTH_5;
+        this.timeUnit = timeUnit != null ? timeUnit : TimeUnit.MINUTES;
     }
 
     @Override
@@ -98,7 +105,7 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
 
         try {
             final ByteBuffer fragment = Objects.requireNonNull(readAheadBuffersCache.get(fragmentIndex, this::computeFragmentFuture))
-                    .get(TimeOutUtils.TIMEOUT_TIME_LENGTH_5, TimeUnit.MINUTES)
+                    .get(timeout, timeUnit)
                     .asReadOnlyBuffer();
 
             fragment.position(fragmentOffset);
@@ -113,19 +120,20 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
             fragment.get(copiedBytes, 0, limit);
             dst.put(copiedBytes);
 
-            if(fragment.position() >= fragment.limit() / 2){
+            if (fragment.position() >= fragment.limit() / 2) {
 
                 // clear any fragments in cache that are lower index than this one
                 clearPriorFragments(fragmentIndex);
 
                 // until available cache slots are filled or number of fragments in file
-                int maxFragmentsToLoad = Math.min(maxNumberFragments -1, numFragmentsInObject - fragmentIndex -1);
+                int maxFragmentsToLoad = Math.min(maxNumberFragments - 1, numFragmentsInObject - fragmentIndex - 1);
 
                 for (int i = 0; i < maxFragmentsToLoad; i++) {
                     final int idxToLoad = i + fragmentIndex + 1;
 
                     //  add the index if it's not already there
-                    if(readAheadBuffersCache.asMap().containsKey(idxToLoad)) continue;
+                    if (readAheadBuffersCache.asMap().containsKey(idxToLoad))
+                        continue;
 
                     logger.debug("initiate pre-loading fragment with index '{}' from '{}'", idxToLoad, path.toUri());
                     readAheadBuffersCache.put(idxToLoad, computeFragmentFuture(idxToLoad));
@@ -135,7 +143,7 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
             delegator.position(channelPosition + copiedBytes.length);
             return copiedBytes.length;
 
-        } catch (InterruptedException e){
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         } catch (ExecutionException e) {
@@ -143,20 +151,20 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
             // not currently obvious when this will happen or if we can recover
             logger.error("an exception occurred while reading bytes from {} that was not recovered by the S3 Client RetryCondition(s)", path.toUri());
             throw new IOException(e);
-        } catch (TimeoutException e){
+        } catch (TimeoutException e) {
             throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(logger, "read",
                     TimeOutUtils.TIMEOUT_TIME_LENGTH_5, TimeUnit.MINUTES);
         }
     }
 
-    private void clearPriorFragments(int currentFragIndx){
+    private void clearPriorFragments(int currentFragIndx) {
         final Set<@NonNull Integer> priorIndexes = readAheadBuffersCache
                 .asMap()
                 .keySet().stream()
                 .filter(idx -> idx < currentFragIndx)
                 .collect(Collectors.toSet());
 
-        if(priorIndexes.size() > 0) {
+        if (priorIndexes.size() > 0) {
             logger.debug("invalidating fragment(s) '{}' from '{}'",
                     priorIndexes.stream().map(Objects::toString).collect(Collectors.joining(", ")), path.toUri());
 
@@ -178,9 +186,10 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
 
     /**
      * The number of fragments currently in the cache.
+     *
      * @return the size of the cache after any async evictions or reloads have happened.
      */
-    protected int numberOfCachedFragments(){
+    protected int numberOfCachedFragments() {
         readAheadBuffersCache.cleanUp();
         return (int) readAheadBuffersCache.estimatedSize();
     }
@@ -188,33 +197,35 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
     /**
      * Obtain a snapshot of the statistics of the internal cache, provides information about hits, misses, requests, evictions etc.
      * that are useful for tuning.
+     *
      * @return the statistics of the internal cache.
      */
-    protected CacheStats cacheStatistics(){
+    protected CacheStats cacheStatistics() {
         return readAheadBuffersCache.stats();
     }
 
-    private CompletableFuture<ByteBuffer> computeFragmentFuture(int fragmentIndex){
+    private CompletableFuture<ByteBuffer> computeFragmentFuture(int fragmentIndex) {
         long readFrom = (long) fragmentIndex * maxFragmentSize;
-        long readTo = Math.min(readFrom + maxFragmentSize, size) -1;
+        long readTo = Math.min(readFrom + maxFragmentSize, size) - 1;
         String range = "bytes=" + readFrom + "-" + readTo;
         logger.debug("byte range for {} is '{}'", path.getKey(), range);
 
         return client.getObject(
-                    builder -> builder
-                        .bucket(path.bucketName())
-                        .key(path.getKey())
-                        .range(range),
-                    AsyncResponseTransformer.toBytes())
+                        builder -> builder
+                                .bucket(path.bucketName())
+                                .key(path.getKey())
+                                .range(range),
+                        AsyncResponseTransformer.toBytes())
                 .thenApply(BytesWrapper::asByteBuffer);
     }
 
     /**
      * Compute which buffer a byte should be in
+     *
      * @param byteNumber the number of the byte in the object accessed by this channel
      * @return the index of the fragment in which {@code byteNumber} will be found.
      */
-    protected Integer fragmentIndexForByteNumber(long byteNumber){
-        return Math.toIntExact(Math.floorDiv(byteNumber, (long)maxFragmentSize));
+    protected Integer fragmentIndexForByteNumber(long byteNumber) {
+        return Math.toIntExact(Math.floorDiv(byteNumber, (long) maxFragmentSize));
     }
 }

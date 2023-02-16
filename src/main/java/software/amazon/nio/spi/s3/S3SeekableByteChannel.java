@@ -37,7 +37,7 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
     private long size = -1L;
 
     protected S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client) throws IOException {
-        this(s3Path, s3Client, Collections.emptySet());
+        this(s3Path, s3Client, Collections.singleton(StandardOpenOption.READ));
     }
 
     /**
@@ -46,7 +46,7 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
      */
     @Deprecated
     protected S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, long startAt) throws IOException {
-        this(s3Path, s3Client, startAt, Collections.emptySet());
+        this(s3Path, s3Client, startAt, Collections.singleton(StandardOpenOption.READ), null, null);
     }
 
     /**
@@ -59,15 +59,18 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
     }
 
     protected S3SeekableByteChannel(S3Path s3Path) throws IOException {
-        this(s3Path, S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName()), Collections.emptySet());
+        this(s3Path, S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName()), Collections.singleton(StandardOpenOption.READ));
     }
-
 
     protected S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, Set<? extends OpenOption> options) throws IOException {
-        this(s3Path, s3Client, 0L, options);
+        this(s3Path, s3Client, 0L, options, null, null);
     }
 
-    private S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, long startAt, Set<? extends OpenOption> options) throws IOException {
+    protected S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, Set<? extends OpenOption> options, long timeout, TimeUnit timeUnit) throws IOException {
+        this(s3Path, s3Client, 0L, options, timeout, timeUnit);
+    }
+
+    private S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, long startAt, Set<? extends OpenOption> options, Long timeout, TimeUnit timeUnit) throws IOException {
         position = startAt;
         path = s3Path;
         closed = false;
@@ -87,11 +90,11 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
         if (options.contains(StandardOpenOption.WRITE)) {
             LOGGER.info("using S3WritableByteChannel as write delegate for path '{}'", s3Path.toUri());
             readDelegate = null;
-            writeDelegate = new S3WritableByteChannel(s3Path, s3Client, options);
+            writeDelegate = new S3WritableByteChannel(s3Path, s3Client, options, timeout, timeUnit);
             position = 0L;
         } else if (options.contains(StandardOpenOption.READ)) {
             LOGGER.info("using S3ReadAheadByteChannel as read delegate for path '{}'", s3Path.toUri());
-            readDelegate = new S3ReadAheadByteChannel(s3Path, config.getMaxFragmentSize(), config.getMaxFragmentNumber(), s3Client, this);
+            readDelegate = new S3ReadAheadByteChannel(s3Path, config.getMaxFragmentSize(), config.getMaxFragmentNumber(), s3Client, this, timeout, timeUnit);
             writeDelegate = null;
         } else {
             throw new IOException("Invalid channel mode");

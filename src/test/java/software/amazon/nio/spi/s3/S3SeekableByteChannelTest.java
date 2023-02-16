@@ -24,6 +24,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.any;
@@ -42,8 +43,11 @@ public class S3SeekableByteChannelTest {
 
     @Before
     public void init() {
+        // forward to the method that uses the HeadObjectRequest parameter
+        when(mockClient.headObject(any(Consumer.class))).thenCallRealMethod();
         when(mockClient.headObject(any(HeadObjectRequest.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
+        when(mockClient.getObject(any(Consumer.class), any(AsyncResponseTransformer.class))).thenCallRealMethod();
         when(mockClient.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> ResponseBytes.fromByteArray(
                         GetObjectResponse.builder().contentLength(6L).build(),

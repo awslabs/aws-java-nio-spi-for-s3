@@ -81,7 +81,7 @@ public class S3FileSystemProviderTest {
 
     @Test
     public void newByteChannel() throws IOException {
-        final SeekableByteChannel channel = provider.newByteChannel(mockClient, Paths.get(URI.create(pathUri)), Collections.emptySet());
+        final SeekableByteChannel channel = provider.newByteChannel(mockClient, Paths.get(URI.create(pathUri)), Collections.singleton(StandardOpenOption.READ));
         assertNotNull(channel);
         assertTrue(channel instanceof S3SeekableByteChannel);
     }
