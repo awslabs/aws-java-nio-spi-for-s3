@@ -115,15 +115,31 @@ reduce the number of requests to the S3 service.
 
 Ensure sufficient memory is available to your JVM if you increase the fragment size or fragment number.
 
+## Writing Files
+
+The mode of the channel is controlled with the `StandardOpenOptions`. To open a channel for write access you need to 
+supply the option `StandardOpenOption.READ`. All write operations on the channel will be gathered in a temporary file,
+which will be uploaded to S3 upon closing the channel.
+
+Be aware, that the current implementation only supports channels to be used either for read or write due to potential
+consistency issues we may face in some cases.
+
+### Configuration
+
+The handling of large files could take potentially very long, therefore there are currently no timeouts configured per 
+default. However, you may configure timeouts via the `S3SeekableByteChannel`.
+
+#### Timeouts
+To configure timeouts for writing files or opening files for write access, you may use the `Long timeout` and 
+`TimeUnit timeUnit` parameters of the `S3SeekableByteChannel` constructor.
+```java
+new S3SeekableByteChannel(s3Path, s3Client, channelOpenOptions, timeout, timeUnit);
+```
+
 ## Design Decisions
 
 As an object store, S3 is not completely analogous to a traditional file system. Therefore, several opinionated decisions
 were made to map filesystem concepts to S3 concepts.
-
-### Read Only
-
-The current implementation only supports read operations. It would be possible to add write operations, however special consideration
-would be needed due to the lack of support for random writes in S3 and the read-after-write consistency of S3 objects.
 
 ### A Bucket is a `FileSystem`
 
