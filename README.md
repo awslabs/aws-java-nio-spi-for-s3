@@ -126,7 +126,7 @@ consistency issues we may face in some cases. Attempting to open a channel for b
 
 ### Configuration
 
-The handling of large files could take potentially very long, therefore there are currently no timeouts configured per 
+Because we cannot predict the time it would take to write files, there are currently no timeouts configured per 
 default. However, you may configure timeouts via the `S3SeekableByteChannel`.
 
 #### Timeouts
