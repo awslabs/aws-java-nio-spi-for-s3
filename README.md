@@ -122,7 +122,7 @@ supply the option `StandardOpenOption.READ`. All write operations on the channel
 which will be uploaded to S3 upon closing the channel.
 
 Be aware, that the current implementation only supports channels to be used either for read or write due to potential
-consistency issues we may face in some cases.
+consistency issues we may face in some cases. Attempting to open a channel for both read and write will result in an error.
 
 ### Configuration
 
