@@ -11,9 +11,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystems;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collections;
 
 import static org.junit.Assert.*;
@@ -37,7 +35,7 @@ public class S3FileSystemTest {
 
 
     @Test
-    public void close() throws IOException{
+    public void close() throws IOException {
         assertEquals(0, s3FileSystem.getOpenChannels().size());
         s3FileSystem.close();
         assertFalse("File system should return false from isOpen when closed has been called", s3FileSystem.isOpen());
@@ -89,8 +87,9 @@ public class S3FileSystemTest {
     }
 
 
-    @Test(expected = UnsupportedOperationException.class) //thrown because cannot be modified
-    public void testGetOpenChannelsIsNotModifiable() throws IOException {
-        s3FileSystem.getOpenChannels().add(Files.newByteChannel(Paths.get(".")));
+    @Test(expected = UnsupportedOperationException.class)
+    //thrown because cannot be modified
+    public void testGetOpenChannelsIsNotModifiable() {
+        s3FileSystem.getOpenChannels().add(null);
     }
 }

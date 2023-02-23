@@ -44,9 +44,11 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:4.3.1'
 
-    implementation platform('software.amazon.awssdk:bom:2.17.285')
+    implementation platform('software.amazon.awssdk:bom:2.19.26')
 
     implementation 'software.amazon.awssdk:s3'
+    implementation 'software.amazon.awssdk:s3-transfer-manager:2.19.26'
+    implementation 'software.amazon.awssdk.crt:aws-crt:0.21.7'
     implementation 'org.slf4j:slf4j-api:1.7.36'
     implementation 'ch.qos.logback:logback-classic:1.2.10'
     implementation 'ch.qos.logback:logback-core:1.2.10'
@@ -65,7 +67,7 @@ publishing {
                         'access to S3 objects for Java applications using Java NIO.2 for file access.'
                 url = 'https://github.com/awslabs/aws-java-nio-spi-for-s3'
                 inceptionYear = '2022'
-                scm{
+                scm {
                     url = 'https://github.com/awslabs/aws-java-nio-spi-for-s3/tree/main'
                     connection = 'scm:git:ssh://git@github.com/awslabs/aws-java-nio-spi-for-s3.git'
                     developerConnection = 'scm:git:ssh://git@github.com/awslabs/aws-java-nio-spi-for-s3.git'
@@ -90,7 +92,7 @@ publishing {
         }
     }
     repositories {
-        maven{
+        maven {
             def releasesRepoUrl = 'https://aws.oss.sonatype.org/service/local/staging/deploy/maven2/'
             def snapshotsRepoUrl = 'https://aws.oss.sonatype.org/content/repositories/snapshots'
             url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
@@ -104,7 +106,7 @@ signing {
 }
 
 javadoc {
-    if(JavaVersion.current().isJava9Compatible()) {
+    if (JavaVersion.current().isJava9Compatible()) {
         options.addBooleanOption('html5', true)
     }
 }

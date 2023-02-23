@@ -51,7 +51,7 @@ public class S3ReadAheadByteChannelTest {
         final ResponseBytes<GetObjectResponse> bytes2 = ResponseBytes.fromByteArray(response, "ABCDEFGHIJKLMNOPQRSTUVWXYZ".getBytes(StandardCharsets.UTF_8));
         when(client.getObject(any(Consumer.class), any(ByteArrayAsyncResponseTransformer.class))).thenReturn(CompletableFuture.supplyAsync(() -> bytes1), CompletableFuture.supplyAsync(() -> bytes2));
 
-        readAheadByteChannel = new S3ReadAheadByteChannel(path, 26, 2, client, delegator);
+        readAheadByteChannel = new S3ReadAheadByteChannel(path, 26, 2, client, delegator, null, null);
     }
 
     @Test
@@ -123,7 +123,7 @@ public class S3ReadAheadByteChannelTest {
     }
 
     @Test
-    public void shouldSignalFinished() throws IOException{
+    public void shouldSignalFinished() throws IOException {
         when(delegator.position()).thenReturn(52L);
         ByteBuffer dst = ByteBuffer.allocate(6);
 
@@ -147,7 +147,7 @@ public class S3ReadAheadByteChannelTest {
     }
 
     @Test
-    public void fragmentIndexForByteNumber(){
+    public void fragmentIndexForByteNumber() {
         assertEquals(Integer.valueOf(0), readAheadByteChannel.fragmentIndexForByteNumber(0L));
         assertEquals(Integer.valueOf(1), readAheadByteChannel.fragmentIndexForByteNumber(26L));
     }
