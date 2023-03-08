@@ -22,7 +22,7 @@ repositories {
 
 group = 'software.amazon.nio.s3'
 archivesBaseName = 'nio-spi-for-s3'
-version = '1.2.0'
+version = '1.2.1'
 
 apply plugin: 'java'
 sourceCompatibility = 1.8
@@ -44,7 +44,7 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:4.3.1'
 
-    implementation platform('software.amazon.awssdk:bom:2.19.26')
+    implementation platform('software.amazon.awssdk:bom:2.20.19')
 
     implementation 'software.amazon.awssdk:s3'
     implementation 'software.amazon.awssdk:s3-transfer-manager:2.19.26'
