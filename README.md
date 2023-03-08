@@ -42,6 +42,21 @@ As a concrete example, using Java 9+ with the popular genomics application [GATK
 java -classpath build/libs/nio-spi-for-s3-1.1.0-all.jar:gatk-package-4.2.2.0-local.jar org.broadinstitute.hellbender.Main CountReads -I s3://<some-bucket>/ena/PRJEB3381/ERR194158/ERR194158.hg38.bam
 ```
 
+## Including as a dependency
+
+Releases of this library are available from Maven Central and can be added to projects using the standard dependency
+declarations.
+
+For example:
+
+```xml
+<dependency>
+    <groupId>software.amazon.nio.s3</groupId>
+    <artifactId>aws-java-nio-spi-for-s3</artifactId>
+    <version>1.2.0</version>
+</dependency>
+```
+
 ## AWS Credentials
 
 This library will perform all actions using credentials according to the AWS SDK for Java [default credential provider
