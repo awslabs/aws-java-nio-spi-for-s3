@@ -32,7 +32,7 @@ public class Main {
 
         for (String pathString : args) {
 
-            // if the URI starts with "s3:" then Paths will use the s3fs spi to handle the paths and reading
+            // if the URI starts with "s3:" then Paths will use the spi to handle the paths and reading
             final Path path = Paths.get(URI.create(pathString));
 
             // proves that the correct path type is being used
