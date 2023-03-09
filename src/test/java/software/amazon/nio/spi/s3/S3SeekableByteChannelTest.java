@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -55,6 +56,12 @@ public class S3SeekableByteChannelTest {
 
         fs = new S3FileSystem("test-bucket");
         path = fs.getPath("/object");
+    }
+
+    @Test
+    public void readDelegateConstructedByDefault() throws IOException {
+        S3SeekableByteChannel channel = new S3SeekableByteChannel(path, mockClient);
+        assertNotNull(channel.getReadDelegate());
     }
 
     @Test

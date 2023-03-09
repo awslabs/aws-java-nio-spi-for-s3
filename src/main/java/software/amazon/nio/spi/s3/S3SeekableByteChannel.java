@@ -92,7 +92,7 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
             readDelegate = null;
             writeDelegate = new S3WritableByteChannel(s3Path, s3Client, options, timeout, timeUnit);
             position = 0L;
-        } else if (options.contains(StandardOpenOption.READ)) {
+        } else if (options.contains(StandardOpenOption.READ) || options.size() == 0) {
             LOGGER.info("using S3ReadAheadByteChannel as read delegate for path '{}'", s3Path.toUri());
             readDelegate = new S3ReadAheadByteChannel(s3Path, config.getMaxFragmentSize(), config.getMaxFragmentNumber(), s3Client, this, timeout, timeUnit);
             writeDelegate = null;
@@ -315,5 +315,21 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
         if (this.closed) {
             throw new ClosedChannelException();
         }
+    }
+
+    /**
+     * Access the underlying {@code ReadableByteChannel} used for reading
+     * @return the channel. May be null if opened for writing only
+     */
+    protected ReadableByteChannel getReadDelegate() {
+        return this.readDelegate;
+    }
+
+    /**
+     * Access the underlying {@code WritableByteChannel} used for writing
+     * @return the channel. May be null if opened for reading only
+     */
+    protected WritableByteChannel getWriteDelegate() {
+        return this.writeDelegate;
     }
 }
