@@ -133,7 +133,7 @@ Ensure sufficient memory is available to your JVM if you increase the fragment s
 ## Writing Files
 
 The mode of the channel is controlled with the `StandardOpenOptions`. To open a channel for write access you need to 
-supply the option `StandardOpenOption.READ`. All write operations on the channel will be gathered in a temporary file,
+supply the option `StandardOpenOption.WRITE`. All write operations on the channel will be gathered in a temporary file,
 which will be uploaded to S3 upon closing the channel.
 
 Be aware, that the current implementation only supports channels to be used either for read or write due to potential
