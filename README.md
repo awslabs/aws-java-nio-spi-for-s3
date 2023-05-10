@@ -1,3 +1,5 @@
+[![Java CI with Gradle](https://github.com/awslabs/aws-java-nio-spi-for-s3/actions/workflows/gradle.yml/badge.svg)](https://github.com/awslabs/aws-java-nio-spi-for-s3/actions/workflows/gradle.yml)
+
 # AWS Java NIO SPI for S3
 
 A Java NIO.2 service provider for S3, allowing Java NIO operations to be performed on paths using the `s3` scheme. This
