@@ -42,7 +42,7 @@ compileJava {
 dependencies {
     // Use JUnit test framework.
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.mockito:mockito-core:4.3.1'
+    testImplementation 'org.mockito:mockito-core:5.3.1'
 
     implementation platform('software.amazon.awssdk:bom:2.20.73')
 
