@@ -44,7 +44,7 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:5.3.1'
 
-    implementation platform('software.amazon.awssdk:bom:2.20.74')
+    implementation platform('software.amazon.awssdk:bom:2.20.75')
 
     implementation 'software.amazon.awssdk:s3'
     implementation 'software.amazon.awssdk:s3-transfer-manager:2.20.74'
