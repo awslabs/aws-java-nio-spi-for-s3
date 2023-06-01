@@ -6,6 +6,6 @@ gradle.properties
 
 # Ignore Gradle build output directory
 build
-target
+
 #MacOS
 .DS_Store
