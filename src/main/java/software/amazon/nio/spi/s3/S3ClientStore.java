@@ -84,13 +84,7 @@ public class S3ClientStore {
 
     Logger logger = LoggerFactory.getLogger("S3ClientStore");
 
-    private S3ClientStore(){}
-
-    /**
-     * Get the ClientStore instance
-     * @return a singleton
-     */
-    public static S3ClientStore getInstance() { return instance; }
+    public S3ClientStore(){}
 
     /**
      * Get an existing client or generate a new client for the named bucket if one doesn't exist
