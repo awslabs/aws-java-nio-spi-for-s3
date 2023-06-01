@@ -84,13 +84,20 @@ public class S3ClientStore {
 
     Logger logger = LoggerFactory.getLogger("S3ClientStore");
 
-    private S3ClientStore(){}
+
 
     /**
      * Get the ClientStore instance
+     *
+     * @deprecated
+     * The use of S3ClientStore as singleton is deprecated in favour of creating
+     * normal instances optionally with additional configuration settings.
+     *
      * @return a singleton
      */
+    @Deprecated
     public static S3ClientStore getInstance() { return instance; }
+    protected S3ClientStore(){}
 
     /**
      * Get an existing client or generate a new client for the named bucket if one doesn't exist
