@@ -15,6 +15,7 @@ import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.http.SdkHttpResponse;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationResponse;
@@ -223,14 +224,14 @@ public class S3ClientStoreTest extends TestCase {
     @Test
     // TODO: move to S3FileSystemProvider
     public void testCaching() {
-        S3Client client = S3Client.create();
+        S3Client client = S3Client.builder().region(Region.US_EAST_1).build();
         doReturn(client).when(spyInstance).generateClient("test-bucket");
 
         final S3Client client1 = spyInstance.getClientForBucketName("test-bucket");
         verify(spyInstance).generateClient("test-bucket");
         assertSame(client1, client);
 
-        S3Client differentClient = S3Client.create();
+        S3Client differentClient = S3Client.builder().region(Region.US_EAST_1).build();
         assertNotSame(client, differentClient);
 
         lenient().doReturn(differentClient).when(spyInstance).generateClient("test-bucket");
@@ -243,14 +244,14 @@ public class S3ClientStoreTest extends TestCase {
 
     @Test
     public void testAsyncCaching() {
-        S3AsyncClient client = S3AsyncClient.create();
+        S3AsyncClient client = S3AsyncClient.builder().region(Region.US_EAST_1).build();
         doReturn(client).when(spyInstance).generateAsyncClient("test-bucket");
 
         final S3AsyncClient client1 = spyInstance.getAsyncClientForBucketName("test-bucket");
         verify(spyInstance).generateAsyncClient("test-bucket");
         assertSame(client1, client);
 
-        S3AsyncClient differentClient = S3AsyncClient.create();
+        S3AsyncClient differentClient = S3AsyncClient.builder().region(Region.US_EAST_1).build();
         assertNotSame(client, differentClient);
 
         lenient().doReturn(differentClient).when(spyInstance).generateAsyncClient("test-bucket");
