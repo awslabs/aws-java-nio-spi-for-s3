@@ -826,7 +826,14 @@ public class S3FileSystemProvider extends FileSystemProvider {
         throw new UnsupportedOperationException("s3 file attributes cannot be modified by this class");
     }
 
-    public static S3ClientStore getClientStore() {
+    /**
+     * Creates if needed and returns the S3ClientStrore caching all created
+     * clients. This is not public on purpose, as it is an intermediate solution
+     * that will be replaced by instance accessors.
+     *
+     * @return the chache of clients as a S3ClientStore
+     */
+    protected static S3ClientStore getClientStore() {
         if (clientStore == null) {
             clientStore = new S3ClientStore();
         }
