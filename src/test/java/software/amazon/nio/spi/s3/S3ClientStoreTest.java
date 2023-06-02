@@ -37,17 +37,12 @@ public class S3ClientStoreTest extends TestCase {
     S3Client mockClient; //client used to determine bucket location
 
     @Spy
-    final S3ClientStore spyInstance = S3ClientStore.getInstance();
+    final S3ClientStore spyInstance = S3FileSystemProvider.getClientStore();  // TODO: move to S3FileSystemProvider
 
     @Before
     public void setUp() throws Exception {
         super.setUp();
-        instance = S3ClientStore.getInstance();
-    }
-
-    @Test
-    public void testGetInstanceReturnsSingleton() {
-        assertSame(S3ClientStore.getInstance(), instance);
+        instance = new S3ClientStore();
     }
 
     @Test
@@ -227,6 +222,7 @@ public class S3ClientStoreTest extends TestCase {
     }
 
     @Test
+    // TODO: move to S3FileSystemProvider
     public void testCaching() {
         S3Client client = S3Client.builder().region(Region.US_EAST_1).build();
         doReturn(client).when(spyInstance).generateClient("test-bucket");

@@ -57,6 +57,13 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
+    public void getClientStore() {
+        S3ClientStore s;
+        assertNotNull(s = provider.getClientStore());
+        assertSame(s, provider.getClientStore());
+    }
+
+    @Test
     public void getScheme() {
         assertEquals("s3", provider.getScheme());
     }
