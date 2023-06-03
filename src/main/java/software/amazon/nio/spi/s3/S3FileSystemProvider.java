@@ -827,11 +827,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     * Creates if needed and returns the S3ClientStrore caching all created
+     * Creates if needed and returns the S3ClientStore caching all created
      * clients. This is not public on purpose, as it is an intermediate solution
      * that will be replaced by instance accessors.
      *
-     * @return the chache of clients as a S3ClientStore
+     * @return the cache of clients as a S3ClientStore
      */
     protected static S3ClientStore getClientStore() {
         if (clientStore == null) {
