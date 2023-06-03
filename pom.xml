@@ -139,7 +139,7 @@
                             <!-- Make sure the build fails if no tests are executed! -->
                             <failIfNoTests>true</failIfNoTests>
                             <systemPropertyVariables>
-                                <aws.region>us-east-1</aws.region>
+                                <!--aws.region>us-east-1</aws.region-->
                             </systemPropertyVariables>
                         </configuration>
                         <executions>
