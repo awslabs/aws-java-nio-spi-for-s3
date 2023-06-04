@@ -9,17 +9,36 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
+import org.junit.runner.RunWith;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.Mock;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.MockitoJUnitRunner;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.core.client.config.SdkClientConfiguration;
+import static software.amazon.awssdk.core.client.config.SdkClientOption.ENDPOINT;
+import static software.amazon.awssdk.core.client.config.SdkClientOption.ENDPOINT_OVERRIDDEN;
+import static software.amazon.awssdk.awscore.client.config.AwsClientOption.CREDENTIALS_PROVIDER;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetBucketLocationResponse;
 
+@RunWith(MockitoJUnitRunner.class)
 public class S3FileSystemTest {
     S3FileSystemProvider provider;
     URI s3Uri = URI.create("s3://mybucket/some/path/to/object.txt");
     S3FileSystem s3FileSystem;
+
+    @Mock
+    S3Client mockClient; //client used to determine bucket location
 
     @Before
     public void init() {
@@ -27,12 +46,10 @@ public class S3FileSystemTest {
         s3FileSystem = (S3FileSystem) this.provider.newFileSystem(s3Uri, Collections.emptyMap());
     }
 
-
     @Test
     public void getSeparator() {
         assertEquals("/", new S3FileSystem(s3Uri, provider).getSeparator());
     }
-
 
     @Test
     public void close() throws IOException {
@@ -49,6 +66,7 @@ public class S3FileSystemTest {
     @Test
     public void bucketName() {
         assertEquals("mybucket", s3FileSystem.bucketName());
+        assertEquals("mybucket", new S3FileSystem("s3://key:secret@endpoint/mybucket/myresource", provider).bucketName());
     }
 
     @Test
@@ -86,10 +104,64 @@ public class S3FileSystemTest {
                 s3FileSystem.getPathMatcher("glob:*.*").getClass());
     }
 
-
     @Test(expected = UnsupportedOperationException.class)
     //thrown because cannot be modified
     public void testGetOpenChannelsIsNotModifiable() {
         s3FileSystem.getOpenChannels().add(null);
     }
+
+    @Test
+    public void clientsWithProvidedEndpoint() throws Exception {
+        when(mockClient.getBucketLocation(any(Consumer.class)))
+                .thenReturn(GetBucketLocationResponse.builder().locationConstraint("us-west-2").build());
+        S3FileSystemProvider.getClientStore().locationClient(mockClient);
+
+        final String URI1 = "s3://endpoint1.io/bucket/resource";
+        final String URI2 = "s3://endpoint2.io:8080/bucket/resource";
+
+        S3FileSystem fs = new S3FileSystem(URI.create(URI1), provider);
+        S3Client client = fs.client();
+
+        Field f = client.getClass().getDeclaredField("clientConfiguration");
+        f.setAccessible(true);
+        SdkClientConfiguration sdkConf = (SdkClientConfiguration)f.get(client);
+
+        assertTrue(sdkConf.option(ENDPOINT_OVERRIDDEN));
+        assertEquals(URI.create("https://endpoint1.io"), sdkConf.option(ENDPOINT));
+
+        sdkConf = (SdkClientConfiguration)f.get(new S3FileSystem(URI.create(URI2), provider).client());
+        assertTrue(sdkConf.option(ENDPOINT_OVERRIDDEN));
+        assertEquals(URI.create("https://endpoint2.io:8080"), sdkConf.option(ENDPOINT));
+    }
+
+    @Test
+    public void clientsWithProvidedEndpointAndCredentials() throws Exception {
+        when(mockClient.getBucketLocation(any(Consumer.class)))
+                .thenReturn(GetBucketLocationResponse.builder().locationConstraint("us-west-2").build());
+        S3FileSystemProvider.getClientStore().locationClient(mockClient);
+
+        final String URI1 = "s3://key1:secret1@endpoint1.io/bucket/resource";
+        final String URI2 = "s3://key2:secret2@endpoint2.io:8080/bucket/resource";
+
+        S3FileSystem fs = new S3FileSystem(URI.create(URI1), provider);
+        S3Client client = fs.client();
+
+        Field f = client.getClass().getDeclaredField("clientConfiguration");
+        f.setAccessible(true);
+        SdkClientConfiguration sdkConf = (SdkClientConfiguration)f.get(client);
+
+        assertEquals(URI.create("https://endpoint1.io"), sdkConf.option(ENDPOINT));
+        assertFalse(sdkConf.option(CREDENTIALS_PROVIDER) instanceof DefaultCredentialsProvider);
+        AwsCredentialsProvider credentials = (AwsCredentialsProvider)sdkConf.option(CREDENTIALS_PROVIDER);
+        assertEquals("key1", credentials.resolveCredentials().accessKeyId());
+        assertEquals("secret1", credentials.resolveCredentials().secretAccessKey());
+
+
+        sdkConf = (SdkClientConfiguration)f.get(new S3FileSystem(URI.create(URI2), provider).client());
+        assertEquals(URI.create("https://endpoint2.io:8080"), sdkConf.option(ENDPOINT));
+        credentials = (AwsCredentialsProvider)sdkConf.option(CREDENTIALS_PROVIDER);
+        assertEquals("key2", credentials.resolveCredentials().accessKeyId());
+        assertEquals("secret2", credentials.resolveCredentials().secretAccessKey());
+    }
+
 }
