@@ -24,12 +24,21 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.util.NoSuchElementException;
 import java.util.function.Consumer;
+import org.junit.Rule;
+import org.junit.contrib.java.lang.system.ProvideSystemProperty;
 
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
 @SuppressWarnings("unchecked")
 public class S3ClientStoreTest extends TestCase {
+
+    @Rule
+    public final ProvideSystemProperty AWS_ACCESS_KEY_ID
+        = new ProvideSystemProperty("aws.accessKeyId", "mykey");
+    @Rule
+    public final ProvideSystemProperty AWS_SECRET_ACCESS_KEY
+        = new ProvideSystemProperty("aws.secretAccessKey", "mysecret");
 
     S3ClientStore instance;
 
@@ -85,6 +94,7 @@ public class S3ClientStoreTest extends TestCase {
     }
 
     @Test
+    // TODO: is this needed anymore? do we really need to invoke getBucketLocation?
     public void testGenerateClientWith403Response() {
         // when you get a forbidden response from getBucketLocation
         when(mockClient.getBucketLocation(any(Consumer.class))).thenThrow(
@@ -133,6 +143,7 @@ public class S3ClientStoreTest extends TestCase {
     }
 
     @Test
+    // TODO: is this needed anymore? do we really need to invoke getBucketLocation?
     public void testGenerateAsyncClientWith403Then301Responses(){
         // when you get a forbidden response from getBucketLocation
         when(mockClient.getBucketLocation(any(Consumer.class))).thenThrow(
@@ -161,6 +172,7 @@ public class S3ClientStoreTest extends TestCase {
     }
 
     @Test
+    // TODO: is this needed anymore? do we really need to invoke getBucketLocation?
     public void testGenerateClientWith403Then301ResponsesNoHeader(){
         // when you get a forbidden response from getBucketLocation
         when(mockClient.getBucketLocation(any(Consumer.class))).thenThrow(
@@ -260,6 +272,15 @@ public class S3ClientStoreTest extends TestCase {
         assertSame(client1, client2);
         assertSame(client2, client);
         assertNotSame(client2, differentClient);
+    }
+
+    @Test
+    public void getAndSetLocationClient() {
+        final S3ClientStore store = new S3ClientStore();
+
+        assertSame(S3ClientStore.DEFAULT_CLIENT, store.locationClient());
+        store.locationClient(mockClient);
+        assertSame(mockClient, store.locationClient());
     }
 }
 

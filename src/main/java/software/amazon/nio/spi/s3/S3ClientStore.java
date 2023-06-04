@@ -26,6 +26,9 @@ import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
 
 /**
  * A Singleton cache of clients for buckets configured for the region of those buckets
@@ -57,6 +60,11 @@ public class S3ClientStore {
             .baseDelay(Duration.ofMillis(200L))
             .maxBackoffTime(Duration.ofSeconds(5L))
             .build();
+
+    private S3Client locationClient = null; // specific client to use to get the
+                                            // location of a bucket; it can be
+                                            // accessed with locationClient(...)
+                                            // accessors
 
     final RetryCondition retryCondition;
 
@@ -133,7 +141,7 @@ public class S3ClientStore {
      * @return an S3 client appropriate for the region of the named bucket
      */
     protected S3Client generateClient(String bucketName){
-        return this.generateClient(bucketName, DEFAULT_CLIENT);
+        return this.generateClient(bucketName, locationClient());
     }
 
     /**
@@ -152,14 +160,17 @@ public class S3ClientStore {
      * @return an S3 client appropriate for the region of the named bucket
      */
     protected S3Client generateClient (String bucketName, S3Client locationClient) {
-        logger.debug("generating client for bucket: '{}'", bucketName);
+            logger.debug("generating client for bucket: '{}'", bucketName);
         S3Client bucketSpecificClient;
         try {
             logger.debug("determining bucket location with getBucketLocation");
-            String bucketLocation = locationClient.getBucketLocation(builder -> builder.bucket(bucketName)).locationConstraintAsString();
+            // TODO: shall we remove this? (see https://github.com/awslabs/aws-java-nio-spi-for-s3/issues/11#issuecomment-1575031350 )
+             String bucketLocation = locationClient.getBucketLocation(builder -> builder.bucket(bucketName)).locationConstraintAsString();
 
-            bucketSpecificClient = this.clientForRegion(bucketLocation);
-
+            //bucketSpecificClient = this.clientForRegion(bucketLocation);
+            //--
+            String[] elements = bucketName.split(S3Path.PATH_SEPARATOR);
+            bucketSpecificClient = this.clientForRegion(elements[0], bucketLocation);
         } catch (S3Exception e) {
             if(e.statusCode() == 403) {
                 logger.debug("Cannot determine location of '{}' bucket directly. Attempting to obtain bucket location with headBucket operation", bucketName);
@@ -247,18 +258,55 @@ public class S3ClientStore {
         return bucketSpecificClient;
     }
 
-    private S3Client clientForRegion(String regionString){
+    protected S3Client locationClient() {
+        return (locationClient == null) ? DEFAULT_CLIENT : locationClient;
+    }
+
+    protected void locationClient(S3Client client) {
+        this.locationClient = client;
+    }
+
+    private S3Client clientForRegion(String endpoint, String regionString) {
         // It may be useful to further cache clients for regions although at some point clients for buckets may need to be
         // specialized beyond just region end points.
         Region region = regionString.equals("") ? Region.US_EAST_1 : Region.of(regionString);
         logger.debug("bucket region is: '{}'", region.id());
 
-        return S3Client.builder()
-                .region(region)
-                .overrideConfiguration(conf -> conf.retryPolicy(builder -> builder
-                        .retryCondition(retryCondition)
-                        .backoffStrategy(backoffStrategy)))
-                .build();
+        S3ClientBuilder clientBuilder =  S3Client.builder()
+            .region(region)
+            .overrideConfiguration(conf -> conf.retryPolicy(builder -> builder
+                    .retryCondition(retryCondition)
+                    .backoffStrategy(backoffStrategy)));
+
+        if ((endpoint != null) && (endpoint.length() > 0)) {
+            //
+            // endpoint may contain credentials in the form of key:secret@url
+            //
+            String key = null, secret = null;
+            int pos = endpoint.indexOf('@');
+            if (pos >= 1) {
+                key = endpoint.substring(0, pos);
+                endpoint = endpoint.substring(pos+1);
+                pos = key.indexOf(':');
+                if (pos >= 0) {
+                    secret = key.substring(pos+1);
+                    key = key.substring(0, pos);
+                }
+            }
+            // TODO: shall we have the protocol in the endpoint already?
+            clientBuilder.endpointOverride(URI.create("https://" + endpoint));
+            
+            if (key != null) {
+                final AwsCredentials credentials = AwsBasicCredentials.create(key, secret);
+                clientBuilder.credentialsProvider(() -> credentials);
+            }
+        }
+
+        return clientBuilder.build();
+    }
+
+    private S3Client clientForRegion(String regionString) {
+        return clientForRegion(null, regionString);
     }
 
     private S3AsyncClient asyncClientForRegion(String regionString){
@@ -271,5 +319,4 @@ public class S3ClientStore {
                 .region(region)
                 .build();
     }
-
 }
