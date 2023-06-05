@@ -94,7 +94,6 @@ public class S3ClientStoreTest extends TestCase {
     }
 
     @Test
-    // TODO: is this needed anymore? do we really need to invoke getBucketLocation?
     public void testGenerateClientWith403Response() {
         // when you get a forbidden response from getBucketLocation
         when(mockClient.getBucketLocation(any(Consumer.class))).thenThrow(
@@ -143,7 +142,6 @@ public class S3ClientStoreTest extends TestCase {
     }
 
     @Test
-    // TODO: is this needed anymore? do we really need to invoke getBucketLocation?
     public void testGenerateAsyncClientWith403Then301Responses(){
         // when you get a forbidden response from getBucketLocation
         when(mockClient.getBucketLocation(any(Consumer.class))).thenThrow(
@@ -172,9 +170,8 @@ public class S3ClientStoreTest extends TestCase {
     }
 
     @Test
-    // TODO: is this needed anymore? do we really need to invoke getBucketLocation?
     public void testGenerateClientWith403Then301ResponsesNoHeader(){
-        // when you get a forbidden response from getBucketLocation
+        // when you get a forbidden response from getBucketLocation --- HERE
         when(mockClient.getBucketLocation(any(Consumer.class))).thenThrow(
                 S3Exception.builder().statusCode(403).build()
         );
@@ -272,15 +269,6 @@ public class S3ClientStoreTest extends TestCase {
         assertSame(client1, client2);
         assertSame(client2, client);
         assertNotSame(client2, differentClient);
-    }
-
-    @Test
-    public void getAndSetLocationClient() {
-        final S3ClientStore store = new S3ClientStore();
-
-        assertSame(S3ClientStore.DEFAULT_CLIENT, store.locationClient());
-        store.locationClient(mockClient);
-        assertSame(mockClient, store.locationClient());
     }
 }
 
