@@ -55,7 +55,7 @@ For example:
 <dependency>
     <groupId>software.amazon.nio.s3</groupId>
     <artifactId>aws-java-nio-spi-for-s3</artifactId>
-    <version>1.2.0</version>
+    <version>1.2.2</version>
 </dependency>
 ```
 
@@ -149,7 +149,8 @@ default. However, you may configure timeouts via the `S3SeekableByteChannel`.
 #### Timeouts
 To configure timeouts for writing files or opening files for write access, you may use the `Long timeout` and 
 `TimeUnit timeUnit` parameters of the `S3SeekableByteChannel` constructor.
-```java
+
+```
 new S3SeekableByteChannel(s3Path, s3Client, channelOpenOptions, timeout, timeUnit);
 ```
 
