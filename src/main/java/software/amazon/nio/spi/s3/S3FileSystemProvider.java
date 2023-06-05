@@ -752,7 +752,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         if (!(path instanceof S3Path))
             throw new IllegalArgumentException("path must be an S3Path instance");
         S3Path s3Path = (S3Path) path;
-        if (s3Path.isDirectory()) return null;
+        //if (s3Path.isDirectory()) return null;
 
         if (type.equals(BasicFileAttributes.class) || type.equals(S3BasicFileAttributes.class)) {
             if (s3AsyncClient == null) {
