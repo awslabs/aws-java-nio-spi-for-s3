@@ -70,7 +70,6 @@ public class S3FileSystemProviderTest {
 
     @Test
     public void newFileSystem() {
-
         URI uri = URI.create(pathUri);
         final FileSystem fileSystem = provider.newFileSystem(uri, Collections.emptyMap());
         assertTrue(fileSystem instanceof S3FileSystem);

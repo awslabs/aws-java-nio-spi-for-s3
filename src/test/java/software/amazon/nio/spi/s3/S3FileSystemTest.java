@@ -9,17 +9,36 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
+import org.junit.runner.RunWith;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.Mock;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.MockitoJUnitRunner;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.core.client.config.SdkClientConfiguration;
+import static software.amazon.awssdk.core.client.config.SdkClientOption.ENDPOINT;
+import static software.amazon.awssdk.core.client.config.SdkClientOption.ENDPOINT_OVERRIDDEN;
+import static software.amazon.awssdk.awscore.client.config.AwsClientOption.CREDENTIALS_PROVIDER;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetBucketLocationResponse;
 
+@RunWith(MockitoJUnitRunner.class)
 public class S3FileSystemTest {
     S3FileSystemProvider provider;
     URI s3Uri = URI.create("s3://mybucket/some/path/to/object.txt");
     S3FileSystem s3FileSystem;
+
+    @Mock
+    S3Client mockClient; //client used to determine bucket location
 
     @Before
     public void init() {
@@ -27,12 +46,10 @@ public class S3FileSystemTest {
         s3FileSystem = (S3FileSystem) this.provider.newFileSystem(s3Uri, Collections.emptyMap());
     }
 
-
     @Test
     public void getSeparator() {
         assertEquals("/", new S3FileSystem(s3Uri, provider).getSeparator());
     }
-
 
     @Test
     public void close() throws IOException {
@@ -49,6 +66,7 @@ public class S3FileSystemTest {
     @Test
     public void bucketName() {
         assertEquals("mybucket", s3FileSystem.bucketName());
+        assertEquals("mybucket", new S3FileSystem("s3://key:secret@endpoint/mybucket/myresource", provider).bucketName());
     }
 
     @Test
@@ -85,7 +103,6 @@ public class S3FileSystemTest {
         assertEquals(FileSystems.getDefault().getPathMatcher("glob:*.*").getClass(),
                 s3FileSystem.getPathMatcher("glob:*.*").getClass());
     }
-
 
     @Test(expected = UnsupportedOperationException.class)
     //thrown because cannot be modified

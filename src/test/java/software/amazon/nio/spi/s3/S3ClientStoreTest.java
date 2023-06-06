@@ -24,12 +24,21 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.util.NoSuchElementException;
 import java.util.function.Consumer;
+import org.junit.Rule;
+import org.junit.contrib.java.lang.system.ProvideSystemProperty;
 
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
 @SuppressWarnings("unchecked")
 public class S3ClientStoreTest extends TestCase {
+
+    @Rule
+    public final ProvideSystemProperty AWS_ACCESS_KEY_ID
+        = new ProvideSystemProperty("aws.accessKeyId", "mykey");
+    @Rule
+    public final ProvideSystemProperty AWS_SECRET_ACCESS_KEY
+        = new ProvideSystemProperty("aws.secretAccessKey", "mysecret");
 
     S3ClientStore instance;
 
@@ -162,7 +171,7 @@ public class S3ClientStoreTest extends TestCase {
 
     @Test
     public void testGenerateClientWith403Then301ResponsesNoHeader(){
-        // when you get a forbidden response from getBucketLocation
+        // when you get a forbidden response from getBucketLocation --- HERE
         when(mockClient.getBucketLocation(any(Consumer.class))).thenThrow(
                 S3Exception.builder().statusCode(403).build()
         );
