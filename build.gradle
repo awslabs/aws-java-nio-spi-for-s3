@@ -43,6 +43,7 @@ dependencies {
     // Use JUnit test framework.
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:5.3.1'
+    testImplementation 'com.github.stefanbirkner:system-rules:1.19.0'
 
     implementation platform('software.amazon.awssdk:bom:2.20.79')
 
