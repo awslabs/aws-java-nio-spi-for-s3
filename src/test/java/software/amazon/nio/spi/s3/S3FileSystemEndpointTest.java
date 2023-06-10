@@ -35,13 +35,14 @@ public class S3FileSystemEndpointTest {
     @Rule
     public final ProvideSystemProperty AWS_PROPERTIES
         = new ProvideSystemProperty("aws.region", "aws-east-1");
+    
     @Before
     public void init() {
         this.provider = new S3FileSystemProvider();
     }
 
     @Test
-    public void clientsWithProvidedEndpoint() throws Exception {
+    public void clientWithProvidedEndpoint() throws Exception {
         final String URI1 = "s3://endpoint1.io/bucket/resource";
         final String URI2 = "s3://endpoint2.io:8080/bucket/resource";
 
@@ -61,7 +62,7 @@ public class S3FileSystemEndpointTest {
     }
 
     @Test
-    public void clientsWithProvidedEndpointAndCredentials() throws Exception {
+    public void clientWithProvidedEndpointAndCredentials() throws Exception {
         final String URI1 = "s3://key1:secret1@endpoint1.io/bucket/resource";
         final String URI2 = "s3://key2:secret2@endpoint2.io:8080/bucket/resource";
 

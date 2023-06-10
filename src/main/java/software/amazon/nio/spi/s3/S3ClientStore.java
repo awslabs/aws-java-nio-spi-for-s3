@@ -29,6 +29,7 @@ import java.util.stream.Stream;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
 
 /**
  * A Singleton cache of clients for buckets configured for the region of those buckets
@@ -36,6 +37,11 @@ import software.amazon.awssdk.services.s3.S3ClientBuilder;
 public class S3ClientStore {
 
     private static final S3ClientStore instance = new S3ClientStore();
+
+    /**
+     * Default S3CrtAsyncClientBuilder
+     */
+    protected S3CrtAsyncClientBuilder asyncClientBuilder = S3AsyncClient.crtBuilder();
 
     /**
      * Default client using the "https://s3.us-east-1.amazonaws.com" endpoint
@@ -170,7 +176,6 @@ public class S3ClientStore {
             try {
                 logger.debug("determining bucket location with getBucketLocation");
                 bucketLocation = locationClient.getBucketLocation(builder -> builder.bucket(bucketName)).locationConstraintAsString();
-
                 bucketSpecificClient = this.clientForRegion(bucketName, bucketLocation);
             } catch (S3Exception e) {
                 if(e.statusCode() == 403) {
@@ -214,47 +219,52 @@ public class S3ClientStore {
      */
     protected S3AsyncClient generateAsyncClient (String bucketName, S3Client locationClient) {
         logger.debug("generating asynchronous client for bucket: '{}'", bucketName);
-        S3AsyncClient bucketSpecificClient;
-        try {
-            logger.debug("determining bucket location with getBucketLocation");
-            String bucketLocation = locationClient.getBucketLocation(builder -> builder.bucket(bucketName)).locationConstraintAsString();
+        S3AsyncClient bucketSpecificClient = null;
 
-            bucketSpecificClient = this.asyncClientForRegion(bucketLocation);
-
-        } catch (S3Exception e) {
-            if(e.statusCode() == 403) {
-                logger.debug("Cannot determine location of '{}' bucket directly. Attempting to obtain bucket location with headBucket operation", bucketName);
-                try {
-                    final HeadBucketResponse headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
-                    bucketSpecificClient = this.asyncClientForRegion(headBucketResponse.sdkHttpResponse()
-                            .firstMatchingHeader("x-amz-bucket-region")
-                            .orElseThrow(() -> new NoSuchElementException("Head Bucket Response doesn't include the header 'x-amz-bucket-region'")));
-                } catch (S3Exception e2) {
-                    if (e2.statusCode() == 301) {
-                        bucketSpecificClient = this.asyncClientForRegion(e2
-                                .awsErrorDetails()
-                                .sdkHttpResponse()
+        String[] elements = bucketName.split(S3Path.PATH_SEPARATOR);
+        //
+        // if elements has only 1 element, no endpoint is given and an s3 endpoint
+        // is assumend. In this case, the location of the bucket is determined
+        // using the locationClient
+        //
+        if (elements.length == 1) {
+            String bucketLocation = null;
+            try {
+                logger.debug("determining bucket location with getBucketLocation");
+                bucketLocation = locationClient.getBucketLocation(builder -> builder.bucket(bucketName)).locationConstraintAsString();
+                bucketSpecificClient = this.asyncClientForRegion(bucketLocation);
+            } catch (S3Exception e) {
+                if(e.statusCode() == 403) {
+                    logger.debug("Cannot determine location of '{}' bucket directly. Attempting to obtain bucket location with headBucket operation", bucketName);
+                    try {
+                        final HeadBucketResponse headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
+                        bucketSpecificClient = this.asyncClientForRegion(headBucketResponse.sdkHttpResponse()
                                 .firstMatchingHeader("x-amz-bucket-region")
                                 .orElseThrow(() -> new NoSuchElementException("Head Bucket Response doesn't include the header 'x-amz-bucket-region'")));
-                    } else {
-                        throw e2;
+                    } catch (S3Exception e2) {
+                        if (e2.statusCode() == 301) {
+                            bucketSpecificClient = this.asyncClientForRegion(e2
+                                    .awsErrorDetails()
+                                    .sdkHttpResponse()
+                                    .firstMatchingHeader("x-amz-bucket-region")
+                                    .orElseThrow(() -> new NoSuchElementException("Head Bucket Response doesn't include the header 'x-amz-bucket-region'")));
+                        } else {
+                            throw e2;
+                        }
                     }
+                } else {
+                    throw e;
                 }
-            } else {
-                throw e;
             }
         }
 
-        if (bucketSpecificClient == null) {
-            logger.warn("Unable to determine the region of bucket: '{}'. Generating a client for the profile region.", bucketName);
-            bucketSpecificClient = S3AsyncClient.builder()
-                    .overrideConfiguration(conf -> conf.retryPolicy(builder -> builder
-                            .retryCondition(retryCondition)
-                            .backoffStrategy(backoffStrategy)))
-                    .build();
-        }
+        //
+        // if here, no S3 not other client has been created yet and we do not
+        // have a location; we'll let it figure out from the profile region
+        //
+        logger.warn("Unable to determine the region of bucket: '{}'. Generating a client for the profile region.", bucketName);
 
-        return bucketSpecificClient;
+        return (bucketSpecificClient != null) ? bucketSpecificClient : this.asyncClientForRegion(elements[0], null);
     }
 
     private S3Client clientForRegion(String endpoint, String regionString) {
@@ -307,14 +317,49 @@ public class S3ClientStore {
         return clientForRegion(null, regionString);
     }
 
-    private S3AsyncClient asyncClientForRegion(String regionString){
+    private S3AsyncClient asyncClientForRegion(String endpoint, String regionString){
         // It may be useful to further cache clients for regions although at some point clients for buckets may need to be
         // specialized beyond just region end points.
-        Region region = regionString.equals("") ? Region.US_EAST_1 : Region.of(regionString);
-        logger.debug("bucket region is: '{}'", region.id());
+        logger.debug("bucket region is: '{}'", regionString);
 
-        return S3AsyncClient.crtBuilder()
-                .region(region)
-                .build();
+        System.out.println(asyncClientBuilder.getClass());
+
+        //
+        // If no regionString is provided, the builder will try with the
+        // profile's region setting
+        //
+        if ((regionString != null) && (!regionString.trim().equals(""))) {
+            asyncClientBuilder.region(Region.of(regionString));
+        }
+
+        if ((endpoint != null) && (endpoint.length() > 0)) {
+            //
+            // endpoint may contain credentials in the form of key:secret@url
+            //
+            String key = null, secret = null;
+            int pos = endpoint.indexOf('@');
+            if (pos >= 1) {
+                key = endpoint.substring(0, pos);
+                endpoint = endpoint.substring(pos+1);
+                pos = key.indexOf(':');
+                if (pos >= 0) {
+                    secret = key.substring(pos+1);
+                    key = key.substring(0, pos);
+                }
+            }
+            // TODO: shall we have the protocol in the endpoint already?
+            asyncClientBuilder.endpointOverride(URI.create("https://" + endpoint));
+
+            if (key != null) {
+                final AwsCredentials credentials = AwsBasicCredentials.create(key, secret);
+                asyncClientBuilder.credentialsProvider(() -> credentials);
+            }
+        }
+
+        return asyncClientBuilder.build();
+    }
+
+    private S3AsyncClient asyncClientForRegion(String regionString) {
+        return asyncClientForRegion(null, regionString);
     }
 }
