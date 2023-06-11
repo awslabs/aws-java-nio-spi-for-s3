@@ -37,67 +37,66 @@ public class FakeAsyncS3ClientBuilder implements S3CrtAsyncClientBuilder {
 
     @Override
     public S3CrtAsyncClientBuilder credentialsProvider(AwsCredentialsProvider acp) {
-        credentialsProvider = acp; return BUILDER.credentialsProvider(acp);
+        return BUILDER.credentialsProvider(credentialsProvider = acp);
     }
 
     @Override
     public S3CrtAsyncClientBuilder region(Region r) {
-        region = r; return BUILDER.region(region);
+        return BUILDER.region(region = r);
     }
 
     @Override
     public S3CrtAsyncClientBuilder minimumPartSizeInBytes(Long l) {
-        minimumPartSizeInBytes = l; return BUILDER.minimumPartSizeInBytes(l);
+        return BUILDER.minimumPartSizeInBytes(minimumPartSizeInBytes = l);
     }
 
     @Override
     public S3CrtAsyncClientBuilder targetThroughputInGbps(Double d) {
-        targetThroughputInGbps = d; return BUILDER.targetThroughputInGbps(d);
+        return BUILDER.targetThroughputInGbps(targetThroughputInGbps = d);
     }
 
     @Override
     public S3CrtAsyncClientBuilder maxConcurrency(Integer i) {
-        maxConcurrency = i; return BUILDER.maxConcurrency(i);
+        return BUILDER.maxConcurrency(maxConcurrency = i);
     }
 
     @Override
     public S3CrtAsyncClientBuilder endpointOverride(URI u) {
-       endpointOverride = u; return BUILDER.endpointOverride(u);
+       return BUILDER.endpointOverride(endpointOverride = u);
     }
 
     @Override
     public S3CrtAsyncClientBuilder checksumValidationEnabled(Boolean b) {
-        checksumValidationEnabled = b; return BUILDER.checksumValidationEnabled(b);
+        return BUILDER.checksumValidationEnabled(checksumValidationEnabled = b);
     }
 
     @Override
     public S3CrtAsyncClientBuilder initialReadBufferSizeInBytes(Long l) {
-        initialReadBufferSizeInBytes = l; return BUILDER.initialReadBufferSizeInBytes(l);
+        return BUILDER.initialReadBufferSizeInBytes(initialReadBufferSizeInBytes = l);
     }
 
     @Override
     public S3CrtAsyncClientBuilder httpConfiguration(S3CrtHttpConfiguration c) {
-        httpConfiguration = c; return BUILDER.httpConfiguration(c);
+        return BUILDER.httpConfiguration(httpConfiguration = c);
+    }
+
+    @Override
+    public S3CrtAsyncClientBuilder retryConfiguration(S3CrtRetryConfiguration c) {
+        return BUILDER.retryConfiguration(retryConfiguration = c);
+    }
+
+    @Override
+    public S3CrtAsyncClientBuilder accelerate(Boolean b) {
+        return BUILDER.accelerate(accelerate = b);
+    }
+
+    @Override
+    public S3CrtAsyncClientBuilder forcePathStyle(Boolean b) {
+        return BUILDER.forcePathStyle(forcePathStyle = b);
     }
 
     @Override
     public S3AsyncClient build() {
         return BUILDER.build();
     }
-
-    @Override
-    public S3CrtAsyncClientBuilder retryConfiguration(S3CrtRetryConfiguration c) {
-        retryConfiguration = c; return BUILDER.retryConfiguration(c);
-    }
-
-    @Override
-    public S3CrtAsyncClientBuilder accelerate(Boolean b) {
-        accelerate = b; return BUILDER.accelerate(b);
-    }
-
-    @Override
-    public S3CrtAsyncClientBuilder forcePathStyle(Boolean b) {
-        forcePathStyle = b; return BUILDER.forcePathStyle(b);
-    }
-
 }
