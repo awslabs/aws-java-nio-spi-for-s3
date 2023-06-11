@@ -31,7 +31,7 @@ public class S3ClientStoreEndpointTest extends TestCase {
         final String BUCKET1 = "key1:secret1@endpoint1.io/bucket1";
         final String BUCKET2 = "key2:secret2@endpoint2.io:8080/bucket2";
 
-        final FakeAsyyncS3ClientBuilder BUILDER = new FakeAsyyncS3ClientBuilder();
+        final FakeAsyncS3ClientBuilder BUILDER = new FakeAsyncS3ClientBuilder();
 
         S3ClientStore cs = new S3ClientStore();
         cs.asyncClientBuilder = BUILDER;
