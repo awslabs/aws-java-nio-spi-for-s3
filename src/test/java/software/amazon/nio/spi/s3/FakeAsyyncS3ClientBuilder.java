@@ -38,7 +38,7 @@ public class FakeAsyyncS3ClientBuilder implements S3CrtAsyncClientBuilder {
 
     @Override
     public S3CrtAsyncClientBuilder region(Region r) {
-        region = region; return BUILDER.region(region);
+        region = r; return BUILDER.region(region);
     }
 
     @Override
