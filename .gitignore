@@ -3,9 +3,15 @@
 .idea
 gradle
 gradle.properties
+build.gradle
 
 # Ignore Gradle build output directory
 build
+bin
+target
 
 #MacOS
 .DS_Store
+
+#IDEs
+.vscode
