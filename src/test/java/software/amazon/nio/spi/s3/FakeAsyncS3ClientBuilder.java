@@ -10,6 +10,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
 import software.amazon.awssdk.services.s3.crt.S3CrtHttpConfiguration;
+import software.amazon.awssdk.services.s3.crt.S3CrtRetryConfiguration;
 
 /**
  * This class fakes a S3CrtAsyncClientBuilder for testability purposes. It
@@ -28,8 +29,11 @@ public class FakeAsyncS3ClientBuilder implements S3CrtAsyncClientBuilder {
     public Double targetThroughputInGbps = null;
     public Integer maxConcurrency = null;
     public URI endpointOverride = null;
-    public Boolean checksumValidationEnabled = null;
+    public Boolean checksumValidationEnabled = null,
+                   accelerate = null,
+                   forcePathStyle = null;
     public S3CrtHttpConfiguration httpConfiguration = null;
+    public S3CrtRetryConfiguration retryConfiguration = null;
 
     @Override
     public S3CrtAsyncClientBuilder credentialsProvider(AwsCredentialsProvider acp) {
@@ -79,6 +83,21 @@ public class FakeAsyncS3ClientBuilder implements S3CrtAsyncClientBuilder {
     @Override
     public S3AsyncClient build() {
         return BUILDER.build();
+    }
+
+    @Override
+    public S3CrtAsyncClientBuilder retryConfiguration(S3CrtRetryConfiguration c) {
+        retryConfiguration = c; return BUILDER.retryConfiguration(c);
+    }
+
+    @Override
+    public S3CrtAsyncClientBuilder accelerate(Boolean b) {
+        accelerate = b; return BUILDER.accelerate(b);
+    }
+
+    @Override
+    public S3CrtAsyncClientBuilder forcePathStyle(Boolean b) {
+        forcePathStyle = b; return BUILDER.forcePathStyle(b);
     }
 
 }
