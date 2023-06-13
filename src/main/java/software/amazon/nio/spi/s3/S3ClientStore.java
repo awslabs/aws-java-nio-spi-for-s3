@@ -24,6 +24,10 @@ public class S3ClientStore {
 
     Logger logger = LoggerFactory.getLogger("S3ClientStore");
 
+    private static final S3ClientProvider DEFAULT_PROVIDER = new S3ClientProvider();
+    public static final S3Client DEFAULT_CLIENT = DEFAULT_PROVIDER.universalClient(false);
+    public static final S3AsyncClient DEFAULT_ASYNC_CLIENT = DEFAULT_PROVIDER.universalClient(true);
+
     private S3ClientStore(){}
 
     /**
