@@ -5,6 +5,7 @@
 
 package software.amazon.nio.spi.s3;
 
+import static com.github.stefanbirkner.systemlambda.SystemLambda.restoreSystemProperties;
 import junit.framework.TestCase;
 import org.junit.Before;
 import org.junit.Test;
@@ -13,19 +14,12 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
-import org.junit.Rule;
-import org.junit.contrib.java.lang.system.ProvideSystemProperty;
-
 
 @RunWith(MockitoJUnitRunner.class)
 @SuppressWarnings("unchecked")
 public class S3ClientStoreTest extends TestCase {
 
     S3ClientStore instance;
-
-    @Rule
-    public final ProvideSystemProperty AWS_PROPERTIES
-        = new ProvideSystemProperty("aws.region", "aws-east-1");
 
     @Mock
     S3Client mockClient; //client used to determine bucket location
@@ -64,7 +58,7 @@ public class S3ClientStoreTest extends TestCase {
     }
 
     @Test
-    public void testCaching() {
+    public void testCaching() throws Exception {
         instance.provider = new S3ClientProvider() {
             @Override
             protected S3Client generateClient(String bucketName) {
@@ -72,13 +66,16 @@ public class S3ClientStoreTest extends TestCase {
             }
         };
 
-        final S3Client client1 = instance.getClientForBucketName("test-bucket1");
-        assertSame(client1, instance.getClientForBucketName("test-bucket1"));
-        assertNotSame(client1, instance.getClientForBucketName("test-bucket2"));
+        restoreSystemProperties(() -> {
+            System.setProperty("aws.region", "us-east-1");
+            final S3Client client1 = instance.getClientForBucketName("test-bucket1");
+            assertSame(client1, instance.getClientForBucketName("test-bucket1"));
+            assertNotSame(client1, instance.getClientForBucketName("test-bucket2"));
+        });
     }
 
     @Test
-    public void testAsyncCaching() {
+    public void testAsyncCaching() throws Exception {
         instance.provider = new S3ClientProvider() {
             @Override
             protected S3AsyncClient generateAsyncClient(String bucketName) {
@@ -86,9 +83,12 @@ public class S3ClientStoreTest extends TestCase {
             }
         };
 
-        final S3AsyncClient client1 = instance.getAsyncClientForBucketName("test-bucket1");
-        assertSame(client1, instance.getAsyncClientForBucketName("test-bucket1"));
-        assertNotSame(client1, instance.getAsyncClientForBucketName("test-bucket2"));
+        restoreSystemProperties(() -> {
+            System.setProperty("aws.region", "us-east-1");
+            final S3AsyncClient client1 = instance.getAsyncClientForBucketName("test-bucket1");
+            assertSame(client1, instance.getAsyncClientForBucketName("test-bucket1"));
+            assertNotSame(client1, instance.getAsyncClientForBucketName("test-bucket2"));
+        });
     }
 
 }
