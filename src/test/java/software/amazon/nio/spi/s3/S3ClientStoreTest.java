@@ -5,14 +5,6 @@
 
 package software.amazon.nio.spi.s3;
 
-import junit.framework.TestCase;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.InOrder;
-import org.mockito.Mock;
-import org.mockito.Spy;
-import org.mockito.junit.MockitoJUnitRunner;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.regions.Region;
@@ -24,22 +16,20 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.util.NoSuchElementException;
 import java.util.function.Consumer;
-import org.junit.Rule;
-import org.junit.contrib.java.lang.system.ProvideSystemProperty;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
+import org.mockito.Mock;
 
 import static org.mockito.Mockito.*;
+import org.mockito.Spy;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 @SuppressWarnings("unchecked")
-public class S3ClientStoreTest extends TestCase {
-
-    @Rule
-    public final ProvideSystemProperty AWS_ACCESS_KEY_ID
-        = new ProvideSystemProperty("aws.accessKeyId", "mykey");
-    @Rule
-    public final ProvideSystemProperty AWS_SECRET_ACCESS_KEY
-        = new ProvideSystemProperty("aws.secretAccessKey", "mysecret");
-
+public class S3ClientStoreTest {
     S3ClientStore instance;
 
     @Mock
@@ -48,9 +38,8 @@ public class S3ClientStoreTest extends TestCase {
     @Spy
     final S3ClientStore spyInstance = S3FileSystemProvider.getClientStore();  // TODO: move to S3FileSystemProvider
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
-        super.setUp();
         instance = new S3ClientStore();
     }
 
@@ -171,7 +160,7 @@ public class S3ClientStoreTest extends TestCase {
 
     @Test
     public void testGenerateClientWith403Then301ResponsesNoHeader(){
-        // when you get a forbidden response from getBucketLocation --- HERE
+        // when you get a forbidden response from getBucketLocation
         when(mockClient.getBucketLocation(any(Consumer.class))).thenThrow(
                 S3Exception.builder().statusCode(403).build()
         );

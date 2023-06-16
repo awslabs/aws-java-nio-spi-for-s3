@@ -5,25 +5,19 @@
 
 package software.amazon.nio.spi.s3;
 
+import static com.github.stefanbirkner.systemlambda.SystemLambda.restoreSystemProperties;
 import java.net.URI;
-import junit.framework.TestCase;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.junit.MockitoJUnitRunner;
-import org.junit.Rule;
-import org.junit.contrib.java.lang.system.ProvideSystemProperty;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
-import static software.amazon.awssdk.awscore.client.config.AwsClientOption.CREDENTIALS_PROVIDER;
 
-@RunWith(MockitoJUnitRunner.class)
 @SuppressWarnings("unchecked")
-public class S3ClientStoreEndpointTest extends TestCase {
-
-    @Rule
-    public final ProvideSystemProperty AWS_PROPERTIES
-        = new ProvideSystemProperty("aws.region", "aws-east-1");
+//@ExtendWith(MockitoExtension.class)
+public class S3ClientStoreEndpointTest {
 
 
     @Test
@@ -36,7 +30,10 @@ public class S3ClientStoreEndpointTest extends TestCase {
         S3ClientStore cs = new S3ClientStore();
         cs.asyncClientBuilder = BUILDER;
 
-        cs.generateAsyncClient(BUCKET1);
+        restoreSystemProperties(() -> {
+            System.setProperty("aws.region", "aws-east-1");
+            cs.generateAsyncClient(BUCKET1);
+        });
 
         assertEquals(URI.create("https://endpoint1.io"), BUILDER.endpointOverride);
         assertTrue(BUILDER.credentialsProvider instanceof AwsCredentialsProvider);

@@ -66,11 +66,6 @@ public class S3FileSystem extends FileSystem {
             //
             // Yes, it does!
             //
-            /*
-            int port = uri.getPort();
-
-            endpoint = uri.getHost() + ((port < 0) ? "" : (":" + uri.getPort()));
-            */
             endpoint = authority;
             bucketName = uri.getPath().split(S3Path.PATH_SEPARATOR)[1];
             logger.debug("creating FileSystem for 's3://{}/{}'", this.endpoint, this.bucketName);
