@@ -41,9 +41,10 @@ compileJava {
 
 dependencies {
     // Use JUnit test framework.
-    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3'
     testImplementation 'org.mockito:mockito-core:5.3.1'
-    testImplementation 'com.github.stefanbirkner:system-rules:1.19.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.3.1'
+    testImplementation 'com.github.stefanbirkner:system-lambda:1.2.1'
 
     implementation platform('software.amazon.awssdk:bom:2.20.79')
 
