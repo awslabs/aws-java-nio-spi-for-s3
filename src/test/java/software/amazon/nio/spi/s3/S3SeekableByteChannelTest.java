@@ -63,7 +63,7 @@ public class S3SeekableByteChannelTest {
                 return mockClient;
             }
         };
-        fs = (S3FileSystem)provider.newFileSystem(URI.create("s3://test-bucket"), Collections.EMPTY_MAP);
+        fs = provider.newFileSystem(URI.create("s3://test-bucket"), Collections.EMPTY_MAP);
         path = fs.getPath("/object");
     }
 

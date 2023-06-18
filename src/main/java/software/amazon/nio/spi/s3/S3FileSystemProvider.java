@@ -97,10 +97,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @IllegalArgumentException - if the pre-conditions for the uri parameter are not met, or the env parameter does not contain properties required by the provider, or a property value is invalid
      */
     @Override
-    //
-    // TODO: can we return a S3FileSystem?
-    //
-    public FileSystem newFileSystem(URI uri, Map<String, ?> env)
+    public S3FileSystem newFileSystem(URI uri, Map<String, ?> env)
     throws FileSystemAlreadyExistsException {
 
         if (uri == null) {
@@ -194,7 +191,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
             if (!create) {
                 throw new FileSystemNotFoundException("file system not found for '" + key + "'");
             }
-            fs = (S3FileSystem)newFileSystem(uri, Collections.EMPTY_MAP);
+            fs = newFileSystem(uri, Collections.EMPTY_MAP);
         }
 
         return fs;
