@@ -69,7 +69,7 @@ public class S3FileSystemProviderTest {
                 return mockClient;
             }
         };
-        fileSystem = (S3FileSystem)provider.newFileSystem(URI.create(pathUri), Collections.EMPTY_MAP);
+        fileSystem = provider.newFileSystem(URI.create(pathUri), Collections.EMPTY_MAP);
         when(mockClient.headObject(any(Consumer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
     }
@@ -99,7 +99,7 @@ public class S3FileSystemProviderTest {
         //
         // New AWS S3 file system
         //
-        S3FileSystem fs = (S3FileSystem)provider.newFileSystem(URI.create("s3://foo2/baa"), Collections.EMPTY_MAP);
+        S3FileSystem fs = provider.newFileSystem(URI.create("s3://foo2/baa"), Collections.EMPTY_MAP);
         assertNotNull(fs); assertEquals("foo2", fs.bucketName()); assertNull(fs.credentials());
 
         //
@@ -116,7 +116,7 @@ public class S3FileSystemProviderTest {
         //
         // New file system with endpoint no credentials
         //
-        fs = (S3FileSystem)provider.newFileSystem(URI.create("s3://endpoint.com/foo2/baa2/dir"), Collections.EMPTY_MAP);
+        fs = provider.newFileSystem(URI.create("s3://endpoint.com/foo2/baa2/dir"), Collections.EMPTY_MAP);
         assertNotNull(fs); assertNull(fs.credentials());
         assertEquals("foo2", fs.bucketName()); assertEquals("endpoint.com", fs.endpoint());
         provider.closeFileSystem(fs);
@@ -124,7 +124,7 @@ public class S3FileSystemProviderTest {
         //
         // New file system with existing endpoint, different bucket, no credentials
         //
-        fs = (S3FileSystem)provider.newFileSystem(URI.create("s3://endpoint.com/foo3/baa2"), Collections.EMPTY_MAP);
+        fs = provider.newFileSystem(URI.create("s3://endpoint.com/foo3/baa2"), Collections.EMPTY_MAP);
         assertNotNull(fs); assertNull(fs.credentials());
         assertEquals("foo3", fs.bucketName()); assertEquals("endpoint.com", fs.endpoint());
 
@@ -142,7 +142,7 @@ public class S3FileSystemProviderTest {
         //
         // New file system with existing endpoint but different port, different bucket, no credentials
         //
-        fs = (S3FileSystem)provider.newFileSystem(URI.create("s3://endpoint.com:1234/foo3/baa2"), Collections.EMPTY_MAP);
+        fs = provider.newFileSystem(URI.create("s3://endpoint.com:1234/foo3/baa2"), Collections.EMPTY_MAP);
         assertNotNull(fs); assertNull(fs.credentials());
         assertEquals("foo3", fs.bucketName()); assertEquals("endpoint.com:1234", fs.endpoint());
         provider.closeFileSystem(fs);
@@ -150,7 +150,7 @@ public class S3FileSystemProviderTest {
         //
         // New file system with existing endpoint, same bucket, credentials
         //
-        fs = (S3FileSystem)provider.newFileSystem(URI.create("s3://akey:asecret@somewhere.com/foo2/baa2"), Collections.EMPTY_MAP);
+        fs = provider.newFileSystem(URI.create("s3://akey:asecret@somewhere.com/foo2/baa2"), Collections.EMPTY_MAP);
         assertNotNull(fs);assertNotNull(fs.credentials());
         assertEquals("foo2", fs.bucketName()); assertEquals("somewhere.com", fs.endpoint());
 
@@ -158,7 +158,7 @@ public class S3FileSystemProviderTest {
         // New file system with same endpoint, same bucket, different credentials
         //
         try {
-            fs = (S3FileSystem)provider.newFileSystem(URI.create("s3://anotherkey:anothersecret@somewhere.com/foo2/baa2"), Collections.EMPTY_MAP);
+            fs = provider.newFileSystem(URI.create("s3://anotherkey:anothersecret@somewhere.com/foo2/baa2"), Collections.EMPTY_MAP);
             fail("filesystem created twice!");
         } catch (FileSystemAlreadyExistsException x) {
             assertTrue(x.getMessage().contains("'somewhere.com/foo2'"));
@@ -209,7 +209,7 @@ public class S3FileSystemProviderTest {
         //
         // New AWS S3 file system
         //
-        S3FileSystem cfs = (S3FileSystem)provider.newFileSystem(URI.create("s3://foo2/baa"), Collections.EMPTY_MAP);
+        S3FileSystem cfs = provider.newFileSystem(URI.create("s3://foo2/baa"), Collections.EMPTY_MAP);
         FileSystem gfs = provider.getFileSystem(URI.create("s3://foo2"));
         assertNotSame(fileSystem, gfs); assertSame(cfs, gfs);
         gfs = provider.getFileSystem(URI.create("s3://foo2"));
@@ -219,7 +219,7 @@ public class S3FileSystemProviderTest {
         //
         // New AWS S3 file system with same bucket but different path
         //
-        cfs = (S3FileSystem)provider.newFileSystem(URI.create("s3://foo3"), Collections.EMPTY_MAP);
+        cfs = provider.newFileSystem(URI.create("s3://foo3"), Collections.EMPTY_MAP);
         gfs = provider.getFileSystem(URI.create("s3://foo3/dir"));
         assertNotSame(fileSystem, gfs); assertSame(cfs, gfs);
         gfs = provider.getFileSystem(URI.create("s3://foo3/dir"));
@@ -229,7 +229,7 @@ public class S3FileSystemProviderTest {
         //
         // New S3 file system with endpoint
         //
-        cfs = (S3FileSystem)provider.newFileSystem(URI.create("s3://endpoint.com/foo3"), Collections.EMPTY_MAP);
+        cfs = provider.newFileSystem(URI.create("s3://endpoint.com/foo3"), Collections.EMPTY_MAP);
         gfs = provider.getFileSystem(URI.create("s3://endpoint.com/foo3"));
         assertNotSame(fileSystem, gfs); assertSame(cfs, gfs);
         gfs = provider.getFileSystem(URI.create("s3://endpoint.com/foo3/dir/subdir"));
@@ -550,6 +550,20 @@ public class S3FileSystemProviderTest {
     public void setAttribute() {
         S3Path foo = fileSystem.getPath("/foo");
         provider.setAttribute(foo, "x", "y");
+    }
+
+    @Test
+    public void getS3FileSystemFromS3URI() throws Exception {
+        final URI U = URI.create("s3://endpoint/bucket1");
+        S3FileSystem fs = (S3FileSystem)FileSystems.newFileSystem(U, Collections.EMPTY_MAP);
+        assertNotNull(fs);
+        try {
+            FileSystems.newFileSystem(URI.create("s3://endpoint/bucket1"), Collections.EMPTY_MAP);
+        } catch (FileSystemAlreadyExistsException x) {
+            assertEquals("a file system already exists for uri 'endpoint', use getFileSystem() instead", x.getMessage());
+        }
+        assertSame(fs, FileSystems.getFileSystem(U));
+        fs.close();
     }
 
     // --------------------------------------------------------- private methods

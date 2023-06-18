@@ -44,7 +44,7 @@ public class S3FileSystemTest {
                 return mockClient;
             }
         };
-        s3FileSystem = (S3FileSystem) this.provider.newFileSystem(s3Uri, Collections.emptyMap());
+        s3FileSystem = this.provider.newFileSystem(s3Uri, Collections.emptyMap());
         lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
     }
