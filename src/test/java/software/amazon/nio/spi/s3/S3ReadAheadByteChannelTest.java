@@ -16,6 +16,7 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
@@ -29,7 +30,10 @@ import static org.mockito.Mockito.when;
 @SuppressWarnings("unchecked")
 public class S3ReadAheadByteChannelTest {
 
-    S3Path path = S3Path.getPath(new S3FileSystem("my-bucket"), "/object");
+    final S3FileSystemProvider provider = new S3FileSystemProvider();
+
+
+    S3Path path;
 
     @Mock
     S3SeekableByteChannel delegator;
@@ -42,6 +46,14 @@ public class S3ReadAheadByteChannelTest {
 
     @Before
     public void setup() throws IOException {
+        provider.clientProvider = new S3ClientProvider() {
+            @Override
+            protected S3AsyncClient generateAsyncClient(String bucketName) {
+                return client;
+            }
+        };
+        path = S3Path.getPath(provider.getFileSystem(URI.create("s3://my-bucket"), true), "/object");
+
 
         // mocking
         when(delegator.size()).thenReturn(52L);
