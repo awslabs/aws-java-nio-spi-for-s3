@@ -17,6 +17,7 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.OpenOption;
@@ -26,6 +27,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import org.junit.After;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.any;
@@ -54,8 +56,20 @@ public class S3SeekableByteChannelTest {
                         GetObjectResponse.builder().contentLength(6L).build(),
                         bytes)));
 
-        fs = new S3FileSystem("test-bucket");
+        S3FileSystemProvider provider = new S3FileSystemProvider();
+        provider.clientProvider = new S3ClientProvider() {
+            @Override
+            protected S3AsyncClient generateAsyncClient(String bucketName) {
+                return mockClient;
+            }
+        };
+        fs = (S3FileSystem)provider.newFileSystem(URI.create("s3://test-bucket"), Collections.EMPTY_MAP);
         path = fs.getPath("/object");
+    }
+
+    @After
+    public void after() throws IOException {
+        fs.close();
     }
 
     @Test

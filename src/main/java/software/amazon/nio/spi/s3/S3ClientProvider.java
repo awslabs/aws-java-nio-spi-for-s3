@@ -113,6 +113,9 @@ public class S3ClientProvider {
      * @return an S3 client appropriate for the region of the named bucket
      */
     protected S3Client generateClient(String bucketName){
+        //
+        // TODO: use generics like in universalClient()
+        //
         return this.generateClient(bucketName, universalClient());
     }
 
@@ -122,6 +125,9 @@ public class S3ClientProvider {
      * @return an asynchronous S3 client appropriate for the region of the named bucket
      */
     protected S3AsyncClient generateAsyncClient(String bucketName){
+        //
+        // TODO: use generics like in universalClient()
+        //
         return this.generateAsyncClient(bucketName, universalClient());
     }
 

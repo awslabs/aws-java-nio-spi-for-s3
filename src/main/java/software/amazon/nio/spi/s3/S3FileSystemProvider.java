@@ -55,6 +55,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
+    protected S3ClientProvider clientProvider = new S3ClientProvider();
+
+    private static Map<String, S3FileSystem> cache = new HashMap<>();
+
 
     /**
      * Returns the URI scheme that identifies this provider.
@@ -88,11 +92,47 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @param env A map of provider specific properties to configure the file system;
      *            may be empty
      * @return A new file system
+     *
+     * @throws FileSystemAlreadyExistsException if the file system has already been created
+     * @IllegalArgumentException - if the pre-conditions for the uri parameter are not met, or the env parameter does not contain properties required by the provider, or a property value is invalid
      */
     @Override
-    public FileSystem newFileSystem(URI uri, Map<String, ?> env) {
-        return new S3FileSystem(uri, this);
+    //
+    // TODO: can we return a S3FileSystem?
+    //
+    public FileSystem newFileSystem(URI uri, Map<String, ?> env)
+    throws FileSystemAlreadyExistsException {
+
+        if (uri == null) {
+            throw new IllegalArgumentException("uri can not be null");
+        }
+        if (uri.getScheme() == null) {
+            throw new IllegalArgumentException(
+                String.format("invalid uri '%s', please provide an uri as s3://[key:secret@][host[:port]]/bucket", uri.toString())
+            );
+        }
+        if (uri.getAuthority() == null) {
+            throw new IllegalArgumentException(
+                String.format("invalid uri '%s', please provide an uri as s3://[key:secret@][host[:port]]/bucket", uri.toString())
+            );
+        }
+
+        S3FileSystem fs = null;
+
+        URI realUri = uri /*normalize(uri)*/;
+
+        String key = getFileSystemKey(realUri);
+        if (cache.containsKey(key)) {
+            throw new FileSystemAlreadyExistsException("a file system already exists for uri '" + key + "', use getFileSystem() instead");
+        }
+        cache.put(key, fs = new S3FileSystem(realUri, this));
+
+        return fs;
     }
+
+    //
+    // TODO: add a shortcut newFileSystem(uri) -> newFileSystem(uri, Collections.EMPTY_MAP);
+    //
 
     /**
      * Returns an existing {@code FileSystem} created by this provider.
@@ -129,7 +169,43 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public S3FileSystem getFileSystem(URI uri) {
-        return new S3FileSystem(uri, this);
+        return getFileSystem(uri, false);
+    }
+
+    /**
+     * Similar to getFileSystem(uri), but it allows to create the file system if
+     * not yet created.
+     *
+     * @param uri URI reference
+     * @param create if true, the file system is created if not already done
+     *
+     * @return The file system
+     *
+     * @throws IllegalArgumentException    If the pre-conditions for the {@code uri} parameter aren't met
+     * @throws FileSystemNotFoundException If the file system does not exist
+     * @throws SecurityException           If a security manager is installed, and it denies an unspecified
+     *                                     permission.
+     */
+    protected S3FileSystem getFileSystem(URI uri, boolean create) {
+        String key = getFileSystemKey(uri);
+        S3FileSystem fs = cache.get(key);
+
+        if (fs == null) {
+            if (!create) {
+                throw new FileSystemNotFoundException("file system not found for '" + key + "'");
+            }
+            fs = (S3FileSystem)newFileSystem(uri, Collections.EMPTY_MAP);
+        }
+
+        return fs;
+    }
+
+    public void closeFileSystem(S3FileSystem fs) {
+        for (String key: cache.keySet()) {
+            if (fs == cache.get(key)) {
+                cache.remove(key); return;
+            }
+        }
     }
 
     /**
@@ -160,7 +236,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public S3Path getPath(URI uri) {
         Objects.requireNonNull(uri);
-        return ((S3FileSystem) FileSystems.getFileSystem(uri)).getPath(uri.getPath());
+        return getFileSystem(uri, true).getPath(uri.getPath());
     }
 
     /**
@@ -192,30 +268,19 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
-        return this.newByteChannel(null, path, options, attrs);
-    }
-
-    /**
-     * Construct a byte channel for the path with the specified client. A more composable and testable (by using a Mock Client)
-     * version of the public method
-     */
-    protected SeekableByteChannel newByteChannel(S3AsyncClient client, Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
         if (Objects.isNull(options)) {
             options = Collections.emptySet();
         }
 
         final S3Path s3Path = getPath(path.toUri());
         final S3SeekableByteChannel channel;
+        final S3FileSystem fs = s3Path.getFileSystem();
 
-        if (client == null) {
-            client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
-        }
+        channel = new S3SeekableByteChannel(s3Path, fs.client(), options);
+        fs.registerOpenChannel(channel);
 
-        channel = new S3SeekableByteChannel(s3Path, client, options);
-        s3Path.getFileSystem().registerOpenChannel(channel);
         return channel;
     }
-
 
     /**
      * Opens a directory, returning a {@code DirectoryStream} to iterate over
@@ -231,71 +296,59 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
         try {
-            return this.newDirectoryStream(null, dir, filter);
+            S3Path s3Path = (S3Path) dir;
+
+            String pathString = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
+            if (!pathString.endsWith(S3Path.PATH_SEPARATOR) && !pathString.isEmpty()) {
+                pathString = pathString + S3Path.PATH_SEPARATOR;
+            }
+
+            final S3FileSystem fs = ((S3Path)dir).getFileSystem();
+
+            final String prefix = pathString;
+
+            long timeOut = TIMEOUT_TIME_LENGTH_1;
+            final TimeUnit unit = MINUTES;
+            try {
+                final Iterator<S3Path> filteredDirectoryContents = fs.client().listObjectsV2(req -> req
+                                .bucket(fs.bucketName())
+                                .prefix(prefix))
+                        .get(timeOut, unit)
+                        .contents()
+                        .stream()
+                        .map(s3Object -> truncateByPrefix(fs, prefix, s3Object))
+                        .filter(path -> {
+                            try {
+                                return filter.accept(path);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                                return false;
+                            }
+                        })
+                        .iterator();
+
+                return new DirectoryStream<Path>() {
+                    final Iterator<? extends Path> iterator = filteredDirectoryContents;
+
+                    @Override
+                    @SuppressWarnings("unchecked")
+                    public Iterator<Path> iterator() {
+                        return (Iterator<Path>) iterator;
+                    }
+
+                    @Override
+                    public void close() {
+                        // nothing to close
+                    }
+                };
+            } catch (TimeoutException e) {
+                throw logAndGenerateExceptionOnTimeOut(logger, "newDirectoryStream", timeOut, unit);
+            }
         } catch (ExecutionException e) {
             throw new IOException(e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * Get a new directory stream that will use the specified client. A composable and testable version of the public
-     * version of {@code newDirectoryStream}
-     */
-    protected DirectoryStream<Path> newDirectoryStream(S3AsyncClient s3Client, Path dir, DirectoryStream.Filter<? super Path> filter) throws ExecutionException, InterruptedException {
-        S3Path s3Path = (S3Path) dir;
-
-        if (s3Client == null) {
-            s3Client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
-        }
-
-        String pathString = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
-        if (!pathString.endsWith(S3Path.PATH_SEPARATOR) && !pathString.isEmpty()) {
-            pathString = pathString + S3Path.PATH_SEPARATOR;
-        }
-
-        final String bucketName = s3Path.bucketName();
-        final S3FileSystem fs = new S3FileSystem(bucketName);
-        final String prefix = pathString;
-
-        long timeOut = TIMEOUT_TIME_LENGTH_1;
-        final TimeUnit unit = MINUTES;
-        try {
-            final Iterator<S3Path> filteredDirectoryContents = s3Client.listObjectsV2(req -> req
-                            .bucket(bucketName)
-                            .prefix(prefix))
-                    .get(timeOut, unit)
-                    .contents()
-                    .stream()
-                    .map(s3Object -> truncateByPrefix(fs, prefix, s3Object))
-                    .filter(path -> {
-                        try {
-                            return filter.accept(path);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            return false;
-                        }
-                    })
-                    .iterator();
-
-            return new DirectoryStream<Path>() {
-                final Iterator<? extends Path> iterator = filteredDirectoryContents;
-
-                @Override
-                @SuppressWarnings("unchecked")
-                public Iterator<Path> iterator() {
-                    return (Iterator<Path>) iterator;
-                }
-
-                @Override
-                public void close() {
-                    // nothing to close
-                }
-            };
-        } catch (TimeoutException e) {
-            throw logAndGenerateExceptionOnTimeOut(logger, "newDirectoryStream", timeOut, unit);
         }
     }
 
@@ -322,40 +375,30 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
+        S3FileSystem fs = ((S3Path)dir).getFileSystem();
         try {
-            this.createDirectory(null, dir, attrs);
+            String directoryKey = ((S3Path)dir).toRealPath(NOFOLLOW_LINKS).getKey();
+            if (!directoryKey.endsWith(S3Path.PATH_SEPARATOR) && !directoryKey.isEmpty()) {
+                directoryKey = directoryKey + S3Path.PATH_SEPARATOR;
+            }
+
+            long timeOut = TIMEOUT_TIME_LENGTH_1;
+            final TimeUnit unit = MINUTES;
+            try {
+                fs.client().putObject(PutObjectRequest.builder()
+                                        .bucket(fs.bucketName())
+                                        .key(directoryKey)
+                                        .build(),
+                                AsyncRequestBody.empty())
+                        .get(timeOut, unit);
+            } catch (TimeoutException e) {
+                throw logAndGenerateExceptionOnTimeOut(logger, "createDirectory", timeOut, unit);
+            }
         } catch (ExecutionException e) {
             throw new IOException(e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
-        }
-    }
-
-    protected void createDirectory(S3AsyncClient s3Client, Path dir, FileAttribute<?>... attrs) throws ExecutionException, InterruptedException {
-        S3Path s3Path = (S3Path) dir;
-        final String bucketName = s3Path.bucketName();
-
-        if (s3Client == null) {
-            s3Client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
-        }
-
-        String directoryKey = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
-        if (!directoryKey.endsWith(S3Path.PATH_SEPARATOR) && !directoryKey.isEmpty()) {
-            directoryKey = directoryKey + S3Path.PATH_SEPARATOR;
-        }
-
-        long timeOut = TIMEOUT_TIME_LENGTH_1;
-        final TimeUnit unit = MINUTES;
-        try {
-            s3Client.putObject(PutObjectRequest.builder()
-                                    .bucket(bucketName)
-                                    .key(directoryKey)
-                                    .build(),
-                            AsyncRequestBody.empty())
-                    .get(timeOut, unit);
-        } catch (TimeoutException e) {
-            throw logAndGenerateExceptionOnTimeOut(logger, "createDirectory", timeOut, unit);
         }
     }
 
@@ -367,69 +410,37 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public void delete(Path path) throws IOException {
+        S3FileSystem fs = ((S3Path)path).getFileSystem();
         try {
-            this.delete(null, path);
+            final S3Path s3Path = (S3Path) path;
+            final S3AsyncClient s3Client = fs.client();
+            final String bucketName = fs.bucketName();
+
+            final String prefix = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
+
+            long timeOut = TIMEOUT_TIME_LENGTH_1;
+            final TimeUnit unit = MINUTES;
+            try {
+                List<List<ObjectIdentifier>> keys = getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit);
+
+                for (List<ObjectIdentifier> keyList : keys) {
+                    s3Client.deleteObjects(DeleteObjectsRequest.builder()
+                                    .bucket(bucketName)
+                                    .delete(Delete.builder()
+                                            .objects(keyList)
+                                            .build())
+                                    .build())
+                            .get(timeOut, unit);
+                }
+            } catch (TimeoutException e) {
+                throw logAndGenerateExceptionOnTimeOut(logger, "delete", timeOut, unit);
+            }
         } catch (ExecutionException e) {
             throw new IOException(e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
-    }
-
-    protected void delete(S3AsyncClient s3Client, Path path) throws ExecutionException, InterruptedException {
-        S3Path s3Path = (S3Path) path;
-
-        if (s3Client == null) {
-            s3Client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
-        }
-
-        String prefix = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
-        final String bucketName = s3Path.bucketName();
-
-        long timeOut = TIMEOUT_TIME_LENGTH_1;
-        final TimeUnit unit = MINUTES;
-        try {
-            List<List<ObjectIdentifier>> keys = getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit);
-
-            for (List<ObjectIdentifier> keyList : keys) {
-                s3Client.deleteObjects(DeleteObjectsRequest.builder()
-                                .bucket(bucketName)
-                                .delete(Delete.builder()
-                                        .objects(keyList)
-                                        .build())
-                                .build())
-                        .get(timeOut, unit);
-            }
-        } catch (TimeoutException e) {
-            throw logAndGenerateExceptionOnTimeOut(logger, "delete", timeOut, unit);
-        }
-    }
-
-    private static List<List<ObjectIdentifier>> getContainedObjectBatches(S3AsyncClient s3Client, String bucketName, String prefix, long timeOut, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        String continuationToken = null;
-        boolean hasMoreItems = true;
-        List<List<ObjectIdentifier>> keys = new ArrayList<>();
-
-        while (hasMoreItems) {
-            String finalContinuationToken = continuationToken;
-            ListObjectsV2Response response = s3Client.listObjectsV2(req -> req
-                            .bucket(bucketName)
-                            .prefix(prefix)
-                            .continuationToken(finalContinuationToken))
-                    .get(timeOut, unit);
-            List<ObjectIdentifier> objects = response.contents()
-                    .stream()
-                    .filter(s3Object -> s3Object.key().equals(prefix) || s3Object.key().startsWith(prefix + S3Path.PATH_SEPARATOR))
-                    .map(s3Object -> ObjectIdentifier.builder().key(s3Object.key()).build())
-                    .collect(Collectors.toList());
-            if (!objects.isEmpty()) {
-                keys.add(objects);
-            }
-            hasMoreItems = response.isTruncated();
-            continuationToken = response.nextContinuationToken();
-        }
-        return keys;
     }
 
     /**
@@ -442,64 +453,58 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @param target  the path to the target file
      * @param options options specifying how the copy should be done
      */
-    @Override
     public void copy(Path source, Path target, CopyOption... options) throws IOException {
         try {
-            this.copy(null, source, target, options);
+            // If both paths point to the same object, this is a no-op
+            if (source.equals(target)) {
+                return;
+            }
+
+            List<CopyOption> copyOptions = Arrays.asList(options);
+
+            S3Path s3SourcePath = (S3Path) source;
+            S3Path s3TargetPath = (S3Path) target;
+
+            final S3FileSystem fs = ((S3Path)source).getFileSystem();
+            final S3AsyncClient s3Client = fs.client();
+            final String bucketName = fs.bucketName();
+
+            String prefix = s3SourcePath.toRealPath(NOFOLLOW_LINKS).getKey();
+
+            long timeOut = TIMEOUT_TIME_LENGTH_1;
+            final TimeUnit unit = MINUTES;
+            try {
+                List<List<ObjectIdentifier>> keys = getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit);
+
+                for (List<ObjectIdentifier> keyList : keys) {
+                    for (ObjectIdentifier objectIdentifier : keyList) {
+                        S3Path resolvedS3TargetPath = s3TargetPath.resolve(objectIdentifier.key().replaceFirst(prefix + S3Path.PATH_SEPARATOR, ""));
+
+                        if (!copyOptions.contains(StandardCopyOption.REPLACE_EXISTING) && exists(s3Client, resolvedS3TargetPath)) {
+                            throw new FileAlreadyExistsException("File already exists at the target key");
+                        }
+
+                        try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(s3Client).build()) {
+                            s3TransferManager.copy(CopyRequest.builder()
+                                    .copyObjectRequest(CopyObjectRequest.builder()
+                                            .checksumAlgorithm(ChecksumAlgorithm.SHA256)
+                                            .sourceBucket(bucketName)
+                                            .sourceKey(objectIdentifier.key())
+                                            .destinationBucket(resolvedS3TargetPath.bucketName())
+                                            .destinationKey(resolvedS3TargetPath.getKey())
+                                            .build())
+                                    .build()).completionFuture().join();
+                        }
+                    }
+                }
+            } catch (TimeoutException e) {
+                throw logAndGenerateExceptionOnTimeOut(logger, "copy", timeOut, unit);
+            }
         } catch (ExecutionException e) {
             throw new IOException(e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
-        }
-    }
-
-    protected void copy(S3AsyncClient s3Client, Path source, Path target, CopyOption... options) throws ExecutionException, InterruptedException, FileAlreadyExistsException {
-        // If both paths point to the same object, this is a no-op
-        if (source.equals(target)) {
-            return;
-        }
-
-        List<CopyOption> copyOptions = Arrays.asList(options);
-
-        S3Path s3SourcePath = (S3Path) source;
-        S3Path s3TargetPath = (S3Path) target;
-
-        if (s3Client == null) {
-            s3Client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3SourcePath.bucketName());
-        }
-
-        String prefix = s3SourcePath.toRealPath(NOFOLLOW_LINKS).getKey();
-        final String bucketName = s3SourcePath.bucketName();
-
-        long timeOut = TIMEOUT_TIME_LENGTH_1;
-        final TimeUnit unit = MINUTES;
-        try {
-            List<List<ObjectIdentifier>> keys = getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit);
-
-            for (List<ObjectIdentifier> keyList : keys) {
-                for (ObjectIdentifier objectIdentifier : keyList) {
-                    S3Path resolvedS3TargetPath = s3TargetPath.resolve(objectIdentifier.key().replaceFirst(prefix + S3Path.PATH_SEPARATOR, ""));
-
-                    if (!copyOptions.contains(StandardCopyOption.REPLACE_EXISTING) && exists(s3Client, resolvedS3TargetPath)) {
-                        throw new FileAlreadyExistsException("File already exists at the target key");
-                    }
-
-                    try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(s3Client).build()) {
-                        s3TransferManager.copy(CopyRequest.builder()
-                                .copyObjectRequest(CopyObjectRequest.builder()
-                                        .checksumAlgorithm(ChecksumAlgorithm.SHA256)
-                                        .sourceBucket(bucketName)
-                                        .sourceKey(objectIdentifier.key())
-                                        .destinationBucket(resolvedS3TargetPath.bucketName())
-                                        .destinationKey(resolvedS3TargetPath.getKey())
-                                        .build())
-                                .build()).completionFuture().join();
-                    }
-                }
-            }
-        } catch (TimeoutException e) {
-            throw logAndGenerateExceptionOnTimeOut(logger, "copy", timeOut, unit);
         }
     }
 
@@ -525,19 +530,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public void move(Path source, Path target, CopyOption... options) throws IOException {
-        try {
-            this.move(null, source, target, options);
-        } catch (ExecutionException e) {
-            throw new IOException(e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        }
-    }
-
-    protected void move(S3AsyncClient s3AsyncClient, Path source, Path target, CopyOption... options) throws ExecutionException, InterruptedException, FileAlreadyExistsException {
-        this.copy(s3AsyncClient, source, target, options);
-        this.delete(s3AsyncClient, source);
+        this.copy(source, target, options);
+        this.delete(source);
     }
 
     /**
@@ -821,4 +815,42 @@ public class S3FileSystemProvider extends FileSystemProvider {
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws UnsupportedOperationException {
         throw new UnsupportedOperationException("s3 file attributes cannot be modified by this class");
     }
+
+    // --------------------------------------------------------- private methods
+
+    private static List<List<ObjectIdentifier>> getContainedObjectBatches(S3AsyncClient s3Client, String bucketName, String prefix, long timeOut, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+        String continuationToken = null;
+        boolean hasMoreItems = true;
+        List<List<ObjectIdentifier>> keys = new ArrayList<>();
+
+        while (hasMoreItems) {
+            String finalContinuationToken = continuationToken;
+            ListObjectsV2Response response = s3Client.listObjectsV2(req -> req
+                            .bucket(bucketName)
+                            .prefix(prefix)
+                            .continuationToken(finalContinuationToken))
+                    .get(timeOut, unit);
+            List<ObjectIdentifier> objects = response.contents()
+                    .stream()
+                    .filter(s3Object -> s3Object.key().equals(prefix) || s3Object.key().startsWith(prefix + S3Path.PATH_SEPARATOR))
+                    .map(s3Object -> ObjectIdentifier.builder().key(s3Object.key()).build())
+                    .collect(Collectors.toList());
+            if (!objects.isEmpty()) {
+                keys.add(objects);
+            }
+            hasMoreItems = response.isTruncated();
+            continuationToken = response.nextContinuationToken();
+        }
+        return keys;
+    }
+
+    private String getFileSystemKey(URI uri) {
+        String host = uri.getHost();
+        int port = uri.getPort();
+
+        return (port<0) && (!host.contains("."))
+               ? host
+               : (host + ((port < 0) ? "" : (':' + port)) + S3Path.PATH_SEPARATOR + uri.getPath().split(S3Path.PATH_SEPARATOR)[1]);
+    }
+
 }

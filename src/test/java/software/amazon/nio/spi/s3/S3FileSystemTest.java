@@ -13,26 +13,51 @@ import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import org.junit.After;
 
 import static org.junit.Assert.*;
+import org.junit.runner.RunWith;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.Mock;
+import static org.mockito.Mockito.lenient;
+import org.mockito.junit.MockitoJUnitRunner;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
+@RunWith(MockitoJUnitRunner.class)
 public class S3FileSystemTest {
     S3FileSystemProvider provider;
     URI s3Uri = URI.create("s3://mybucket/some/path/to/object.txt");
     S3FileSystem s3FileSystem;
 
+    @Mock
+    S3AsyncClient mockClient;
+
     @Before
     public void init() {
-        this.provider = new S3FileSystemProvider();
+        provider = new S3FileSystemProvider();
+        provider.clientProvider = new S3ClientProvider() {
+            @Override
+            protected S3AsyncClient generateAsyncClient(String bucketName) {
+                return mockClient;
+            }
+        };
         s3FileSystem = (S3FileSystem) this.provider.newFileSystem(s3Uri, Collections.emptyMap());
+        lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
+                CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
     }
 
+    @After
+    public void after() throws Exception {
+        s3FileSystem.close();
+    }
 
     @Test
     public void getSeparator() {
         assertEquals("/", new S3FileSystem(s3Uri, provider).getSeparator());
     }
-
 
     @Test
     public void close() throws IOException {
