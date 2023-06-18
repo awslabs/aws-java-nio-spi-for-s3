@@ -116,13 +116,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         S3FileSystem fs = null;
 
-        URI realUri = uri /*normalize(uri)*/;
-
-        String key = getFileSystemKey(realUri);
+        String key = getFileSystemKey(uri);
         if (cache.containsKey(key)) {
             throw new FileSystemAlreadyExistsException("a file system already exists for uri '" + key + "', use getFileSystem() instead");
         }
-        cache.put(key, fs = new S3FileSystem(realUri, this));
+        cache.put(key, fs = new S3FileSystem(uri, this));
 
         return fs;
     }
