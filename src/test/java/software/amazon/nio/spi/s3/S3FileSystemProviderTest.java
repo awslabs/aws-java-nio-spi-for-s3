@@ -459,12 +459,12 @@ public class S3FileSystemProviderTest {
                         .build()));
 
         S3Path foo = fileSystem.getPath("/foo");
-        provider.checkAccess(mockClient, foo, AccessMode.READ);
-        provider.checkAccess(mockClient, foo, AccessMode.EXECUTE);
-        provider.checkAccess(mockClient, foo);
+        provider.checkAccess(foo, AccessMode.READ);
+        provider.checkAccess(foo, AccessMode.EXECUTE);
+        provider.checkAccess(foo);
     }
 
-   @Test(expected = AccessDeniedException.class)
+    @Test(expected = AccessDeniedException.class)
     public void checkAccessWhenAccessDenied() throws Exception {
         when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 HeadObjectResponse.builder()
@@ -472,7 +472,7 @@ public class S3FileSystemProviderTest {
                         .build()));
 
         S3Path foo = fileSystem.getPath("/foo");
-        provider.checkAccess(mockClient, foo);
+        provider.checkAccess(foo);
     }
 
     @Test(expected = NoSuchFileException.class)
@@ -483,7 +483,7 @@ public class S3FileSystemProviderTest {
                         .build()));
 
         S3Path foo = fileSystem.getPath("/foo");
-        provider.checkAccess(mockClient, foo);
+        provider.checkAccess(foo);
     }
 
     @Test
@@ -492,7 +492,7 @@ public class S3FileSystemProviderTest {
                 HeadObjectResponse.builder()
                         .sdkHttpResponse(SdkHttpResponse.builder().statusCode(200).build())
                         .build()));
-        provider.checkAccess(mockClient, fileSystem.getPath("foo"), AccessMode.WRITE);
+        provider.checkAccess(fileSystem.getPath("foo"), AccessMode.WRITE);
     }
 
     @Test
@@ -509,17 +509,17 @@ public class S3FileSystemProviderTest {
     @Test(expected = IllegalArgumentException.class)
     public void getFileAttributeViewIllegalArg() {
         S3Path foo = fileSystem.getPath("/foo");
-        final FileAttributeView fileAttributeView = provider.getFileAttributeView(foo, FileAttributeView.class);
+        provider.getFileAttributeView(foo, FileAttributeView.class);
     }
 
     @Test
     public void readAttributes() {
         S3Path foo = fileSystem.getPath("/foo");
-        final BasicFileAttributes BasicFileAttributes = provider.readAttributes(mockClient, foo, BasicFileAttributes.class);
+        final BasicFileAttributes BasicFileAttributes = provider.readAttributes(foo, BasicFileAttributes.class);
         assertNotNull(BasicFileAttributes);
         assertTrue(BasicFileAttributes instanceof S3BasicFileAttributes);
 
-        final S3BasicFileAttributes s3BasicFileAttributes = provider.readAttributes(mockClient, foo, S3BasicFileAttributes.class);
+        final S3BasicFileAttributes s3BasicFileAttributes = provider.readAttributes(foo, S3BasicFileAttributes.class);
         assertNotNull(s3BasicFileAttributes);
     }
 
@@ -535,15 +535,15 @@ public class S3FileSystemProviderTest {
                         .eTag("abcdef")
                         .build()));
 
-        Map<String, Object> attributes = provider.readAttributes(mockClient, foo, "*");
+        Map<String, Object> attributes = provider.readAttributes(foo, "*");
         assertTrue(attributes.size() >= 9);
 
-        attributes = provider.readAttributes(mockClient, foo, "lastModifiedTime,size,fileKey");
+        attributes = provider.readAttributes(foo, "lastModifiedTime,size,fileKey");
         assertEquals(3, attributes.size());
         assertEquals(FileTime.from(Instant.EPOCH), attributes.get("lastModifiedTime"));
         assertEquals(100L, attributes.get("size"));
 
-        assertEquals(Collections.emptyMap(), provider.readAttributes(mockClient, fooDir, "*"));
+        assertEquals(Collections.emptyMap(), provider.readAttributes(fooDir, "*"));
     }
 
     @Test(expected = UnsupportedOperationException.class)

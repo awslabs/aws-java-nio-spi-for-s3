@@ -648,52 +648,44 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public void checkAccess(Path path, AccessMode... modes) throws IOException {
         try {
-            this.checkAccess(null, path, modes);
+            assert path instanceof S3Path;
+
+            final S3Path s3Path = (S3Path) path.toRealPath(NOFOLLOW_LINKS);
+            final S3FileSystem fs = s3Path.getFileSystem();
+            final String bucketName = fs.bucketName();
+            final S3AsyncClient s3Client = fs.client();
+
+            final CompletableFuture<? extends S3Response> response;
+            if (s3Path.equals(s3Path.getRoot())) {
+                response = s3Client.headBucket(request -> request.bucket(bucketName));
+            } else {
+                response = s3Client.headObject(req -> req.bucket(bucketName).key(s3Path.getKey()));
+            }
+
+            long timeOut = TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
+            TimeUnit unit = MINUTES;
+
+            try {
+                SdkHttpResponse httpResponse = response.get(timeOut, unit).sdkHttpResponse();
+                if (httpResponse.isSuccessful()) return;
+
+                if (httpResponse.statusCode() == FORBIDDEN)
+                    throw new AccessDeniedException(s3Path.toString());
+
+                if (httpResponse.statusCode() == NOT_FOUND)
+                    throw new NoSuchFileException(s3Path.toString());
+
+                throw new IOException(String.format("exception occurred while checking access, response code was '%d'",
+                        httpResponse.statusCode()));
+
+            } catch (TimeoutException e) {
+                throw logAndGenerateExceptionOnTimeOut(logger, "checkAccess", timeOut, unit);
+            }
         } catch (ExecutionException e) {
             throw new IOException(e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * Composable and testable version of {@code checkAccess} that uses the provided client to check access
-     */
-    protected void checkAccess(S3AsyncClient s3Client, Path path, AccessMode... modes) throws IOException, ExecutionException, InterruptedException {
-        assert path instanceof S3Path;
-        S3Path s3Path = (S3Path) path.toRealPath(NOFOLLOW_LINKS);
-        final String bucketName = s3Path.getFileSystem().bucketName();
-
-        if (s3Client == null) {
-            s3Client = S3ClientStore.getInstance().getAsyncClientForBucketName(bucketName);
-        }
-
-        final CompletableFuture<? extends S3Response> response;
-        if (s3Path.equals(s3Path.getRoot())) {
-            response = s3Client.headBucket(request -> request.bucket(bucketName));
-        } else {
-            response = s3Client.headObject(req -> req.bucket(bucketName).key(s3Path.getKey()));
-        }
-
-        long timeOut = TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
-        TimeUnit unit = MINUTES;
-
-        try {
-            SdkHttpResponse httpResponse = response.get(timeOut, unit).sdkHttpResponse();
-            if (httpResponse.isSuccessful()) return;
-
-            if (httpResponse.statusCode() == FORBIDDEN)
-                throw new AccessDeniedException(s3Path.toString());
-
-            if (httpResponse.statusCode() == NOT_FOUND)
-                throw new NoSuchFileException(s3Path.toString());
-
-            throw new IOException(String.format("exception occurred while checking access, response code was '%d'",
-                    httpResponse.statusCode()));
-
-        } catch (TimeoutException e) {
-            throw logAndGenerateExceptionOnTimeOut(logger, "checkAccess", timeOut, unit);
         }
     }
 
@@ -737,25 +729,17 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @param options options indicating how symbolic links are handled
      * @return the file attributes or {@code null} if {@code path} is inferred to be a directory.
      */
-    @Override
     public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) {
-        return this.readAttributes(null, path, type, options);
-    }
-
-    protected <A extends BasicFileAttributes> A readAttributes(S3AsyncClient s3AsyncClient, Path path, Class<A> type, LinkOption... options) {
         Objects.requireNonNull(path);
         Objects.requireNonNull(type);
         if (!(path instanceof S3Path))
             throw new IllegalArgumentException("path must be an S3Path instance");
         S3Path s3Path = (S3Path) path;
-        //if (s3Path.isDirectory()) return null;
+        S3AsyncClient s3Client = s3Path.getFileSystem().client();
 
         if (type.equals(BasicFileAttributes.class) || type.equals(S3BasicFileAttributes.class)) {
-            if (s3AsyncClient == null) {
-                s3AsyncClient = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
-            }
             @SuppressWarnings("unchecked")
-            A a = (A) new S3BasicFileAttributes(s3Path, s3AsyncClient);
+            A a = (A) new S3BasicFileAttributes(s3Path, s3Client);
             return a;
         } else {
             throw new UnsupportedOperationException("cannot read attributes of type: " + type);
@@ -783,28 +767,21 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) {
-        return this.readAttributes(null, path, attributes, options);
-    }
-
-    protected Map<String, Object> readAttributes(S3AsyncClient client, Path path, String attributes, LinkOption... options) {
         Objects.requireNonNull(path);
         Objects.requireNonNull(attributes);
         S3Path s3Path = (S3Path) path;
-
-        if (client == null) {
-            client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
-        }
+        S3AsyncClient s3Client = s3Path.getFileSystem().client();
 
         if (s3Path.isDirectory() || attributes.trim().isEmpty())
             return Collections.emptyMap();
 
         if (attributes.equals("*") || attributes.equals("s3"))
-            return new S3BasicFileAttributes(s3Path, client).asMap();
+            return new S3BasicFileAttributes(s3Path, s3Client).asMap();
 
         final Set<String> attrSet = Arrays.stream(attributes.split(","))
                 .map(attr -> attr.replaceAll("^s3:", ""))
                 .collect(Collectors.toSet());
-        return readAttributes(client, path, S3BasicFileAttributes.class, options)
+        return readAttributes(path, S3BasicFileAttributes.class, options)
                 .asMap(attrSet::contains);
     }
 

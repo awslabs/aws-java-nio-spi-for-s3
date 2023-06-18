@@ -82,7 +82,7 @@ public class S3ClientProvider {
         );
     }
 
-    Logger logger = LoggerFactory.getLogger("S3ClientStore");
+    Logger logger = LoggerFactory.getLogger("S3ClientStoreProvider");
 
 
     /**
