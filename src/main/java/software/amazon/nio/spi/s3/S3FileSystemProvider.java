@@ -125,9 +125,16 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return fs;
     }
 
-    //
-    // TODO: add a shortcut newFileSystem(uri) -> newFileSystem(uri, Collections.EMPTY_MAP);
-    //
+    /**
+     * Same as newFileSystem(uri, Collections.EMPTY_MAP);
+     *
+     * @param uri URI reference
+     *
+     * @return newFileSystem(uri, Collections.EMPTY_MPA)
+     */
+    public S3FileSystem newFileSystem(URI uri) {
+        return newFileSystem(uri, Collections.EMPTY_MAP);
+    }
 
     /**
      * Returns an existing {@code FileSystem} created by this provider.
@@ -189,7 +196,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
             if (!create) {
                 throw new FileSystemNotFoundException("file system not found for '" + key + "'");
             }
-            fs = newFileSystem(uri, Collections.EMPTY_MAP);
+            fs = newFileSystem(uri);
         }
 
         return fs;

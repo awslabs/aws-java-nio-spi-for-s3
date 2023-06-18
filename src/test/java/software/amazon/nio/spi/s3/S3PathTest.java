@@ -51,7 +51,7 @@ public class S3PathTest {
                 return mockClient;
             }
         };
-        fileSystem = provider.newFileSystem(URI.create(uriString), Collections.EMPTY_MAP);
+        fileSystem = provider.newFileSystem(URI.create(uriString));
         lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
 
@@ -206,7 +206,7 @@ public class S3PathTest {
 
         assertFalse(relativeObject.startsWith(S3Path.getPath(fileSystem, "dir1/dir2")));
         assertFalse(absoluteObject.startsWith(relativeBeginning));
-        assertFalse(absoluteObject.startsWith(S3Path.getPath(provider.newFileSystem(URI.create("s3://different-bucket"), Collections.EMPTY_MAP), "/dir1/")));
+        assertFalse(absoluteObject.startsWith(S3Path.getPath(provider.newFileSystem(URI.create("s3://different-bucket")), "/dir1/")));
     }
 
     @Test
@@ -461,7 +461,7 @@ public class S3PathTest {
         // the working directory, which is always "/" for a bucket.
         assertEquals(S3Path.getPath(fileSystem, "dir1/"), S3Path.getPath(fileSystem, "/dir1/"));
 
-        assertNotEquals(S3Path.getPath(fileSystem, "dir1/"), S3Path.getPath(provider.newFileSystem(URI.create("s3://foo"), Collections.EMPTY_MAP), "/dir1/"));
+        assertNotEquals(S3Path.getPath(fileSystem, "dir1/"), S3Path.getPath(provider.newFileSystem(URI.create("s3://foo")), "/dir1/"));
 
         // not equal because in s3 dir1 cannot be implied to be a directory unless it ends with "/"
         assertNotEquals(S3Path.getPath(fileSystem, "dir1/"), S3Path.getPath(fileSystem, "dir1"));
