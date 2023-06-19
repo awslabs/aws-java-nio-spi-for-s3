@@ -5,8 +5,6 @@
 
 package software.amazon.nio.spi.s3;
 
-import org.junit.Before;
-import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URI;
@@ -15,18 +13,20 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
-import org.junit.After;
-
-import static org.junit.Assert.*;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
 import static org.mockito.Mockito.lenient;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class S3FileSystemTest {
     S3FileSystemProvider provider;
     URI s3Uri = URI.create("s3://mybucket/some/path/to/object.txt");
@@ -35,12 +35,12 @@ public class S3FileSystemTest {
     @Mock
     S3AsyncClient mockClient;
 
-    @Before
+    @BeforeEach
     public void init() {
         provider = new S3FileSystemProvider();
         provider.clientProvider = new S3ClientProvider() {
             @Override
-            protected S3AsyncClient generateAsyncClient(String bucketName) {
+            protected S3AsyncClient generateAsyncClient(String endpoint, String bucketName, AwsCredentials credentials) {
                 return mockClient;
             }
         };
@@ -49,7 +49,7 @@ public class S3FileSystemTest {
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
     }
 
-    @After
+    @AfterEach
     public void after() throws Exception {
         s3FileSystem.close();
     }
@@ -63,12 +63,12 @@ public class S3FileSystemTest {
     public void close() throws IOException {
         assertEquals(0, s3FileSystem.getOpenChannels().size());
         s3FileSystem.close();
-        assertFalse("File system should return false from isOpen when closed has been called", s3FileSystem.isOpen());
+        assertFalse(s3FileSystem.isOpen(), "File system should return false from isOpen when closed has been called");
     }
 
     @Test
     public void isOpen() {
-        assertTrue("File system should be open when newly created", s3FileSystem.isOpen());
+        assertTrue(s3FileSystem.isOpen(), "File system should be open when newly created");
     }
 
     @Test
@@ -112,9 +112,11 @@ public class S3FileSystemTest {
     }
 
 
-    @Test(expected = UnsupportedOperationException.class)
-    //thrown because cannot be modified
+    @Test
     public void testGetOpenChannelsIsNotModifiable() {
-        s3FileSystem.getOpenChannels().add(null);
+        //
+        // thrown because cannot be modified
+        //
+        assertThrows(UnsupportedOperationException.class, () -> s3FileSystem.getOpenChannels().add(null));
     }
 }

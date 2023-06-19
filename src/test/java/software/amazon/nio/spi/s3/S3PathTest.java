@@ -5,30 +5,29 @@
 
 package software.amazon.nio.spi.s3;
 
-import org.junit.Before;
-import org.junit.Test;
 
-import java.io.File;
 import java.net.URI;
 import java.nio.file.LinkOption;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
-import org.junit.After;
+import org.junit.jupiter.api.AfterEach;
 
-import static org.junit.Assert.*;
-import org.junit.runner.RunWith;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
 import static org.mockito.Mockito.lenient;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class S3PathTest {
     final String uriString = "s3://mybucket";
     final S3FileSystemProvider provider = new S3FileSystemProvider();
@@ -43,11 +42,11 @@ public class S3PathTest {
     S3Path absoluteObject;
     S3Path relativeObject;
 
-    @Before
+    @BeforeEach
     public void init(){
         provider.clientProvider = new S3ClientProvider() {
             @Override
-            protected S3AsyncClient generateAsyncClient(String bucketName) {
+            protected S3AsyncClient generateAsyncClient(String endpoint, String bucketName, AwsCredentials credentials) {
                 return mockClient;
             }
         };
@@ -62,24 +61,24 @@ public class S3PathTest {
         relativeObject = S3Path.getPath(fileSystem, "dir1", "dir2", "object");
     }
 
-    @After
+    @AfterEach
     public void after() throws Exception {
         fileSystem.close();
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void getPathNullFileSystem() {
-        S3Path.getPath(null, "/", "foo");
+        assertThrows(IllegalArgumentException.class, () -> S3Path.getPath(null, "/", "foo"));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void getPathNullFirst() {
-        S3Path.getPath(fileSystem, null, "foo");
+        assertThrows(IllegalArgumentException.class, () -> S3Path.getPath(fileSystem, null, "foo"));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void getPathEmptyFirst() {
-        S3Path.getPath(fileSystem, " ", "foo");
+        assertThrows(IllegalArgumentException.class, () -> S3Path.getPath(fileSystem, " ", "foo"));
     }
 
     @Test
@@ -165,16 +164,14 @@ public class S3PathTest {
         assertEquals(object, absoluteObject.getName(2));
     }
 
-    @SuppressWarnings("unused")
-    @Test (expected = IllegalArgumentException.class)
+    @Test
     public void getNameNegativeIllegalArgument() {
-        final S3Path path = absoluteObject.getName(-1);
+        assertThrows(IllegalArgumentException.class, () -> absoluteObject.getName(-1));
     }
 
-    @SuppressWarnings("unused")
-    @Test (expected = IllegalArgumentException.class)
+    @Test
     public void getNameOOBIllegalArgument() {
-        final S3Path path = absoluteObject.getName(3);
+        assertThrows(IllegalArgumentException.class, () -> absoluteObject.getName(3));
     }
 
     @Test
@@ -392,14 +389,14 @@ public class S3PathTest {
                 S3Path.getPath(fileSystem, "/bar/").toRealPath(LinkOption.NOFOLLOW_LINKS).toString());
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void toFile() {
-        final File file = absoluteObject.toFile();
+        assertThrows(UnsupportedOperationException.class, () -> absoluteObject.toFile());
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void register() {
-        absoluteObject.register(null);
+        assertThrows(UnsupportedOperationException.class, () -> absoluteObject.register(null));
     }
 
     @Test

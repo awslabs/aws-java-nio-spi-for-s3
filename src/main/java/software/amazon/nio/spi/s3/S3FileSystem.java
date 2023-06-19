@@ -27,6 +27,8 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 /**
  * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
+ *
+ * TODO: replace uriString in constructors with endpoint, bucket and credentials
  */
 public class S3FileSystem extends FileSystem {
     Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -63,6 +65,10 @@ public class S3FileSystem extends FileSystem {
         super();
         assert uri.getScheme().equals(S3FileSystemProvider.SCHEME);
 
+        //
+        // TODO: move this logic in S3FileSystemProvider and provide constructors
+        // that accept endpoint, bucket and credentials
+        //
         credentials = getCredentials(uri);
 
         String host = uri.getHost(); int port = uri.getPort();
@@ -76,7 +82,7 @@ public class S3FileSystem extends FileSystem {
 
         logger.debug("creating FileSystem for 's3://{}'", this.bucketName);
         this.provider = s3FileSystemProvider;
-        this.client = s3FileSystemProvider.clientProvider.generateAsyncClient(this.bucketName);
+        this.client = s3FileSystemProvider.clientProvider.generateAsyncClient(endpoint, bucketName, credentials); // provide the endpoint too
     }
 
     /**
@@ -473,7 +479,7 @@ public class S3FileSystem extends FileSystem {
         int pos = userInfo.indexOf(':');
         return AwsBasicCredentials.create(
             (pos < 0) ? userInfo : userInfo.substring(0, pos),
-            (pos < 0) ? null : userInfo.substring(pos)
+            (pos < 0) ? null : userInfo.substring(pos+1)
         );
     }
 

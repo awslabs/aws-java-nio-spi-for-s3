@@ -6,27 +6,27 @@
 package software.amazon.nio.spi.s3;
 
 import static com.github.stefanbirkner.systemlambda.SystemLambda.restoreSystemProperties;
-import junit.framework.TestCase;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 @SuppressWarnings("unchecked")
-public class S3ClientStoreTest extends TestCase {
+@Deprecated
+public class S3ClientStoreTest {
 
     S3ClientStore instance;
 
     @Mock
     S3Client mockClient; //client used to determine bucket location
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
-        super.setUp();
         instance = S3ClientStore.getInstance();
     }
 

@@ -11,6 +11,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
 
 /**
  * A Singleton cache of clients for buckets configured for the region of those buckets

@@ -5,11 +5,11 @@
 
 package software.amazon.nio.spi.s3;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import static com.github.stefanbirkner.systemlambda.SystemLambda.restoreSystemProperties;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.*;
 
@@ -28,19 +28,22 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import org.junit.After;
+import org.junit.jupiter.api.AfterEach;
 
-import static org.junit.Assert.*;
-import org.junit.Rule;
-import org.junit.contrib.java.lang.system.ProvideSystemProperty;
-import org.mockito.ArgumentCaptor;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-import software.amazon.awssdk.core.async.AsyncRequestBody;
-import software.amazon.awssdk.http.SdkHttpResponse;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 @SuppressWarnings("unchecked")
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class S3FileSystemProviderTest {
 
     S3FileSystemProvider provider;
@@ -50,31 +53,22 @@ public class S3FileSystemProviderTest {
     S3AsyncClient mockClient;
 
 
-    //
-    // TODO: switch to JUnit5 and system lambda
-    //
-    @Rule
-    public final ProvideSystemProperty AWS_ACCESS_KEY
-	 = new ProvideSystemProperty("aws.accessKeyId", "akey");
-    @Rule
-    public final ProvideSystemProperty AWS_SECRET_ACCESS_KEY
-	 = new ProvideSystemProperty("aws.secretAccessKey", "asecret");
-
-    @Before
+    @BeforeEach
     public void init() {
         provider = new S3FileSystemProvider();
         provider.clientProvider = new S3ClientProvider() {
             @Override
-            protected S3AsyncClient generateAsyncClient(String bucketName) {
+            protected S3AsyncClient generateAsyncClient(String endpoint, String bucketName, AwsCredentials credentials) {
                 return mockClient;
             }
         };
-        fileSystem = provider.newFileSystem(URI.create(pathUri));
-        when(mockClient.headObject(any(Consumer.class))).thenReturn(
+        lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
+
+        fileSystem = provider.newFileSystem(URI.create(pathUri));
     }
 
-    @After
+    @AfterEach
     public void after() {
        provider.closeFileSystem(fileSystem);
     }
@@ -464,7 +458,7 @@ public class S3FileSystemProviderTest {
         provider.checkAccess(foo);
     }
 
-    @Test(expected = AccessDeniedException.class)
+    @Test
     public void checkAccessWhenAccessDenied() throws Exception {
         when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 HeadObjectResponse.builder()
@@ -472,10 +466,10 @@ public class S3FileSystemProviderTest {
                         .build()));
 
         S3Path foo = fileSystem.getPath("/foo");
-        provider.checkAccess(foo);
+        assertThrows(AccessDeniedException.class, () -> provider.checkAccess(foo));
     }
 
-    @Test(expected = NoSuchFileException.class)
+    @Test
     public void checkAccessWhenNoSuchFile() throws Exception {
         when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 HeadObjectResponse.builder()
@@ -483,7 +477,7 @@ public class S3FileSystemProviderTest {
                         .build()));
 
         S3Path foo = fileSystem.getPath("/foo");
-        provider.checkAccess(foo);
+        assertThrows(NoSuchFileException.class, () -> provider.checkAccess(foo));
     }
 
     @Test
@@ -506,10 +500,10 @@ public class S3FileSystemProviderTest {
         assertNotNull(fileAttributeView1);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void getFileAttributeViewIllegalArg() {
         S3Path foo = fileSystem.getPath("/foo");
-        provider.getFileAttributeView(foo, FileAttributeView.class);
+        assertThrows(IllegalArgumentException.class, () -> provider.getFileAttributeView(foo, FileAttributeView.class));
     }
 
     @Test
@@ -546,24 +540,28 @@ public class S3FileSystemProviderTest {
         assertEquals(Collections.emptyMap(), provider.readAttributes(fooDir, "*"));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void setAttribute() {
         S3Path foo = fileSystem.getPath("/foo");
-        provider.setAttribute(foo, "x", "y");
+        assertThrows(UnsupportedOperationException.class, () -> provider.setAttribute(foo, "x", "y"));
     }
 
     @Test
     public void getS3FileSystemFromS3URI() throws Exception {
-        final URI U = URI.create("s3://endpoint/bucket1");
-        S3FileSystem fs = (S3FileSystem)FileSystems.newFileSystem(U, Collections.EMPTY_MAP);
-        assertNotNull(fs);
-        try {
-            FileSystems.newFileSystem(URI.create("s3://endpoint/bucket1"), Collections.EMPTY_MAP);
-        } catch (FileSystemAlreadyExistsException x) {
-            assertEquals("a file system already exists for uri 'endpoint', use getFileSystem() instead", x.getMessage());
-        }
-        assertSame(fs, FileSystems.getFileSystem(U));
-        fs.close();
+        restoreSystemProperties(() -> {
+            System.setProperty("aws.region", "us-west-1");
+
+            final URI U = URI.create("s3://key:secret@endpoint.com/bucket1");
+            S3FileSystem fs = (S3FileSystem)FileSystems.newFileSystem(U, Collections.EMPTY_MAP);
+            assertNotNull(fs);
+            try {
+                FileSystems.newFileSystem(URI.create("s3://endpoint.com/bucket1"), Collections.EMPTY_MAP);
+            } catch (FileSystemAlreadyExistsException x) {
+                assertEquals("a file system already exists for 'endpoint.com/bucket1', use getFileSystem() instead", x.getMessage());
+            }
+            assertSame(fs, FileSystems.getFileSystem(U));
+            fs.close();
+        });
     }
 
     // --------------------------------------------------------- private methods
