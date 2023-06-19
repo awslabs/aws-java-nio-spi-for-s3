@@ -5,12 +5,8 @@
 
 package software.amazon.nio.spi.s3;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -34,12 +30,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @SuppressWarnings("unchecked")
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class S3FileSystemProviderTest {
 
     S3FileSystemProvider provider;
@@ -48,12 +51,19 @@ public class S3FileSystemProviderTest {
     @Mock
     S3AsyncClient mockClient;
 
-    @Before
+    @BeforeEach
     public void init() {
         provider = new S3FileSystemProvider();
         fs = new S3FileSystem("s3://mybucket", provider);
-        when(mockClient.headObject(any(Consumer.class))).thenReturn(
+        lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
+    }
+
+    @Test
+    public void getClientStore() {
+        S3ClientStore s;
+        assertNotNull(s = provider.getClientStore());
+        assertSame(s, provider.getClientStore());
     }
 
     @Test
@@ -63,7 +73,6 @@ public class S3FileSystemProviderTest {
 
     @Test
     public void newFileSystem() {
-
         URI uri = URI.create(pathUri);
         final FileSystem fileSystem = provider.newFileSystem(uri, Collections.emptyMap());
         assertTrue(fileSystem instanceof S3FileSystem);
@@ -259,7 +268,7 @@ public class S3FileSystemProviderTest {
         provider.checkAccess(mockClient, foo);
     }
 
-    @Test(expected = AccessDeniedException.class)
+    @Test
     public void checkAccessWhenAccessDenied() throws IOException, ExecutionException, InterruptedException {
         when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 HeadObjectResponse.builder()
@@ -267,10 +276,10 @@ public class S3FileSystemProviderTest {
                         .build()));
 
         S3Path foo = fs.getPath("/foo");
-        provider.checkAccess(mockClient, foo);
+        assertThrows(AccessDeniedException.class, () -> provider.checkAccess(mockClient, foo));
     }
 
-    @Test(expected = NoSuchFileException.class)
+    @Test
     public void checkAccessWhenNoSuchFile() throws IOException, ExecutionException, InterruptedException {
         when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 HeadObjectResponse.builder()
@@ -278,7 +287,7 @@ public class S3FileSystemProviderTest {
                         .build()));
 
         S3Path foo = fs.getPath("/foo");
-        provider.checkAccess(mockClient, foo);
+        assertThrows(NoSuchFileException.class, () -> provider.checkAccess(mockClient, foo));
     }
 
     @Test
@@ -301,10 +310,10 @@ public class S3FileSystemProviderTest {
         assertNotNull(fileAttributeView1);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void getFileAttributeViewIllegalArg() {
         S3Path foo = fs.getPath("/foo");
-        final FileAttributeView fileAttributeView = provider.getFileAttributeView(foo, FileAttributeView.class);
+        assertThrows(IllegalArgumentException.class, () -> provider.getFileAttributeView(foo, FileAttributeView.class));
     }
 
     @Test
@@ -341,9 +350,9 @@ public class S3FileSystemProviderTest {
         assertEquals(Collections.emptyMap(), provider.readAttributes(mockClient, fooDir, "*"));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void setAttribute() {
         S3Path foo = fs.getPath("/foo");
-        provider.setAttribute(foo, "x", "y");
+        assertThrows(UnsupportedOperationException.class, () -> provider.setAttribute(foo, "x", "y"));
     }
 }

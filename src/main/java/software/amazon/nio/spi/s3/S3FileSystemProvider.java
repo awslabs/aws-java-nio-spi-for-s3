@@ -55,6 +55,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
+    /**
+     * Cache for clients; null means not initialized yet!
+     */
+    private static S3ClientStore clientStore = null;
 
     /**
      * Returns the URI scheme that identifies this provider.
@@ -208,7 +212,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final S3SeekableByteChannel channel;
 
         if (client == null) {
-            client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
+            client = getClientStore().getAsyncClientForBucketName(s3Path.bucketName());
         }
 
         channel = new S3SeekableByteChannel(s3Path, client, options);
@@ -248,7 +252,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         S3Path s3Path = (S3Path) dir;
 
         if (s3Client == null) {
-            s3Client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
+            s3Client = getClientStore().getAsyncClientForBucketName(s3Path.bucketName());
         }
 
         String pathString = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
@@ -337,7 +341,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final String bucketName = s3Path.bucketName();
 
         if (s3Client == null) {
-            s3Client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
+            s3Client = getClientStore().getAsyncClientForBucketName(s3Path.bucketName());
         }
 
         String directoryKey = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
@@ -381,7 +385,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         S3Path s3Path = (S3Path) path;
 
         if (s3Client == null) {
-            s3Client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
+            s3Client = getClientStore().getAsyncClientForBucketName(s3Path.bucketName());
         }
 
         String prefix = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
@@ -466,7 +470,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         S3Path s3TargetPath = (S3Path) target;
 
         if (s3Client == null) {
-            s3Client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3SourcePath.bucketName());
+            s3Client = getClientStore().getAsyncClientForBucketName(s3SourcePath.bucketName());
         }
 
         String prefix = s3SourcePath.toRealPath(NOFOLLOW_LINKS).getKey();
@@ -670,7 +674,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final String bucketName = s3Path.getFileSystem().bucketName();
 
         if (s3Client == null) {
-            s3Client = S3ClientStore.getInstance().getAsyncClientForBucketName(bucketName);
+            s3Client = getClientStore().getAsyncClientForBucketName(bucketName);
         }
 
         final CompletableFuture<? extends S3Response> response;
@@ -756,7 +760,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         if (type.equals(BasicFileAttributes.class) || type.equals(S3BasicFileAttributes.class)) {
             if (s3AsyncClient == null) {
-                s3AsyncClient = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
+                s3AsyncClient = getClientStore().getAsyncClientForBucketName(s3Path.bucketName());
             }
             @SuppressWarnings("unchecked")
             A a = (A) new S3BasicFileAttributes(s3Path, s3AsyncClient);
@@ -796,7 +800,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         S3Path s3Path = (S3Path) path;
 
         if (client == null) {
-            client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
+            client = getClientStore().getAsyncClientForBucketName(s3Path.bucketName());
         }
 
         if (s3Path.isDirectory() || attributes.trim().isEmpty())
@@ -820,5 +824,19 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws UnsupportedOperationException {
         throw new UnsupportedOperationException("s3 file attributes cannot be modified by this class");
+    }
+
+    /**
+     * Creates if needed and returns the S3ClientStore caching all created
+     * clients. This is not public on purpose, as it is an intermediate solution
+     * that will be replaced by instance accessors.
+     *
+     * @return the cache of clients as a S3ClientStore
+     */
+    protected static S3ClientStore getClientStore() {
+        if (clientStore == null) {
+            clientStore = new S3ClientStore();
+        }
+        return clientStore;
     }
 }
