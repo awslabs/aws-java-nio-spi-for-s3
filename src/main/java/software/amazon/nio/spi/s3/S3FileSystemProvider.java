@@ -305,20 +305,20 @@ public class S3FileSystemProvider extends FileSystemProvider {
                 pathString = pathString + S3Path.PATH_SEPARATOR;
             }
 
-            final S3FileSystem fs = ((S3Path)dir).getFileSystem();
+            final S3FileSystem fs = s3Path.getFileSystem();
 
             final String prefix = pathString;
 
             long timeOut = TIMEOUT_TIME_LENGTH_1;
             final TimeUnit unit = MINUTES;
             try {
-                final Iterator<S3Path> filteredDirectoryContents = fs.client().listObjectsV2(req -> req
-                                .bucket(fs.bucketName())
-                                .prefix(prefix))
+                final Iterator<S3Path> filteredDirectoryContents =
+                    fs.client().listObjectsV2(req -> req.bucket(fs.bucketName()).prefix(prefix))
                         .get(timeOut, unit)
                         .contents()
                         .stream()
                         .map(s3Object -> truncateByPrefix(fs, prefix, s3Object))
+                        .distinct()
                         .filter(path -> {
                             try {
                                 return filter.accept(path);
