@@ -274,6 +274,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
                     .contents()
                     .stream()
                     .map(s3Object -> truncateByPrefix(fs, prefix, s3Object))
+                    .distinct()
                     .filter(path -> {
                         try {
                             return filter.accept(path);
