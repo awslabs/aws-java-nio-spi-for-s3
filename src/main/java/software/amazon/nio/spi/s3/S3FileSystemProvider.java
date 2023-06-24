@@ -363,7 +363,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
 
         int indexOfNextSeparator = object.key().indexOf(S3Path.PATH_SEPARATOR, prefix.length());
-        String truncated = indexOfNextSeparator == -1 ? object.key() : object.key().substring(0, indexOfNextSeparator);
+        String truncated = indexOfNextSeparator == -1 ? object.key() : object.key().substring(0, indexOfNextSeparator+1);
         return fs.getPath(truncated);
     }
 
