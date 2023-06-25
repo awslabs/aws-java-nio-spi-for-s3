@@ -47,7 +47,7 @@ public class S3FileSystem extends FileSystem {
     private boolean open = true;
     private final Set<S3SeekableByteChannel> openChannels = new HashSet<>();
 
-    private final AwsCredentials credentials;
+    private AwsCredentials credentials;
 
     private S3AsyncClient client;
 
@@ -86,6 +86,18 @@ public class S3FileSystem extends FileSystem {
         // that accept endpoint, bucket and credentials
         //
         credentials = getCredentials(uri);
+        if ((credentials == null) && (config != null)) {
+            //
+            // Here, no credentials have been provided in the URI, let's check
+            // if we have them in the configuration map
+            //
+            credentials = config.getCredentials();
+        }
+
+        //
+        // if here credentials are still null, no overrides have been provided,
+        // the defauls environment/system properties will be used
+        //
 
         String host = uri.getHost(); int port = uri.getPort();
         if ((port > 0) || (host.indexOf('.') > 0)) {
