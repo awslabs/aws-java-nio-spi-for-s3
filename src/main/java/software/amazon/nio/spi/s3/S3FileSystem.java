@@ -21,10 +21,16 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 /**
  * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
+ *
+ * TODO: replace uriString in constructors with endpoint, bucket and credentials
+ * TODO: make it closeable so that it is removed from the cache once not needed any more
  */
 public class S3FileSystem extends FileSystem {
     Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -34,11 +40,17 @@ public class S3FileSystem extends FileSystem {
      */
     public static final String BASIC_FILE_ATTRIBUTE_VIEW = "basic";
 
-    private final String bucketName;
+    protected S3ClientProvider clientProvider;
+
+    private final String bucketName, endpoint;
     private final S3FileSystemProvider provider;
     private boolean open = true;
     private final Set<S3SeekableByteChannel> openChannels = new HashSet<>();
     private final String endpoint;
+
+    private final AwsCredentials credentials;
+
+    private S3AsyncClient client;
 
     /**
      * Create a filesystem that represents the bucket specified by the URI
@@ -55,26 +67,37 @@ public class S3FileSystem extends FileSystem {
      * @param s3FileSystemProvider the provider to be used with this fileSystem
      */
     protected S3FileSystem(URI uri, S3FileSystemProvider s3FileSystemProvider) {
+        this(uri, s3FileSystemProvider, null);
+    }
+
+    /**
+     * Create a filesystem that represents the bucket specified by the URI
+     * @param uri a valid S3 URI to a bucket, e.g <code>URI.create("s3://mybucket")</code>
+     * @param s3FileSystemProvider the provider to be used with this fileSystem
+     * @param config the configuration to use; can be null to use a default configuration
+     */
+    protected S3FileSystem(URI uri, S3FileSystemProvider s3FileSystemProvider, S3NioSpiConfiguration config) {
         super();
         assert uri.getScheme().equals(S3FileSystemProvider.SCHEME);
 
-        String authority = uri.getAuthority();
+        clientProvider = new S3ClientProvider(config);
+
         //
-        // does the uri contain a server?
+        // TODO: move this logic in S3FileSystemProvider and provide constructors
+        // that accept endpoint, bucket and credentials
         //
-        if (authority.contains(".") || authority.contains(":") || authority.contains("@")) {
-            //
-            // Yes, it does!
-            //
-            endpoint = authority;
-            bucketName = uri.getPath().split(S3Path.PATH_SEPARATOR)[1];
-            logger.debug("creating FileSystem for 's3://{}/{}'", this.endpoint, this.bucketName);
+        credentials = getCredentials(uri);
+
+        String host = uri.getHost(); int port = uri.getPort();
+        if ((port > 0) || (host.indexOf('.') > 0)) {
+            this.bucketName = uri.getPath().split(S3Path.PATH_SEPARATOR)[1];
+            this.endpoint = host + ((port > 0) ? (":" + port) : "");
         } else {
-            endpoint = null;
-            bucketName = uri.getAuthority();
-            logger.debug("creating FileSystem for 's3://{}'", this.bucketName);
+            this.bucketName = host;
+            this.endpoint = null;
         }
 
+        logger.debug("creating FileSystem for 's3://{}'", this.bucketName);
         this.provider = s3FileSystemProvider;
     }
 
@@ -97,12 +120,39 @@ public class S3FileSystem extends FileSystem {
         return provider;
     }
 
+    public S3AsyncClient client() {
+        if (client == null) {
+            client = clientProvider.generateAsyncClient(endpoint, bucketName, credentials);
+        }
+
+        return client;
+    }
+
     /**
-     * Obtain the name of the bucket represented by this FileSystem instance
+     * Obtain the name of the bucket represented by this <code>FileSystem</code> instance
      * @return the bucket name
      */
     public String bucketName() {
         return bucketName;
+    }
+
+    /**
+     * Obtain the endpoint of the bucket represented by this <code>FileSystem</code> instance
+     * @return the endpoint in the form of hostname[:port]
+     */
+    public String endpoint() {
+        return endpoint;
+    }
+
+    /**
+     * Obtain the provided credentials to access the bucket represented by this
+     * <code>FileSystem</code> instance
+     *
+     * @return the credentials to access the bucket or null if no credentials
+     *             have been provided
+     */
+    public AwsCredentials credentials() {
+        return credentials;
     }
 
     /**
@@ -129,6 +179,7 @@ public class S3FileSystem extends FileSystem {
             }
             deregisterClosedChannel(channel);
         }
+        provider.closeFileSystem(this);
     }
 
     /**
@@ -443,4 +494,21 @@ public class S3FileSystem extends FileSystem {
     public int hashCode() {
         return Objects.hash(bucketName, provider.getClass().getName());
     }
+
+    // --------------------------------------------------------- private methods
+
+    private AwsCredentials getCredentials(URI uri) {
+        String userInfo = uri.getUserInfo();
+
+        if (userInfo == null) {
+            return null;
+        }
+
+        int pos = userInfo.indexOf(':');
+        return AwsBasicCredentials.create(
+            (pos < 0) ? userInfo : userInfo.substring(0, pos),
+            (pos < 0) ? null : userInfo.substring(pos+1)
+        );
+    }
+
 }
