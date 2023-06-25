@@ -15,11 +15,16 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 /**
  * Object to hold configuration of the S3 NIO SPI
  */
 public class S3NioSpiConfiguration {
+
+    public static final String AWS_ACCESS_KEY_PROPERTY = "aws.accessKey";
+    public static final String AWS_SECRET_ACCESS_KEY_PROPERTY = "aws.secretAccessKey";
 
     /**
      * The name of the maximum fragment size property
@@ -93,6 +98,7 @@ public class S3NioSpiConfiguration {
      */
     protected S3NioSpiConfiguration(Properties overrides) {
         Objects.requireNonNull(overrides);
+        System.out.println(overrides.keySet());
         overrides.stringPropertyNames()
             .forEach(key -> properties.setProperty(key, overrides.getProperty(key)));
     }
@@ -127,6 +133,20 @@ public class S3NioSpiConfiguration {
         logger.warn("the value of '{}' for '{}' is not an integer, using default value of '{}'",
                     protocol, S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
         return S3_SPI_ENDPOINT_PROTOCOL_DEFAULT;
+    }
+
+    /**
+     * Get the configured credentials
+     * @return the configured value or the default if not overridden
+     */
+    public AwsCredentials getCredentials() {
+        if (properties.containsKey(AWS_ACCESS_KEY_PROPERTY)) {
+            return AwsBasicCredentials.create(properties.getProperty(AWS_ACCESS_KEY_PROPERTY),
+                properties.getProperty(AWS_SECRET_ACCESS_KEY_PROPERTY)
+           );
+        }
+
+        return null;
     }
 
     // ------------------------------------------------------- protected methods
