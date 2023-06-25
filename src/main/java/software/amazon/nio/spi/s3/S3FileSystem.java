@@ -46,7 +46,6 @@ public class S3FileSystem extends FileSystem {
     private final S3FileSystemProvider provider;
     private boolean open = true;
     private final Set<S3SeekableByteChannel> openChannels = new HashSet<>();
-    private final String endpoint;
 
     private final AwsCredentials credentials;
 
@@ -119,6 +118,10 @@ public class S3FileSystem extends FileSystem {
     public FileSystemProvider provider() {
         return provider;
     }
+
+    /**
+     * @return the S3Client associated with this FileSystem
+     */
 
     public S3AsyncClient client() {
         if (client == null) {
@@ -457,14 +460,6 @@ public class S3FileSystem extends FileSystem {
      */
     protected Set<Channel> getOpenChannels(){
         return Collections.unmodifiableSet(openChannels);
-    }
-
-    /**
-     * @return the S3Client associated with this FileSystem
-     */
-    protected S3Client client() {
-        // TODO: create the client directly in the file system
-        return provider.getClientStore().getClientForBucketName(endpoint + S3Path.PATH_SEPARATOR + bucketName);
     }
 
     protected void registerOpenChannel(S3SeekableByteChannel channel){
