@@ -5,7 +5,6 @@
 
 package software.amazon.nio.spi.s3;
 
-
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystems;
@@ -68,6 +67,7 @@ public class S3FileSystemTest {
     @Test
     public void bucketName() {
         assertEquals("mybucket", s3FileSystem.bucketName());
+        assertEquals("mybucket", new S3FileSystem("s3://key:secret@endpoint.com/mybucket/myresource", provider).bucketName());
     }
 
     @Test
@@ -104,7 +104,6 @@ public class S3FileSystemTest {
         assertEquals(FileSystems.getDefault().getPathMatcher("glob:*.*").getClass(),
                 s3FileSystem.getPathMatcher("glob:*.*").getClass());
     }
-
 
     @Test
     public void testGetOpenChannelsIsNotModifiable() {

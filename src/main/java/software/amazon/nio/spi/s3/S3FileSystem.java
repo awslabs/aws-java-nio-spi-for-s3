@@ -119,6 +119,10 @@ public class S3FileSystem extends FileSystem {
         return provider;
     }
 
+    /**
+     * @return the S3Client associated with this FileSystem
+     */
+
     public S3AsyncClient client() {
         if (client == null) {
             client = clientProvider.generateAsyncClient(endpoint, bucketName, credentials);
