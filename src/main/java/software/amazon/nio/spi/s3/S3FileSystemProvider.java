@@ -35,6 +35,7 @@ import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static software.amazon.awssdk.http.HttpStatusCode.FORBIDDEN;
 import static software.amazon.awssdk.http.HttpStatusCode.NOT_FOUND;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExceptionOnTimeOut;
 
@@ -54,8 +55,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
     public static final String SCHEME = "s3";
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
-
-    protected S3ClientProvider clientProvider = new S3ClientProvider();
 
     private static Map<String, S3FileSystem> cache = new HashMap<>();
 
@@ -120,7 +119,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         if (cache.containsKey(key)) {
             throw new FileSystemAlreadyExistsException("a file system already exists for '" + key + "', use getFileSystem() instead");
         }
-        cache.put(key, fs = new S3FileSystem(uri, this));
+        cache.put(key, fs = new S3FileSystem(uri, this, new S3NioSpiConfiguration(env)));
 
         return fs;
     }

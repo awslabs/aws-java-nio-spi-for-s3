@@ -22,7 +22,6 @@ import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
 import static org.mockito.Mockito.lenient;
 import org.mockito.junit.jupiter.MockitoExtension;
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
@@ -38,13 +37,8 @@ public class S3FileSystemTest {
     @BeforeEach
     public void init() {
         provider = new S3FileSystemProvider();
-        provider.clientProvider = new S3ClientProvider() {
-            @Override
-            protected S3AsyncClient generateAsyncClient(String endpoint, String bucketName, AwsCredentials credentials) {
-                return mockClient;
-            }
-        };
         s3FileSystem = this.provider.newFileSystem(s3Uri, Collections.emptyMap());
+        s3FileSystem.clientProvider = new FakeS3ClientProvider(mockClient);
         lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
     }

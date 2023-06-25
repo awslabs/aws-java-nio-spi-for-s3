@@ -35,9 +35,10 @@ import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 /**
- *
+ * TODO: remove credentials as they can now be constructed from configuration
  */
 public class S3ClientProvider {
 
@@ -45,6 +46,11 @@ public class S3ClientProvider {
      * Default S3CrtAsyncClientBuilder
      */
     protected S3CrtAsyncClientBuilder asyncClientBuilder = S3AsyncClient.crtBuilder();
+
+    /**
+     * Configuration
+     */
+    final protected S3NioSpiConfiguration configuration;
 
 
     /**
@@ -93,6 +99,14 @@ public class S3ClientProvider {
     }
 
     Logger logger = LoggerFactory.getLogger("S3ClientStoreProvider");
+
+    public S3ClientProvider(S3NioSpiConfiguration c) {
+        this.configuration = (c == null) ? new S3NioSpiConfiguration() : c;
+    }
+
+    public S3ClientProvider() {
+        this(null);
+    }
 
 
     /**
@@ -287,8 +301,7 @@ public class S3ClientProvider {
         }
 
         if ((endpoint != null) && (endpoint.length() > 0)) {
-            // TODO: shall we have the protocol in the endpoint already?
-            asyncClientBuilder.endpointOverride(URI.create("https://" + endpoint));
+            asyncClientBuilder.endpointOverride(URI.create(configuration.getEndpointProtocol() + "://" + endpoint));
         }
 
         if (credentials != null) {
@@ -317,7 +330,7 @@ public class S3ClientProvider {
 
         if ((endpoint != null) && (endpoint.length() > 0)) {
             // TODO: shall we have the protocol in the endpoint already?
-            asyncClientBuilder.endpointOverride(URI.create("https://" + endpoint));
+            asyncClientBuilder.endpointOverride(URI.create(configuration.getEndpointProtocol() + "://" + endpoint));
         }
 
         if (credentials != null) {

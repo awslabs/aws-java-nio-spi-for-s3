@@ -44,13 +44,8 @@ public class S3PathTest {
 
     @BeforeEach
     public void init(){
-        provider.clientProvider = new S3ClientProvider() {
-            @Override
-            protected S3AsyncClient generateAsyncClient(String endpoint, String bucketName, AwsCredentials credentials) {
-                return mockClient;
-            }
-        };
         fileSystem = provider.newFileSystem(URI.create(uriString));
+        fileSystem.clientProvider = new FakeS3ClientProvider(mockClient);
         lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
 

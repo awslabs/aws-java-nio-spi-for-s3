@@ -29,7 +29,6 @@ public class S3FileSystemEndpointTest {
     @BeforeEach
     public void init() {
         provider = new S3FileSystemProvider();
-        provider.clientProvider.asyncClientBuilder = BUILDER;
     }
 
     @Test
@@ -45,12 +44,16 @@ public class S3FileSystemEndpointTest {
             System.setProperty("aws.region", "aws-east-1");
 
             S3FileSystem fs = new S3FileSystem(URI.create(URI1), provider);
+            fs.clientProvider.asyncClientBuilder = BUILDER;
 
             S3AsyncClient client = fs.client();
             assertEquals(URI.create("https://endpoint1.io"), BUILDER.endpointOverride);
             assertNull(BUILDER.credentialsProvider);
 
-            fs = new S3FileSystem(URI.create(URI2), provider); fs.client();
+            fs = new S3FileSystem(URI.create(URI2), provider);
+            fs.clientProvider.asyncClientBuilder = BUILDER;
+
+            fs.client();
             assertEquals(URI.create("https://endpoint2.io:8080"), BUILDER.endpointOverride);
             assertNull(BUILDER.credentialsProvider);
         });
@@ -65,6 +68,7 @@ public class S3FileSystemEndpointTest {
             System.setProperty("aws.region", "aws-east-1");
 
             S3FileSystem fs = new S3FileSystem(URI.create(URI1), provider);
+            fs.clientProvider.asyncClientBuilder = BUILDER;
 
             //
             // For non AWS S3 buckets, backet's region is not discovered runtime and it
@@ -77,8 +81,10 @@ public class S3FileSystemEndpointTest {
             assertEquals("key1", BUILDER.credentialsProvider.resolveCredentials().accessKeyId());
             assertEquals("secret1", BUILDER.credentialsProvider.resolveCredentials().secretAccessKey());
 
-            fs = new S3FileSystem(URI.create(URI2), provider); fs.client();
+            fs = new S3FileSystem(URI.create(URI2), provider);
+            fs.clientProvider.asyncClientBuilder = BUILDER;
 
+            fs.client();
             assertEquals(URI.create("https://endpoint2.io:8080"), BUILDER.endpointOverride);
             assertNotNull(BUILDER.credentialsProvider);
             assertEquals("key2", BUILDER.credentialsProvider.resolveCredentials().accessKeyId());

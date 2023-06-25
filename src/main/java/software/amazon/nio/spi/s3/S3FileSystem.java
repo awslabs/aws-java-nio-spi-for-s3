@@ -24,11 +24,13 @@ import java.util.regex.PatternSyntaxException;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 /**
  * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
  *
  * TODO: replace uriString in constructors with endpoint, bucket and credentials
+ * TODO: make it closeable so that it is removed from the cache once not needed any more
  */
 public class S3FileSystem extends FileSystem {
     Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -38,6 +40,8 @@ public class S3FileSystem extends FileSystem {
      */
     public static final String BASIC_FILE_ATTRIBUTE_VIEW = "basic";
 
+    protected S3ClientProvider clientProvider;
+
     private final String bucketName, endpoint;
     private final S3FileSystemProvider provider;
     private boolean open = true;
@@ -45,8 +49,8 @@ public class S3FileSystem extends FileSystem {
 
     private final AwsCredentials credentials;
 
-    private final S3AsyncClient client; // TODO: do we want this final?
-                                        // TODO: do we need to support S3Client too?
+    private S3AsyncClient client;
+
     /**
      * Create a filesystem that represents the bucket specified by the URI
      * @param uriString a valid S3 URI to a bucket, e.g "s3://mybucket"
@@ -62,8 +66,20 @@ public class S3FileSystem extends FileSystem {
      * @param s3FileSystemProvider the provider to be used with this fileSystem
      */
     protected S3FileSystem(URI uri, S3FileSystemProvider s3FileSystemProvider) {
+        this(uri, s3FileSystemProvider, null);
+    }
+
+    /**
+     * Create a filesystem that represents the bucket specified by the URI
+     * @param uri a valid S3 URI to a bucket, e.g <code>URI.create("s3://mybucket")</code>
+     * @param s3FileSystemProvider the provider to be used with this fileSystem
+     * @param config the configuration to use; can be null to use a default configuration
+     */
+    protected S3FileSystem(URI uri, S3FileSystemProvider s3FileSystemProvider, S3NioSpiConfiguration config) {
         super();
         assert uri.getScheme().equals(S3FileSystemProvider.SCHEME);
+
+        clientProvider = new S3ClientProvider(config);
 
         //
         // TODO: move this logic in S3FileSystemProvider and provide constructors
@@ -82,7 +98,6 @@ public class S3FileSystem extends FileSystem {
 
         logger.debug("creating FileSystem for 's3://{}'", this.bucketName);
         this.provider = s3FileSystemProvider;
-        this.client = s3FileSystemProvider.clientProvider.generateAsyncClient(endpoint, bucketName, credentials); // provide the endpoint too
     }
 
     /**
@@ -105,6 +120,10 @@ public class S3FileSystem extends FileSystem {
     }
 
     public S3AsyncClient client() {
+        if (client == null) {
+            client = clientProvider.generateAsyncClient(endpoint, bucketName, credentials);
+        }
+
         return client;
     }
 

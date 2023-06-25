@@ -26,14 +26,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("unchecked")
 public class S3ReadAheadByteChannelTest {
 
     final S3FileSystemProvider provider = new S3FileSystemProvider();
-
 
     S3Path path;
 
@@ -48,14 +46,7 @@ public class S3ReadAheadByteChannelTest {
 
     @BeforeEach
     public void setup() throws IOException {
-        provider.clientProvider = new S3ClientProvider() {
-            @Override
-            protected S3AsyncClient generateAsyncClient(String endpoint, String bucketName, AwsCredentials credentials) {
-                return client;
-            }
-        };
         path = S3Path.getPath(provider.getFileSystem(URI.create("s3://my-bucket"), true), "/object");
-
 
         // mocking
         lenient().when(delegator.size()).thenReturn(52L);

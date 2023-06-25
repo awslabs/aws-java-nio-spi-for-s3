@@ -24,6 +24,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationResponse;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 @ExtendWith(MockitoExtension.class)
 public class S3ClientProviderTest {
@@ -41,13 +42,18 @@ public class S3ClientProviderTest {
     @Test
     public void initialization() {
         final S3ClientProvider P = new S3ClientProvider();
+
+        assertNotNull(P.configuration);
+
         assertTrue(P.universalClient() instanceof S3Client);
         assertNotNull(P.universalClient());
 
         assertTrue(P.universalClient(true) instanceof S3AsyncClient);
         assertNotNull(P.universalClient());
-    }
 
+        S3NioSpiConfiguration config = new S3NioSpiConfiguration();
+        assertSame(config, new S3ClientProvider(config).configuration);
+    }
 
     @Test
     public void testGenerateAsyncClientWithNoErrors() {
