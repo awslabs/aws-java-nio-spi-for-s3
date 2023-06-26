@@ -137,6 +137,9 @@ public class S3FileSystem extends FileSystem {
 
     public S3AsyncClient client() {
         if (client == null) {
+            //
+            // TODO: remove credentials from this call (clientProvider has already the config)
+            //
             client = clientProvider.generateAsyncClient(endpoint, bucketName, credentials);
         }
 

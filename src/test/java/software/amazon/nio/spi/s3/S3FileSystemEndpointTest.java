@@ -7,8 +7,9 @@ package software.amazon.nio.spi.s3;
 
 import static com.github.stefanbirkner.systemlambda.SystemLambda.restoreSystemProperties;
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,13 +17,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
+import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_REGION_PROPERTY;
 
 @ExtendWith(MockitoExtension.class)
 public class S3FileSystemEndpointTest {
 
     final private FakeAsyncS3ClientBuilder BUILDER = new FakeAsyncS3ClientBuilder();
+    final private Map<String, String> CONFIG = new HashMap<>();
+
+    {
+        CONFIG.put(AWS_REGION_PROPERTY, "us-east-1");
+    }
 
     S3FileSystemProvider provider;
 
@@ -40,23 +47,19 @@ public class S3FileSystemEndpointTest {
         // For non AWS S3 buckets, backet's region is not discovered runtime and it
         // must be provided in the AWS profile
         //
-        restoreSystemProperties(() -> {
-            System.setProperty("aws.region", "aws-east-1");
+        S3FileSystem fs = new S3FileSystem(URI.create(URI1), provider, new S3NioSpiConfiguration(CONFIG));
+        fs.clientProvider.asyncClientBuilder = BUILDER;
 
-            S3FileSystem fs = new S3FileSystem(URI.create(URI1), provider);
-            fs.clientProvider.asyncClientBuilder = BUILDER;
+        S3AsyncClient client = fs.client();
+        assertEquals(URI.create("https://endpoint1.io"), BUILDER.endpointOverride);
+        assertNull(BUILDER.credentialsProvider);
 
-            S3AsyncClient client = fs.client();
-            assertEquals(URI.create("https://endpoint1.io"), BUILDER.endpointOverride);
-            assertNull(BUILDER.credentialsProvider);
+        fs = new S3FileSystem(URI.create(URI2), provider);
+        fs.clientProvider.asyncClientBuilder = BUILDER;
 
-            fs = new S3FileSystem(URI.create(URI2), provider);
-            fs.clientProvider.asyncClientBuilder = BUILDER;
-
-            fs.client();
-            assertEquals(URI.create("https://endpoint2.io:8080"), BUILDER.endpointOverride);
-            assertNull(BUILDER.credentialsProvider);
-        });
+        fs.client();
+        assertEquals(URI.create("https://endpoint2.io:8080"), BUILDER.endpointOverride);
+        assertNull(BUILDER.credentialsProvider);
     }
 
     @Test

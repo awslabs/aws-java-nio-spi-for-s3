@@ -214,15 +214,16 @@ public class S3ClientProvider {
                     throw e;
                 }
             }
+            //
+            // if here, no S3 nor other client has been created yet and we do not
+            // have a location; we'll let it figure out from the profile region
+            //
+            logger.warn("Unable to determine the region of bucket: '{}'. Generating a client for the profile region.", bucket);
         }
 
-        //
-        // if here, no S3 nor other client has been created yet and we do not
-        // have a location; we'll let it figure out from the profile region
-        //
-
-        logger.warn("Unable to determine the region of bucket: '{}'. Generating a client for the profile region.", bucket);
-        return (bucketSpecificClient != null) ? bucketSpecificClient : clientForRegion(endpoint, bucket, null, credentials);
+        return (bucketSpecificClient != null)
+            ? bucketSpecificClient
+            : clientForRegion(endpoint, bucket, configuration.getRegion(), credentials);
     }
 
     /**
@@ -267,15 +268,17 @@ public class S3ClientProvider {
                     throw e;
                 }
             }
+
+            //
+            // if here, no S3 nor other client has been created yet and we do not
+            // have a location; we'll let it figure out from the profile region
+            //
+            logger.warn("Unable to determine the region of bucket: '{}'. Generating a client for the profile region.", bucket);
         }
 
-        //
-        // if here, no S3 nor other client has been created yet and we do not
-        // have a location; we'll let it figure out from the profile region
-        //
-        logger.warn("Unable to determine the region of bucket: '{}'. Generating a client for the profile region.", bucket);
-
-        return (bucketSpecificClient != null) ? bucketSpecificClient : this.asyncClientForRegion(endpoint, bucket, null, credentials);
+        return (bucketSpecificClient != null)
+            ? bucketSpecificClient
+            : asyncClientForRegion(endpoint, bucket, configuration.getRegion(), credentials);
     }
 
     // --------------------------------------------------------- private methods
