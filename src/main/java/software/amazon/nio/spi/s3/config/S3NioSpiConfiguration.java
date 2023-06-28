@@ -111,7 +111,6 @@ public class S3NioSpiConfiguration {
      */
     protected S3NioSpiConfiguration(Properties overrides) {
         Objects.requireNonNull(overrides);
-        System.out.println(overrides.keySet());
         overrides.stringPropertyNames()
             .forEach(key -> properties.setProperty(key, overrides.getProperty(key)));
     }
