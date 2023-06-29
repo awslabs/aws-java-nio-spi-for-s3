@@ -331,7 +331,6 @@ public class S3ClientProvider {
         }
 
         if ((endpoint != null) && (endpoint.length() > 0)) {
-            // TODO: shall we have the protocol in the endpoint already?
             asyncClientBuilder.endpointOverride(URI.create(configuration.getEndpointProtocol() + "://" + endpoint));
         }
 

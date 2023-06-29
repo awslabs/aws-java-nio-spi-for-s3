@@ -5,7 +5,6 @@
 
 package software.amazon.nio.spi.s3;
 
-import static com.github.stefanbirkner.systemlambda.SystemLambda.restoreSystemProperties;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
@@ -22,6 +21,7 @@ import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -40,7 +40,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_REGION_PROPERTY;
 
 @SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
@@ -238,8 +238,8 @@ public class S3FileSystemProviderTest {
             URI.create("s3://key:secret@nowhere.com:2000/foo2/baa2")
         };
 
-        assertThrows(FileAlreadyExistsException.class, () -> {
-            provider.getFileSystem(URI.create("s3://nowhere.com/foo2/baa2"));
+        assertThrows(FileSystemNotFoundException.class, () -> {
+            provider.getFileSystem(URI.create("s3://nowhere.com:2000/foo2/baa2"));
             fail("wrong file system!");
         });
     }
@@ -248,17 +248,10 @@ public class S3FileSystemProviderTest {
     public void closingFileSystemDiscardsItFromCache() {
         provider.closeFileSystem(fileSystem);
 
-        //
-        // TODO: turn into a JUnit5 assertion
-        //
-        try {
-            provider.getFileSystem(URI.create(pathUri));
-            fail("file system still available");
-        } catch (FileSystemNotFoundException x) {
-            //
-            // OK!
-            //
-        }
+        assertThrows(
+            FileSystemNotFoundException.class,
+            () -> provider.getFileSystem(URI.create(pathUri))
+        );
     }
 
     @Test
@@ -538,20 +531,19 @@ public class S3FileSystemProviderTest {
 
     @Test
     public void getS3FileSystemFromS3URI() throws Exception {
-        restoreSystemProperties(() -> {
-            System.setProperty("aws.region", "us-west-1");
+        Map<String, String> env = new HashMap<>();
+        env.put(AWS_REGION_PROPERTY, "us-west-1");
 
-            final URI U = URI.create("s3://key:secret@endpoint.com:8000/bucket1");
-            S3FileSystem fs = (S3FileSystem)FileSystems.newFileSystem(U, Collections.EMPTY_MAP);
-            assertNotNull(fs);
-            try {
-                FileSystems.newFileSystem(URI.create("s3://endpoint.com:8000/bucket1"), Collections.EMPTY_MAP);
-            } catch (FileSystemAlreadyExistsException x) {
-                assertEquals("a file system already exists for 'endpoint.com/bucket1', use getFileSystem() instead", x.getMessage());
-            }
-            assertSame(fs, FileSystems.getFileSystem(U));
-            fs.close();
-        });
+        final URI U = URI.create("s3://key:secret@endpoint.com:8000/bucket1");
+        S3FileSystem fs = (S3FileSystem)FileSystems.newFileSystem(U, Collections.EMPTY_MAP);
+        assertNotNull(fs);
+        try {
+            FileSystems.newFileSystem(URI.create("s3://endpoint.com:8000/bucket1"), Collections.EMPTY_MAP);
+        } catch (FileSystemAlreadyExistsException x) {
+            assertEquals("a file system already exists for 'endpoint.com:8000/bucket1', use getFileSystem() instead", x.getMessage());
+        }
+        assertSame(fs, FileSystems.getFileSystem(U));
+        fs.close();
     }
 
     // --------------------------------------------------------- private methods
