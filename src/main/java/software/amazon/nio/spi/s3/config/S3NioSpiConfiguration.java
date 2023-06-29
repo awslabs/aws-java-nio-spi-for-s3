@@ -71,8 +71,7 @@ public class S3NioSpiConfiguration {
         // aws.accessKey, leaving the framework and the underlying AWS client
         // the possibility to use the standard behaviour.
         //
-        // TODO: shall we instead incorporate take the value of those properties
-        //       too (aws.region, aws.accessKey, aws.secretAccessKey)?
+        // TOTO: shall we return an Optional instead returning null?
         // TOTO: shall we return an Optional instead returning null?
         //
 
