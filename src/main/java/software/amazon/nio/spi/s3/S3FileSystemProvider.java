@@ -237,7 +237,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public S3Path getPath(URI uri) {
         Objects.requireNonNull(uri);
-        return getFileSystem(uri, true).getPath(uri.getPath());
+        return getFileSystem(uri, true).getPath(uri.getScheme() + ":/" + uri.getPath());
     }
 
     /**
