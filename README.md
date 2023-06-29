@@ -68,20 +68,20 @@ chain](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.h
 want to interact with, you do not have to do anything else - Note, although your IAM role may be sufficient to access the
 desired objects and buckets you may still be blocked by bucket access control lists and/ or bucket policies.
 
-## S3 Compatible Wndpoints and Credentials
+## S3 Compatible Endpoints and Credentials
 
 This NIO provider supports any S3-like service. To access a 3rd party service,
-follow this URL pattern:
+follow this URI pattern:
 
 ```
 s3://[[key:secret@]endpoint:port]/bucket/objectkey
 ```
 Note that in this case the TCP port of the target service must be specified.
-If no credentials are givem the default AWS configuration mechanism will be used as per
+If no credentials are given the default AWS configuration mechanism will be used as per
 the section above.
 
-In the case the target service uses HTTP instead of HTTPS (e.g. a testing envronment),
-the protocol tu use can be fonfigured through the following environment variable or system
+In the case the target service uses HTTP instead of HTTPS (e.g. a testing environment),
+the protocol to use can be fonfigured through the following environment variable or system
 property:
 
 ```
@@ -293,7 +293,7 @@ Code must compile to JDK 1.8 compatible bytecode. Matching unit tests are requir
 
 ### Contributing Unit Tests
 
-We use JUnit 4 and Mockito for unit testing.
+We use JUnit 5 and Mockito for unit testing.
 
 When contributing code for bug fixes or feature improvements, matching tests should also be provided. Tests must not
 rely on specific S3 bucket access or credentials. To this end, S3 clients and other artifacts should be mocked as
