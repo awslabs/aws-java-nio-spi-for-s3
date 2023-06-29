@@ -20,8 +20,9 @@ There are several ways that this package can be used to provide Java NIO operati
 Assuming that `myExecutatbleJar` is a Java application that has been built to read from `java.nio.file.Path`s and
 this library has been exposed by one of the mechanisms above then S3 URIs may be used to identify inputs. For example:
 
-``` 
+```
 java -jar myExecutableJar --input s3://some-bucket/input/file
+java -jar myExecutableJar --input s3://my-s3-service:9000/some-bucket/input/file
 ```
 
 If this library is exposed as an extension (see above), then no code changes or recompilation of `myExecutable` are
@@ -62,13 +63,39 @@ For example:
 ## AWS Credentials
 
 This library will perform all actions using credentials according to the AWS SDK for Java [default credential provider
-chain](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html). The library does not allow any
-library specific configuration of credentials. In essence, you (or the service / Principal 
-using this library) should have, or be able to assume, a role that will allow access to the S3 buckets and objects you
-want to interact with.
+chain](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html). Therefore, if you (or the service
+/ Principal using this library) have, or be able to assume, a role that will allow access to the S3 buckets and objects you
+want to interact with, you do not have to do anything else - Note, although your IAM role may be sufficient to access the
+desired objects and buckets you may still be blocked by bucket access control lists and/ or bucket policies.
 
-Note, although your IAM role may be sufficient to access the desired objects and buckets you may still be 
-blocked by bucket access control lists and/ or bucket policies.
+## S3 Compatible Endpoints and Credentials
+
+This NIO provider supports any S3-like service. To access a 3rd party service,
+follow this URI pattern:
+
+```
+s3://[[key:secret@]endpoint:port]/bucket/objectkey
+```
+Note that in this case the TCP port of the target service must be specified.
+If no credentials are given the default AWS configuration mechanism will be used as per
+the section above.
+
+In the case the target service uses HTTP instead of HTTPS (e.g. a testing environment),
+the protocol to use can be fonfigured through the following environment variable or system
+property:
+
+```
+export S3_SPI_ENDPOINT_PROTOCOL=http
+java -Ds3.spi.endpoint-protocol=http
+```
+
+The same can also be provided when creating a file system:
+
+```
+Map<String, String> env = ...;
+env.put("s3.spi.endpoint-protocol", "http");
+FileSystem fs = FileSystems.newFileSystem("s3://myendpoint.com:1000/mybucket", env);
+```
 
 ## Reading Files
 
@@ -266,7 +293,7 @@ Code must compile to JDK 1.8 compatible bytecode. Matching unit tests are requir
 
 ### Contributing Unit Tests
 
-We use JUnit 4 and Mockito for unit testing.
+We use JUnit 5 and Mockito for unit testing.
 
 When contributing code for bug fixes or feature improvements, matching tests should also be provided. Tests must not 
 rely on specific S3 bucket access or credentials. To this end, S3 clients and other artifacts should be mocked as 
