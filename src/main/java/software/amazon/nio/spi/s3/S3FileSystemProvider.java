@@ -237,7 +237,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public S3Path getPath(URI uri) {
         Objects.requireNonNull(uri);
-        return getFileSystem(uri, true).getPath(uri.getPath());
+        return getFileSystem(uri, true).getPath(uri.getScheme() + ":/" + uri.getPath());
     }
 
     /**
@@ -455,6 +455,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @param options options specifying how the copy should be done
      */
     public void copy(Path source, Path target, CopyOption... options) throws IOException {
+        //
+        // TODO: source and target can belong to any file system, we can not
+        //       assume they points to S3 objects
+        //
         try {
             // If both paths point to the same object, this is a no-op
             if (source.equals(target)) {

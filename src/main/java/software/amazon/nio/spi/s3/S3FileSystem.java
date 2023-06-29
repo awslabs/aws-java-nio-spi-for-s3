@@ -100,6 +100,9 @@ public class S3FileSystem extends FileSystem {
         //
 
         String host = uri.getHost(); int port = uri.getPort();
+        //
+        // TDOO: use : instead of . to determine if we have an endpoint (bucket
+        //       name can contain '.')
         if ((port > 0) || (host.indexOf('.') > 0)) {
             this.bucketName = uri.getPath().split(S3Path.PATH_SEPARATOR)[1];
             this.endpoint = host + ((port > 0) ? (":" + port) : "");
@@ -137,6 +140,9 @@ public class S3FileSystem extends FileSystem {
 
     public S3AsyncClient client() {
         if (client == null) {
+            //
+            // TODO: remove credentials from this call (clientProvider has already the config)
+            //
             client = clientProvider.generateAsyncClient(endpoint, bucketName, credentials);
         }
 

@@ -23,6 +23,7 @@ import software.amazon.awssdk.auth.credentials.AwsCredentials;
  */
 public class S3NioSpiConfiguration {
 
+    public static final String AWS_REGION_PROPERTY = "aws.region";
     public static final String AWS_ACCESS_KEY_PROPERTY = "aws.accessKey";
     public static final String AWS_SECRET_ACCESS_KEY_PROPERTY = "aws.secretAccessKey";
 
@@ -63,6 +64,18 @@ public class S3NioSpiConfiguration {
         //setup defaults
         properties = new Properties(defaults);
 
+        //
+        // With the below we pick existing environment variables and system
+        // properties as overrides of the default aws-nio specific properties.
+        // We do not pick aws generic properties like aws.region or
+        // aws.accessKey, leaving the framework and the underlying AWS client
+        // the possibility to use the standard behaviour.
+        //
+        // TODO: shall we instead incorporate take the value of those properties
+        //       too (aws.region, aws.accessKey, aws.secretAccessKey)?
+        // TOTO: shall we return an Optional instead returning null?
+        //
+
         //add env var overrides if present
         properties.stringPropertyNames().stream()
                 .map(key -> Pair.of(key,
@@ -98,7 +111,6 @@ public class S3NioSpiConfiguration {
      */
     protected S3NioSpiConfiguration(Properties overrides) {
         Objects.requireNonNull(overrides);
-        System.out.println(overrides.keySet());
         overrides.stringPropertyNames()
             .forEach(key -> properties.setProperty(key, overrides.getProperty(key)));
     }
@@ -137,7 +149,7 @@ public class S3NioSpiConfiguration {
 
     /**
      * Get the configured credentials
-     * @return the configured value or the default if not overridden
+     * @return the configured value or null if not provided
      */
     public AwsCredentials getCredentials() {
         if (properties.containsKey(AWS_ACCESS_KEY_PROPERTY)) {
@@ -147,6 +159,15 @@ public class S3NioSpiConfiguration {
         }
 
         return null;
+    }
+
+    /**
+     * Get the configured region if any
+     *
+     * @return the configured value or null if not provided
+     */
+    public String getRegion() {
+        return properties.getProperty(AWS_REGION_PROPERTY);
     }
 
     // ------------------------------------------------------- protected methods

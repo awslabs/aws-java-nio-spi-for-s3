@@ -78,8 +78,24 @@ public class S3Path implements Path {
         first = first.trim();
 
         if((first.isEmpty()) && !(more == null || more.length == 0)) throw new IllegalArgumentException("The first element of the path may not be empty when more exists");
-        if( first.startsWith(S3FileSystemProvider.SCHEME+":/")) {
-            first = first.replaceFirst(S3FileSystemProvider.SCHEME+":/", "");
+        if(first.startsWith(S3FileSystemProvider.SCHEME+":/")) {
+            first = first.substring(4);
+
+            String part = null;
+            if (fsForBucket.credentials() != null) {
+                part = fsForBucket.credentials().accessKeyId() + ':' + fsForBucket.credentials().secretAccessKey();
+                if (first.startsWith('/' + part)) {
+                    first = PATH_SEPARATOR + first.substring(part.length()+2);
+                }
+            }
+            part = fsForBucket.endpoint();
+            if (first.startsWith(PATH_SEPARATOR + part)) {
+                first = first.substring(part.length()+1);
+            }
+            part = fsForBucket.bucketName();
+            if (first.startsWith(PATH_SEPARATOR + part)) {
+                first = first.substring(part.length()+1);
+            }
         }
 
         return new S3Path(fsForBucket, PosixLikePathRepresentation.of(first, more));

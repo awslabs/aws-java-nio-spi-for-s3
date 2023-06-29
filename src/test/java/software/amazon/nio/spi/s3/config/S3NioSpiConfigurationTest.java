@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_ACCESS_KEY_PROPERTY;
+import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_REGION_PROPERTY;
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_SECRET_ACCESS_KEY_PROPERTY;
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY;
 
@@ -67,14 +68,24 @@ public class S3NioSpiConfigurationTest {
     }
 
     @Test
-    public void endpointProtocol() {
+    public void getRegion() {
+        assertNull(new S3NioSpiConfiguration().getRegion());
+
+        Properties env = new Properties();
+        env.setProperty(AWS_REGION_PROPERTY, "region1");
+
+        assertEquals("region1", new S3NioSpiConfiguration(env).getRegion());
+    }
+
+    @Test
+    public void getEndpointProtocol() {
         assertEquals(S3NioSpiConfiguration.S3_SPI_ENDPOINT_PROTOCOL_DEFAULT, new S3NioSpiConfiguration().getEndpointProtocol());
         assertEquals("http", overriddenConfig.getEndpointProtocol());
         assertEquals(S3NioSpiConfiguration.S3_SPI_ENDPOINT_PROTOCOL_DEFAULT, badOverriddenConfig.getEndpointProtocol());
     }
 
     @Test
-    public void credentials() {
+    public void getCredentials() {
         assertNull(new S3NioSpiConfiguration().getCredentials());
 
         Properties env = new Properties();
