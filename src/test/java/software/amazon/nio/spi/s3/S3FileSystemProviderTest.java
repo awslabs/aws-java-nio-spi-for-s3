@@ -238,10 +238,11 @@ public class S3FileSystemProviderTest {
             URI.create("s3://key:secret@nowhere.com:2000/foo2/baa2")
         };
 
-        assertThrows(FileSystemNotFoundException.class, () -> {
-            provider.getFileSystem(URI.create("s3://nowhere.com:2000/foo2/baa2"));
-            fail("wrong file system!");
-        });
+        assertThrows(
+            FileSystemNotFoundException.class, () -> {
+                provider.getFileSystem(URI.create("s3://nowhere.com:2000/foo2/baa2"));
+            }
+        );
     }
 
     @Test
