@@ -104,12 +104,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
         if (uri.getScheme() == null) {
             throw new IllegalArgumentException(
-                String.format("invalid uri '%s', please provide an uri as s3://[key:secret@][host[:port]]/bucket", uri.toString())
+                String.format("invalid uri '%s', please provide an uri as s3://[key:secret@][host:port]/bucket", uri.toString())
             );
         }
         if (uri.getAuthority() == null) {
             throw new IllegalArgumentException(
-                String.format("invalid uri '%s', please provide an uri as s3://[key:secret@][host[:port]]/bucket", uri.toString())
+                String.format("invalid uri '%s', please provide an uri as s3://[key:secret@][host:port]/bucket", uri.toString())
             );
         }
 
@@ -832,7 +832,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         return (port<0) && (!host.contains("."))
                ? host
-               : (host + ((port < 0) ? "" : (':' + port)) + S3Path.PATH_SEPARATOR + uri.getPath().split(S3Path.PATH_SEPARATOR)[1]);
+               : (host + ((port < 0) ? "" : (":" + port)) + S3Path.PATH_SEPARATOR + uri.getPath().split(S3Path.PATH_SEPARATOR)[1]);
     }
 
 }

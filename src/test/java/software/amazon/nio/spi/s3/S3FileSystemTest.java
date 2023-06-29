@@ -67,7 +67,7 @@ public class S3FileSystemTest {
     @Test
     public void bucketName() {
         assertEquals("mybucket", s3FileSystem.bucketName());
-        assertEquals("mybucket", new S3FileSystem("s3://key:secret@endpoint.com/mybucket/myresource", provider).bucketName());
+        assertEquals("mybucket", new S3FileSystem("s3://key:secret@endpoint.com:9000/mybucket/myresource", provider).bucketName());
     }
 
     @Test
