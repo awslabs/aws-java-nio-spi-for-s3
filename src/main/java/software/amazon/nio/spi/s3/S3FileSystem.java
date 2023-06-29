@@ -100,10 +100,7 @@ public class S3FileSystem extends FileSystem {
         //
 
         String host = uri.getHost(); int port = uri.getPort();
-        //
-        // TDOO: use : instead of . to determine if we have an endpoint (bucket
-        //       name can contain '.')
-        if ((port > 0) || (host.indexOf('.') > 0)) {
+        if ((port > 0) || (host.indexOf(':') > 0)) {
             this.bucketName = uri.getPath().split(S3Path.PATH_SEPARATOR)[1];
             this.endpoint = host + ((port > 0) ? (":" + port) : "");
         } else {
