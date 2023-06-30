@@ -46,7 +46,7 @@ dependencies {
     testImplementation 'org.mockito:mockito-junit-jupiter:5.4.0'
     testImplementation 'com.github.stefanbirkner:system-lambda:1.2.1'
 
-    implementation platform('software.amazon.awssdk:bom:2.20.95')
+    implementation platform('software.amazon.awssdk:bom:2.20.97')
 
     implementation 'software.amazon.awssdk:s3'
     implementation 'software.amazon.awssdk:s3-transfer-manager:2.20.95'
