@@ -426,8 +426,6 @@ public class S3PathTest {
 
     @Test
     public void testEquals() {
-        assertEquals(absoluteObject, absoluteObject);
-
         // true because the equals contract requires the use of realPath which uses an absolute path which is relative to
         // the working directory, which is always "/" for a bucket.
         assertEquals(S3Path.getPath(fileSystem, "dir1/"), S3Path.getPath(fileSystem, "/dir1/"));
@@ -441,8 +439,6 @@ public class S3PathTest {
 
     @Test
     public void testHashCode() {
-        assertEquals(root.hashCode(), root.hashCode());
-
         final S3Path rootAbc = fileSystem.getPath("/a/b/c");
         final S3Path abc = fileSystem.getPath("a/b/c");
         assertEquals(rootAbc.hashCode(), abc.hashCode());
