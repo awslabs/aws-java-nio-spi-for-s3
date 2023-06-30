@@ -26,6 +26,10 @@ import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
 
 /**
  * A Singleton cache of clients for buckets configured for the region of those buckets
@@ -33,6 +37,11 @@ import java.util.stream.Stream;
 public class S3ClientStore {
 
     private static final S3ClientStore instance = new S3ClientStore();
+
+    /**
+     * Default S3CrtAsyncClientBuilder
+     */
+    protected S3CrtAsyncClientBuilder asyncClientBuilder = S3AsyncClient.crtBuilder();
 
     /**
      * Default client using the "https://s3.us-east-1.amazonaws.com" endpoint
