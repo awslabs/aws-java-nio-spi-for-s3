@@ -62,7 +62,12 @@ public class S3PathTest {
 
     @Test
     public void bucketName() {
-        assertEquals("mybucket", root.bucketName());
+        String b = "mybucket";
+        assertEquals(b, root.bucketName());
+        assertEquals(b, absoluteDirectory.bucketName());
+        assertEquals(b, absoluteObject.bucketName());
+        assertEquals(b, relativeObject.bucketName());
+        assertEquals(b, relativeDirectory.bucketName());
     }
 
     @Test
@@ -449,5 +454,15 @@ public class S3PathTest {
         assertEquals("/dir1/dir2/", absoluteDirectory.toString());
         assertEquals("/dir1/dir2/object", absoluteObject.toString());
         assertEquals("../dir3/", relativeDirectory.toString());
+        assertEquals("dir2/object", relativeObject.toString());
+    }
+
+    @Test
+    public void testGetKey() {
+        assertEquals("", root.getKey());
+        assertEquals("dir1/dir2/", absoluteDirectory.getKey());
+        assertEquals("dir1/dir2/object", absoluteObject.getKey());
+        assertEquals("dir3/", relativeDirectory.getKey());
+        assertEquals("dir1/dir2/object", relativeObject.getKey());
     }
 }

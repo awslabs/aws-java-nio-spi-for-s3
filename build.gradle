@@ -114,6 +114,7 @@ javadoc {
 }
 
 test {
+    useJUnitPlatform()
     finalizedBy jacocoTestReport
 }
 

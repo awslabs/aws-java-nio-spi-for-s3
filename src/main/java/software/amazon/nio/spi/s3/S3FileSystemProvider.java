@@ -268,34 +268,46 @@ public class S3FileSystemProvider extends FileSystemProvider {
             s3Client = getClientStore().getAsyncClientForBucketName(s3Path.bucketName());
         }
 
-        String pathString = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
+        String pathString = s3Path.getKey();
         if (!pathString.endsWith(S3Path.PATH_SEPARATOR) && !pathString.isEmpty()) {
             pathString = pathString + S3Path.PATH_SEPARATOR;
         }
 
         final String bucketName = s3Path.bucketName();
-        final S3FileSystem fs = new S3FileSystem(bucketName);
-        final String prefix = pathString;
 
         long timeOut = TIMEOUT_TIME_LENGTH_1;
         final TimeUnit unit = MINUTES;
-        try {
-            final Iterator<S3Path> filteredDirectoryContents = s3Client.listObjectsV2(req -> req
+
+        try (final S3FileSystem fs = new S3FileSystem(bucketName)) {
+            List<S3Path> s3Paths = new ArrayList<>();
+            String finalPathString = pathString;
+
+            s3Client.listObjectsV2Paginator(req -> req
                             .bucket(bucketName)
-                            .prefix(prefix))
-                    .get(timeOut, unit)
-                    .contents()
-                    .stream()
-                    .map(s3Object -> truncateByPrefix(fs, prefix, s3Object))
-                    .filter(path -> {
-                        try {
-                            return filter.accept(path);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            return false;
-                        }
-                    })
-                    .iterator();
+                            .prefix(finalPathString)
+                            .delimiter(S3Path.PATH_SEPARATOR))
+                    .subscribe(response -> {
+                        // add common prefixes (essentially directories)
+                        response.commonPrefixes().forEach(commonPrefix -> {
+                            // remove the path from the start of the dir name
+                            String dirName = commonPrefix.prefix().replaceFirst("^"+finalPathString, "");
+                            s3Paths.add(fs.getPath(dirName));
+                        });
+                        // add objects (files) from response contents to s3Paths
+                        response.contents().forEach(s3Object -> {
+                            String objectName = s3Object.key().replaceFirst("^"+finalPathString, "");
+                            s3Paths.add(S3Path.getPath(fs, objectName));
+                        });
+                    }).get(timeOut, unit);
+
+            final Iterator<S3Path> filteredDirectoryContents = s3Paths.stream().filter(path -> {
+                try {
+                    return filter.accept(path);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return false;
+                }
+            }).iterator();
 
             return new DirectoryStream<Path>() {
                 final Iterator<? extends Path> iterator = filteredDirectoryContents;
@@ -312,21 +324,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
                 }
             };
         } catch (TimeoutException e) {
-            throw logAndGenerateExceptionOnTimeOut(logger, "newDirectoryStream", timeOut, unit);
+            throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(logger, "ListObjectsV2Paginator", timeOut, unit);
+        } catch (IOException e){
+            throw new RuntimeException("Cannot construct filesystem for path "+pathString, e);
         }
-    }
-
-    /**
-     * truncate objects whose key after the prefix contains a "/" to the first "/" after the prefix
-     */
-    private S3Path truncateByPrefix(final S3FileSystem fs, final String prefix, final S3Object object) {
-        if (object.key().indexOf(prefix) != 0 || object.key().equals(prefix)) {
-            return S3Path.getPath(fs, object);
-        }
-
-        int indexOfNextSeparator = object.key().indexOf(S3Path.PATH_SEPARATOR, prefix.length());
-        String truncated = indexOfNextSeparator == -1 ? object.key() : object.key().substring(0, indexOfNextSeparator);
-        return fs.getPath(truncated);
     }
 
     /**
