@@ -476,7 +476,7 @@ public class S3PathTest {
         assertEquals("/dir1/dir2/", absoluteDirectory.toString());
         assertEquals("/dir1/dir2/object", absoluteObject.toString());
         assertEquals("../dir3/", relativeDirectory.toString());
-        assertEquals("dir2/object", relativeObject.toString());
+        assertEquals("dir1/dir2/object", relativeObject.toString());
     }
 
     @Test
