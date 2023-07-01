@@ -778,12 +778,19 @@ public class S3Path implements Path {
     }
 
     /**
-     * The key of the object for S3. Essentially the "real path" with the "/" prefix removed.
+     * The key of the object for S3. Essentially the "real path" with the "/" prefix and bucket name removed.
      * @return the key
      */
     public String getKey(){
         if(isEmpty()) return "";
-        return toRealPath(NOFOLLOW_LINKS).toString().substring(1);
+        String s = toRealPath(NOFOLLOW_LINKS).toString();
+        if(s.startsWith(S3Path.PATH_SEPARATOR+bucketName())) {
+                s = s.replaceFirst(S3Path.PATH_SEPARATOR+bucketName(), "");
+        }
+        while(s.startsWith(S3Path.PATH_SEPARATOR)){
+            s = s.substring(1);
+        }
+        return s;
     }
 
     private final class S3PathIterator implements Iterator<Path> {

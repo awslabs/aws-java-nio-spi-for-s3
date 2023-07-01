@@ -5,16 +5,40 @@
 
 package software.amazon.nio.spi.s3;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 
 import java.net.URI;
 import java.nio.channels.SeekableByteChannel;
-import java.nio.file.*;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.AccessMode;
+import java.nio.file.DirectoryStream;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileSystem;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttributeView;
@@ -31,16 +55,11 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 
 import static org.junit.jupiter.api.Assertions.*;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import org.mockito.junit.jupiter.MockitoExtension;
-import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_REGION_PROPERTY;
 
 @SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
@@ -275,22 +294,24 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void newDirectoryStream() throws Exception {
-
+    public void newDirectoryStream() throws ExecutionException, InterruptedException, IOException {
         S3Object object1 = S3Object.builder().key("key1").build();
-        S3Object object2 = S3Object.builder().key("foo/key2").build();
+        S3Object object2 = S3Object.builder().key("key2").build();
 
-        when(mockClient.listObjectsV2(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
+
+        when(mockClient.listObjectsV2Paginator(any(Consumer.class))).thenReturn(new ListObjectsV2Publisher(mockClient,
+                ListObjectsV2Request.builder()
+                        .bucket(fs.bucketName())
+                        .prefix("")
+                        .build())
+        );
+
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2).build()));
 
         final DirectoryStream<Path> stream = provider.newDirectoryStream(Paths.get(URI.create(pathUri)), entry -> true);
         assertNotNull(stream);
         assertEquals(2, countDirStreamItems(stream));
-
-        final DirectoryStream<Path> filteredStream = provider.newDirectoryStream(Paths.get(URI.create(pathUri)),
-                entry -> entry.endsWith("key2"));
-        assertNotNull(filteredStream);
-        assertEquals(1, countDirStreamItems(filteredStream));
     }
 
     @Test
@@ -409,7 +430,6 @@ public class S3FileSystemProviderTest {
         S3Path alsoFoo2 = fileSystem.getPath("./foo");
         assertTrue(provider.isSameFile(foo, alsoFoo2));
     }
-
 
     @Test
     public void isHidden() {

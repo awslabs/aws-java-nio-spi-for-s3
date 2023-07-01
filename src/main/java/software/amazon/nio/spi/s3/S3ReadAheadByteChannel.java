@@ -61,6 +61,8 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
      * @param maxNumberFragments the maximum number of read ahead fragments to hold. Must be {@code >= 2}.
      * @param client             the client used to read from the {@code path}
      * @param delegator          the {@code S3SeekableByteChannel} that delegates reading to this object.
+     * @param timeout            the amount of time after which the operation will timeout
+     * @param timeUnit           the unit of time for the timeout
      * @throws IOException if a problem occurs initializing the cached fragments
      */
     public S3ReadAheadByteChannel(S3Path path, int maxFragmentSize, int maxNumberFragments, S3AsyncClient client, S3SeekableByteChannel delegator, Long timeout, TimeUnit timeUnit) throws IOException {

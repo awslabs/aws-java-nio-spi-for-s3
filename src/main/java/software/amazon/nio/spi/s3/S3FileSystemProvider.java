@@ -269,6 +269,20 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
+        return this.newByteChannel(null, path, options, attrs);
+    }
+
+    /**
+     * Construct a byte channel for the path with the specified client. A more composable and testable (by using a Mock Client)
+     * version of the public method
+     * @param client a client that will make data requests for the channel
+     * @param path the path to read from. Must not be null.
+     * @param options a set of zero or more open options. May be null.
+     * @param attrs optional file attributes to set.
+     * @return An {@link S3SeekableByteChannel}
+     * @throws IOException if the channel creation fails
+     */
+    protected SeekableByteChannel newByteChannel(S3AsyncClient client, Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
         if (Objects.isNull(options)) {
             options = Collections.emptySet();
         }
@@ -293,6 +307,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @param dir    the path to the directory
      * @param filter the directory stream filter
      * @return a new and open {@code DirectoryStream} object
+     * @throws IOException if the stream cannot be created or has a streaming problem.
      */
     @Override
     public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
@@ -354,16 +369,82 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     * truncate objects whose key after the prefix contains a "/" to the first "/" after the prefix
+     * Get a new directory stream that will use the specified client. A composable and testable version of the public
+     * version of {@code newDirectoryStream}
+     * @param s3Client the client to use for calls to S3
+     * @param dir    the path to the directory
+     * @param filter the directory stream filter
+     * @return a new and open {@code DirectoryStream} object
+     * @throws ExecutionException if the async operation cannot be executed.
+     * @throws InterruptedException if the async operation is interrupted.
      */
-    private S3Path truncateByPrefix(final S3FileSystem fs, final String prefix, final S3Object object) {
-        if (object.key().indexOf(prefix) != 0 || object.key().equals(prefix)) {
-            return S3Path.getPath(fs, object);
+    protected DirectoryStream<Path> newDirectoryStream(S3AsyncClient s3Client, Path dir, DirectoryStream.Filter<? super Path> filter) throws ExecutionException, InterruptedException {
+        S3Path s3Path = (S3Path) dir;
+
+        if (s3Client == null) {
+            s3Client = getClientStore().getAsyncClientForBucketName(s3Path.bucketName());
         }
 
-        int indexOfNextSeparator = object.key().indexOf(S3Path.PATH_SEPARATOR, prefix.length());
-        String truncated = indexOfNextSeparator == -1 ? object.key() : object.key().substring(0, indexOfNextSeparator+1);
-        return fs.getPath(truncated);
+        String pathString = s3Path.getKey();
+        if (!pathString.endsWith(S3Path.PATH_SEPARATOR) && !pathString.isEmpty()) {
+            pathString = pathString + S3Path.PATH_SEPARATOR;
+        }
+
+        final String bucketName = s3Path.bucketName();
+
+        long timeOut = TIMEOUT_TIME_LENGTH_1;
+        final TimeUnit unit = MINUTES;
+
+        try (final S3FileSystem fs = new S3FileSystem(bucketName)) {
+            List<S3Path> s3Paths = new ArrayList<>();
+            String finalPathString = pathString;
+
+            s3Client.listObjectsV2Paginator(req -> req
+                            .bucket(bucketName)
+                            .prefix(finalPathString)
+                            .delimiter(S3Path.PATH_SEPARATOR))
+                    .subscribe(response -> {
+                        // add common prefixes (essentially directories)
+                        response.commonPrefixes().forEach(commonPrefix -> {
+                            // remove the path from the start of the dir name
+                            String dirName = commonPrefix.prefix().replaceFirst("^"+finalPathString, "");
+                            s3Paths.add(fs.getPath(dirName));
+                        });
+                        // add objects (files) from response contents to s3Paths
+                        response.contents().forEach(s3Object -> {
+                            String objectName = s3Object.key().replaceFirst("^"+finalPathString, "");
+                            s3Paths.add(S3Path.getPath(fs, objectName));
+                        });
+                    }).get(timeOut, unit);
+
+            final Iterator<S3Path> filteredDirectoryContents = s3Paths.stream().filter(path -> {
+                try {
+                    return filter.accept(path);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return false;
+                }
+            }).iterator();
+
+            return new DirectoryStream<Path>() {
+                final Iterator<? extends Path> iterator = filteredDirectoryContents;
+
+                @Override
+                @SuppressWarnings("unchecked")
+                public Iterator<Path> iterator() {
+                    return (Iterator<Path>) iterator;
+                }
+
+                @Override
+                public void close() {
+                    // nothing to close
+                }
+            };
+        } catch (TimeoutException e) {
+            throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(logger, "ListObjectsV2Paginator", timeOut, unit);
+        } catch (IOException e){
+            throw new RuntimeException("Cannot construct filesystem for path "+pathString, e);
+        }
     }
 
     /**
@@ -689,6 +770,52 @@ public class S3FileSystemProvider extends FileSystemProvider {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Composable and testable version of {@code checkAccess} that uses the provided client to check access
+     * @param s3Client the client to use for S3 operations
+     * @param path  the path to the file to check
+     * @param modes The access modes to check; may have zero elements
+     * @throws IOException if an IO error occurs when trying to check access
+     * @throws ExecutionException if the async operation execution fails
+     * @throws InterruptedException if the async operation is interrupted
+     */
+    protected void checkAccess(S3AsyncClient s3Client, Path path, AccessMode... modes) throws IOException, ExecutionException, InterruptedException {
+        assert path instanceof S3Path;
+        S3Path s3Path = (S3Path) path.toRealPath(NOFOLLOW_LINKS);
+        final String bucketName = s3Path.getFileSystem().bucketName();
+
+        if (s3Client == null) {
+            s3Client = getClientStore().getAsyncClientForBucketName(bucketName);
+        }
+
+        final CompletableFuture<? extends S3Response> response;
+        if (s3Path.equals(s3Path.getRoot())) {
+            response = s3Client.headBucket(request -> request.bucket(bucketName));
+        } else {
+            response = s3Client.headObject(req -> req.bucket(bucketName).key(s3Path.getKey()));
+        }
+
+        long timeOut = TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
+        TimeUnit unit = MINUTES;
+
+        try {
+            SdkHttpResponse httpResponse = response.get(timeOut, unit).sdkHttpResponse();
+            if (httpResponse.isSuccessful()) return;
+
+            if (httpResponse.statusCode() == FORBIDDEN)
+                throw new AccessDeniedException(s3Path.toString());
+
+            if (httpResponse.statusCode() == NOT_FOUND)
+                throw new NoSuchFileException(s3Path.toString());
+
+            throw new IOException(String.format("exception occurred while checking access, response code was '%d'",
+                    httpResponse.statusCode()));
+
+        } catch (TimeoutException e) {
+            throw logAndGenerateExceptionOnTimeOut(logger, "checkAccess", timeOut, unit);
         }
     }
 
