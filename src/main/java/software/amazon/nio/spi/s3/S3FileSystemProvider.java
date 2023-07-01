@@ -269,6 +269,23 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
+<<<<<<< HEAD
+=======
+        return this.newByteChannel(null, path, options, attrs);
+    }
+
+    /**
+     * Construct a byte channel for the path with the specified client. A more composable and testable (by using a Mock Client)
+     * version of the public method
+     * @param client a client that will make data requests for the channel
+     * @param path the path to read from. Must not be null.
+     * @param options a set of zero or more open options. May be null.
+     * @param attrs optional file attributes to set.
+     * @return An {@link S3SeekableByteChannel}
+     * @throws IOException if the channel creation fails
+     */
+    protected SeekableByteChannel newByteChannel(S3AsyncClient client, Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
+>>>>>>> upstream/main
         if (Objects.isNull(options)) {
             options = Collections.emptySet();
         }
@@ -293,6 +310,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @param dir    the path to the directory
      * @param filter the directory stream filter
      * @return a new and open {@code DirectoryStream} object
+     * @throws IOException if the stream cannot be created or has a streaming problem.
      */
     @Override
     public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
@@ -354,6 +372,74 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
+<<<<<<< HEAD
+=======
+     * Get a new directory stream that will use the specified client. A composable and testable version of the public
+     * version of {@code newDirectoryStream}
+     * @param s3Client the client to use for calls to S3
+     * @param dir    the path to the directory
+     * @param filter the directory stream filter
+     * @return a new and open {@code DirectoryStream} object
+     * @throws ExecutionException if the async operation cannot be executed.
+     * @throws InterruptedException if the async operation is interrupted.
+     */
+    protected DirectoryStream<Path> newDirectoryStream(S3AsyncClient s3Client, Path dir, DirectoryStream.Filter<? super Path> filter) throws ExecutionException, InterruptedException {
+        S3Path s3Path = (S3Path) dir;
+
+        if (s3Client == null) {
+            s3Client = getClientStore().getAsyncClientForBucketName(s3Path.bucketName());
+        }
+
+        String pathString = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
+        if (!pathString.endsWith(S3Path.PATH_SEPARATOR) && !pathString.isEmpty()) {
+            pathString = pathString + S3Path.PATH_SEPARATOR;
+        }
+
+        final String bucketName = s3Path.bucketName();
+        final S3FileSystem fs = new S3FileSystem(bucketName);
+        final String prefix = pathString;
+
+        long timeOut = TIMEOUT_TIME_LENGTH_1;
+        final TimeUnit unit = MINUTES;
+        try {
+            final Iterator<S3Path> filteredDirectoryContents = s3Client.listObjectsV2(req -> req
+                            .bucket(bucketName)
+                            .prefix(prefix))
+                    .get(timeOut, unit)
+                    .contents()
+                    .stream()
+                    .map(s3Object -> truncateByPrefix(fs, prefix, s3Object))
+                    .filter(path -> {
+                        try {
+                            return filter.accept(path);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            return false;
+                        }
+                    })
+                    .iterator();
+
+            return new DirectoryStream<Path>() {
+                final Iterator<? extends Path> iterator = filteredDirectoryContents;
+
+                @Override
+                @SuppressWarnings("unchecked")
+                public Iterator<Path> iterator() {
+                    return (Iterator<Path>) iterator;
+                }
+
+                @Override
+                public void close() {
+                    // nothing to close
+                }
+            };
+        } catch (TimeoutException e) {
+            throw logAndGenerateExceptionOnTimeOut(logger, "newDirectoryStream", timeOut, unit);
+        }
+    }
+
+    /**
+>>>>>>> upstream/main
      * truncate objects whose key after the prefix contains a "/" to the first "/" after the prefix
      */
     private S3Path truncateByPrefix(final S3FileSystem fs, final String prefix, final S3Object object) {
@@ -693,6 +779,55 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
+<<<<<<< HEAD
+=======
+     * Composable and testable version of {@code checkAccess} that uses the provided client to check access
+     * @param s3Client the client to use for S3 operations
+     * @param path  the path to the file to check
+     * @param modes The access modes to check; may have zero elements
+     * @throws IOException if an IO error occurs when trying to check access
+     * @throws ExecutionException if the async operation execution fails
+     * @throws InterruptedException if the async operation is interrupted
+     */
+    protected void checkAccess(S3AsyncClient s3Client, Path path, AccessMode... modes) throws IOException, ExecutionException, InterruptedException {
+        assert path instanceof S3Path;
+        S3Path s3Path = (S3Path) path.toRealPath(NOFOLLOW_LINKS);
+        final String bucketName = s3Path.getFileSystem().bucketName();
+
+        if (s3Client == null) {
+            s3Client = getClientStore().getAsyncClientForBucketName(bucketName);
+        }
+
+        final CompletableFuture<? extends S3Response> response;
+        if (s3Path.equals(s3Path.getRoot())) {
+            response = s3Client.headBucket(request -> request.bucket(bucketName));
+        } else {
+            response = s3Client.headObject(req -> req.bucket(bucketName).key(s3Path.getKey()));
+        }
+
+        long timeOut = TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
+        TimeUnit unit = MINUTES;
+
+        try {
+            SdkHttpResponse httpResponse = response.get(timeOut, unit).sdkHttpResponse();
+            if (httpResponse.isSuccessful()) return;
+
+            if (httpResponse.statusCode() == FORBIDDEN)
+                throw new AccessDeniedException(s3Path.toString());
+
+            if (httpResponse.statusCode() == NOT_FOUND)
+                throw new NoSuchFileException(s3Path.toString());
+
+            throw new IOException(String.format("exception occurred while checking access, response code was '%d'",
+                    httpResponse.statusCode()));
+
+        } catch (TimeoutException e) {
+            throw logAndGenerateExceptionOnTimeOut(logger, "checkAccess", timeOut, unit);
+        }
+    }
+
+    /**
+>>>>>>> upstream/main
      * Returns a file attribute view of a given type. This method works in
      * exactly the manner specified by the {@link Files#getFileAttributeView}
      * method.
