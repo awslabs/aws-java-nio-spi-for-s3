@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,6 +53,10 @@ public class S3FileSystemProviderTest {
     @Mock
     S3AsyncClient mockClient;
 
+    @BeforeAll
+    public static void beforeAll() {
+        S3FileSystemProvider.clear();
+    }
 
     @BeforeEach
     public void init() {
@@ -65,7 +70,7 @@ public class S3FileSystemProviderTest {
 
     @AfterEach
     public void after() {
-       provider.closeFileSystem(fileSystem);
+        provider.closeFileSystem(fileSystem);
     }
 
     @Test
