@@ -190,7 +190,17 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return fs;
     }
 
+    protected static void clear() {
+        //
+        // TODO: close each file system first?
+        //
+        cache.clear();
+    }
+
     public void closeFileSystem(S3FileSystem fs) {
+        //
+        // TODO: use fs to get the key
+        //
         for (String key: cache.keySet()) {
             if (fs == cache.get(key)) {
                 cache.remove(key); return;
