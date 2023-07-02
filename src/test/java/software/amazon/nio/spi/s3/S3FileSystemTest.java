@@ -23,6 +23,7 @@ import static org.mockito.Mockito.lenient;
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 @ExtendWith(MockitoExtension.class)
 public class S3FileSystemTest {
@@ -49,7 +50,7 @@ public class S3FileSystemTest {
 
     @Test
     public void getSeparator() {
-        assertEquals("/", new S3FileSystem(s3Uri, provider).getSeparator());
+        assertEquals("/", new S3FileSystem(S3URI.of(s3Uri), provider, new S3NioSpiConfiguration()).getSeparator());
     }
 
     @Test
@@ -67,7 +68,11 @@ public class S3FileSystemTest {
     @Test
     public void bucketName() {
         assertEquals("mybucket", s3FileSystem.bucketName());
-        assertEquals("mybucket", new S3FileSystem("s3://key:secret@endpoint.com:9000/mybucket/myresource", provider).bucketName());
+        assertEquals("mybucket", new S3FileSystem(
+            S3URI.of(URI.create("s3://key:secret@endpoint.com:9000/mybucket/myresource")),
+            provider,
+            new S3NioSpiConfiguration()
+        ).bucketName());
     }
 
     @Test

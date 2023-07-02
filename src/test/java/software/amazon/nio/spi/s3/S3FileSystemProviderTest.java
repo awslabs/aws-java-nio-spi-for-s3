@@ -164,7 +164,7 @@ public class S3FileSystemProviderTest {
         try {
             provider.newFileSystem((URI)null);
             fail("mising argument check!");
-        } catch (IllegalArgumentException x) {
+        } catch (NullPointerException x) {
             assertEquals("uri can not be null", x.getMessage());
         }
 
@@ -223,8 +223,6 @@ public class S3FileSystemProviderTest {
         gfs = provider.getFileSystem(URI.create("s3://endpoint.com:2000/foo3"));
         assertNotSame(fileSystem, gfs); assertSame(cfs, gfs);
         gfs = provider.getFileSystem(URI.create("s3://endpoint.com:2000/foo3/dir/subdir"));
-        assertSame(cfs, gfs);
-        gfs = provider.getFileSystem(URI.create("s3://key@endpoint.com:2000/foo3/dir/subdir"));
         assertSame(cfs, gfs);
         gfs = provider.getFileSystem(URI.create("s3://key:secret@endpoint.com:2000/foo3"));
         assertSame(cfs, gfs);

@@ -98,24 +98,13 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public S3FileSystem newFileSystem(URI uri, Map<String, ?> env)
     throws FileSystemAlreadyExistsException {
+        return newFileSystem(S3URI.of(uri), env);
+    }
 
-        if (uri == null) {
-            throw new IllegalArgumentException("uri can not be null");
-        }
-        if (uri.getScheme() == null) {
-            throw new IllegalArgumentException(
-                String.format("invalid uri '%s', please provide an uri as s3://[key:secret@][host:port]/bucket", uri.toString())
-            );
-        }
-        if (uri.getAuthority() == null) {
-            throw new IllegalArgumentException(
-                String.format("invalid uri '%s', please provide an uri as s3://[key:secret@][host:port]/bucket", uri.toString())
-            );
-        }
-
+    protected S3FileSystem newFileSystem(S3URI uri, Map<String, ?> env) {
         S3FileSystem fs = null;
 
-        String key = getFileSystemKey(uri);
+        String key = uri.fileSystemKey();
         if (cache.containsKey(key)) {
             throw new FileSystemAlreadyExistsException("a file system already exists for '" + key + "', use getFileSystem() instead");
         }
@@ -131,7 +120,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      *
      * @return newFileSystem(uri, Collections.EMPTY_MPA)
      */
-    public S3FileSystem newFileSystem(URI uri) {
+    protected S3FileSystem newFileSystem(URI uri) {
         return newFileSystem(uri, Collections.EMPTY_MAP);
     }
 
@@ -188,7 +177,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      *                                     permission.
      */
     protected S3FileSystem getFileSystem(URI uri, boolean create) {
-        String key = getFileSystemKey(uri);
+        String key = S3URI.of(uri).fileSystemKey();
         S3FileSystem fs = cache.get(key);
 
         if (fs == null) {
@@ -841,13 +830,5 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return keys;
     }
 
-    private String getFileSystemKey(URI uri) {
-        String host = uri.getHost();
-        int port = uri.getPort();
-
-        return (port<0) && (!host.contains("."))
-               ? host
-               : (host + ((port < 0) ? "" : (":" + port)) + S3Path.PATH_SEPARATOR + uri.getPath().split(S3Path.PATH_SEPARATOR)[1]);
-    }
 
 }

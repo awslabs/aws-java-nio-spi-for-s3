@@ -29,8 +29,6 @@ import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 /**
  * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
  *
- * TODO: replace uriString in constructors with endpoint, bucket and credentials
- * TODO: make it closeable so that it is removed from the cache once not needed any more
  */
 public class S3FileSystem extends FileSystem {
     Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -52,43 +50,20 @@ public class S3FileSystem extends FileSystem {
     private S3AsyncClient client;
 
     /**
-     * Create a filesystem that represents the bucket specified by the URI
-     * @param uriString a valid S3 URI to a bucket, e.g "s3://mybucket"
-     * @param s3FileSystemProvider the provider to be used with this fileSystem
-     */
-    protected S3FileSystem(String uriString, S3FileSystemProvider s3FileSystemProvider){
-        this(URI.create(uriString), s3FileSystemProvider);
-    }
-
-    /**
-     * Create a filesystem that represents the bucket specified by the URI
-     * @param uri a valid S3 URI to a bucket, e.g <code>URI.create("s3://mybucket")</code>
-     * @param s3FileSystemProvider the provider to be used with this fileSystem
-     */
-    protected S3FileSystem(URI uri, S3FileSystemProvider s3FileSystemProvider) {
-        this(uri, s3FileSystemProvider, null);
-    }
-
-    /**
-     * Create a filesystem that represents the bucket specified by the URI
-     * @param uri a valid S3 URI to a bucket, e.g <code>URI.create("s3://mybucket")</code>
-     * @param s3FileSystemProvider the provider to be used with this fileSystem
+     * Create a filesystem that represents the given bucket, endpoint and credentials
+     *
+     * @param uri the S3 uri representing the file system
+     * @param provider the provider to be used with this fileSystem
      * @param config the configuration to use; can be null to use a default configuration
      */
-    protected S3FileSystem(URI uri, S3FileSystemProvider s3FileSystemProvider, S3NioSpiConfiguration config) {
-        super();
-        assert uri.getScheme().equals(S3FileSystemProvider.SCHEME);
+    protected S3FileSystem(S3URI uri, S3FileSystemProvider provider, S3NioSpiConfiguration config) {
+        this.clientProvider = new S3ClientProvider(config);
+        this.provider = provider;
 
-        clientProvider = new S3ClientProvider(config);
-
-        //
-        // TODO: move this logic in S3FileSystemProvider and provide constructors
-        // that accept endpoint, bucket and credentials
-        //
-        credentials = getCredentials(uri);
+        credentials = uri.credentials();
         if ((credentials == null) && (config != null)) {
             //
-            // Here, no credentials have been provided in the URI, let's check
+            // Here, no credentials have been provided, let's check
             // if we have them in the configuration map
             //
             credentials = config.getCredentials();
@@ -99,17 +74,20 @@ public class S3FileSystem extends FileSystem {
         // the defauls environment/system properties will be used
         //
 
-        String host = uri.getHost(); int port = uri.getPort();
-        if ((port > 0) || (host.indexOf(':') > 0)) {
-            this.bucketName = uri.getPath().split(S3Path.PATH_SEPARATOR)[1];
-            this.endpoint = host + ((port > 0) ? (":" + port) : "");
-        } else {
-            this.bucketName = host;
-            this.endpoint = null;
-        }
+        this.bucketName = uri.bucket();
+        this.endpoint = uri.endpoint();
 
-        logger.debug("creating FileSystem for 's3://{}'", this.bucketName);
-        this.provider = s3FileSystemProvider;
+        logger.debug("creating FileSystem for 's3://{}' with endpoint '{}' and provided credentials (if any)", bucketName, endpoint);
+    }
+
+    /**
+     * Same as <code>this(uri, provider, new S3NioSpiConfig())</code>
+     *
+     * @param uri
+     * @param provider
+     */
+    protected S3FileSystem(S3URI uri, S3FileSystemProvider provider) {
+        this(uri, provider, new S3NioSpiConfiguration());
     }
 
     /**
@@ -117,7 +95,7 @@ public class S3FileSystem extends FileSystem {
      * @param bucketName the name of the bucket. Must not be null or empty
      */
     protected S3FileSystem(String bucketName){
-        this (URI.create(S3FileSystemProvider.SCHEME + "://" + bucketName), new S3FileSystemProvider());
+        this (new S3URI(bucketName), new S3FileSystemProvider(), new S3NioSpiConfiguration());
     }
 
 
@@ -505,20 +483,5 @@ public class S3FileSystem extends FileSystem {
         return Objects.hash(bucketName, provider.getClass().getName());
     }
 
-    // --------------------------------------------------------- private methods
-
-    private AwsCredentials getCredentials(URI uri) {
-        String userInfo = uri.getUserInfo();
-
-        if (userInfo == null) {
-            return null;
-        }
-
-        int pos = userInfo.indexOf(':');
-        return AwsBasicCredentials.create(
-            (pos < 0) ? userInfo : userInfo.substring(0, pos),
-            (pos < 0) ? null : userInfo.substring(pos+1)
-        );
-    }
 
 }
