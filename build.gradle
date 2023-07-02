@@ -25,8 +25,8 @@ archivesBaseName = 'nio-spi-for-s3'
 version = '1.2.3'
 
 apply plugin: 'java'
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+sourceCompatibility = 17
+targetCompatibility = 17
 
 
 java {
