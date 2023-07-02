@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.channels.Channel;
 import java.nio.file.*;
 import java.nio.file.attribute.UserPrincipalLookupService;
@@ -21,7 +20,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
@@ -40,7 +38,7 @@ public class S3FileSystem extends FileSystem {
 
     protected S3ClientProvider clientProvider;
 
-    private final String bucketName, endpoint;
+    private final String bucketName, endpoint, key;
     private final S3FileSystemProvider provider;
     private boolean open = true;
     private final Set<S3SeekableByteChannel> openChannels = new HashSet<>();
@@ -76,6 +74,7 @@ public class S3FileSystem extends FileSystem {
 
         this.bucketName = uri.bucket();
         this.endpoint = uri.endpoint();
+        this.key = uri.fileSystemKey();
 
         logger.debug("creating FileSystem for 's3://{}' with endpoint '{}' and provided credentials (if any)", bucketName, endpoint);
     }
@@ -138,6 +137,15 @@ public class S3FileSystem extends FileSystem {
      */
     public String endpoint() {
         return endpoint;
+    }
+
+    /**
+     * Obtain the file system key of this <code>FileSystem</code> instance
+     *
+     * @return the file system key in the form of endpoint/bucket
+     */
+    public String key() {
+        return key;
     }
 
     /**

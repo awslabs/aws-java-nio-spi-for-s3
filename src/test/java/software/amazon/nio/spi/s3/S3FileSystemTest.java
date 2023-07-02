@@ -76,6 +76,18 @@ public class S3FileSystemTest {
     }
 
     @Test
+    public void fileSystemKey() {
+        assertEquals("mybucket", s3FileSystem.key());
+        assertEquals(
+            "somewhere.com:1080/yourbucket",
+            new S3FileSystem(
+                S3URI.of(URI.create("s3://somewhere.com:1080/yourbucket/yourobject")),
+                provider
+            ).key()
+        );
+    }
+
+    @Test
     public void isReadOnly() {
         assertFalse(s3FileSystem.isReadOnly());
     }

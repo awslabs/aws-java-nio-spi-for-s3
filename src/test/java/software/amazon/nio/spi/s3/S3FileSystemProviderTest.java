@@ -55,7 +55,7 @@ public class S3FileSystemProviderTest {
 
     @BeforeAll
     public static void beforeAll() {
-        S3FileSystemProvider.clear();
+        S3FileSystemProvider.reset();
     }
 
     @BeforeEach
@@ -256,6 +256,25 @@ public class S3FileSystemProviderTest {
             FileSystemNotFoundException.class,
             () -> provider.getFileSystem(URI.create(pathUri))
         );
+    }
+
+    @Test
+    public void resetClosesAllFileSystems() {
+        final URI U1 = URI.create("s3://endpoint1:8080/bucket1");
+        final URI U2 = URI.create("s3://endpoint2:8080/bucket2");
+        final URI U3 = URI.create("s3://endpoint2:8080/bucket3");
+
+        final S3FileSystem FS1 = provider.newFileSystem(U1);
+        final S3FileSystem FS2 = provider.newFileSystem(U2);
+        final S3FileSystem FS3 = provider.newFileSystem(U3);
+
+        provider.reset();
+
+        assertFalse(FS1.isOpen()); assertFalse(FS2.isOpen()); assertFalse(FS3.isOpen());
+
+        assertThrows(FileSystemNotFoundException.class, () -> provider.getFileSystem(U1));
+        assertThrows(FileSystemNotFoundException.class, () -> provider.getFileSystem(U2));
+        assertThrows(FileSystemNotFoundException.class, () -> provider.getFileSystem(U3));
     }
 
     @Test
