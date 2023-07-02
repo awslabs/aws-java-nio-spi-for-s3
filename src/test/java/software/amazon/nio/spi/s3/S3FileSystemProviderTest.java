@@ -275,12 +275,7 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-<<<<<<< HEAD
     public void newDirectoryStream() throws Exception {
-=======
-    public void newDirectoryStream() throws ExecutionException, InterruptedException, IOException {
->>>>>>> upstream/main
-
         S3Object object1 = S3Object.builder().key("key1").build();
         S3Object object2 = S3Object.builder().key("foo/key2").build();
 
