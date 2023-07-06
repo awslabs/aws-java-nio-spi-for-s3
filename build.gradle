@@ -42,13 +42,13 @@ compileJava {
 dependencies {
     // Use JUnit test framework.
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.mockito:mockito-core:5.3.1'
+    testImplementation 'org.mockito:mockito-core:5.4.0'
 
-    implementation platform('software.amazon.awssdk:bom:2.20.86')
+    implementation platform('software.amazon.awssdk:bom:2.20.99')
 
     implementation 'software.amazon.awssdk:s3'
-    implementation 'software.amazon.awssdk:s3-transfer-manager:2.20.86'
-    implementation 'software.amazon.awssdk.crt:aws-crt:0.22.1'
+    implementation 'software.amazon.awssdk:s3-transfer-manager'
+    implementation 'software.amazon.awssdk.crt:aws-crt:0.22.2'
     implementation 'org.slf4j:slf4j-api:2.0.7'
     implementation 'ch.qos.logback:logback-classic:1.4.8'
     implementation 'ch.qos.logback:logback-core:1.4.8'
