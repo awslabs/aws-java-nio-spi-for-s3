@@ -55,10 +55,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
-    /**
-     * Cache for clients; null means not initialized yet!
-     */
-    private static S3ClientStore clientStore = null;
 
     /**
      * Returns the URI scheme that identifies this provider.
@@ -202,12 +198,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
     /**
      * Construct a byte channel for the path with the specified client. A more composable and testable (by using a Mock Client)
      * version of the public method
-     * @param client a client that will make data requests for the channel
-     * @param path the path to read from. Must not be null.
-     * @param options a set of zero or more open options. May be null.
-     * @param attrs optional file attributes to set.
-     * @return An {@link S3SeekableByteChannel}
-     * @throws IOException if the channel creation fails
      */
     protected SeekableByteChannel newByteChannel(S3AsyncClient client, Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
         if (Objects.isNull(options)) {
@@ -218,7 +208,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final S3SeekableByteChannel channel;
 
         if (client == null) {
-            client = getClientStore().getAsyncClientForBucketName(s3Path.bucketName());
+            client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
         }
 
         channel = new S3SeekableByteChannel(s3Path, client, options);
@@ -237,7 +227,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @param dir    the path to the directory
      * @param filter the directory stream filter
      * @return a new and open {@code DirectoryStream} object
-     * @throws IOException if the stream cannot be created or has a streaming problem.
      */
     @Override
     public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
@@ -254,18 +243,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
     /**
      * Get a new directory stream that will use the specified client. A composable and testable version of the public
      * version of {@code newDirectoryStream}
-     * @param s3Client the client to use for calls to S3
-     * @param dir    the path to the directory
-     * @param filter the directory stream filter
-     * @return a new and open {@code DirectoryStream} object
-     * @throws ExecutionException if the async operation cannot be executed.
-     * @throws InterruptedException if the async operation is interrupted.
      */
     protected DirectoryStream<Path> newDirectoryStream(S3AsyncClient s3Client, Path dir, DirectoryStream.Filter<? super Path> filter) throws ExecutionException, InterruptedException {
         S3Path s3Path = (S3Path) dir;
 
         if (s3Client == null) {
-            s3Client = getClientStore().getAsyncClientForBucketName(s3Path.bucketName());
+            s3Client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
         }
 
         String pathString = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
@@ -354,7 +337,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final String bucketName = s3Path.bucketName();
 
         if (s3Client == null) {
-            s3Client = getClientStore().getAsyncClientForBucketName(s3Path.bucketName());
+            s3Client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
         }
 
         String directoryKey = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
@@ -398,7 +381,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         S3Path s3Path = (S3Path) path;
 
         if (s3Client == null) {
-            s3Client = getClientStore().getAsyncClientForBucketName(s3Path.bucketName());
+            s3Client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
         }
 
         String prefix = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
@@ -483,7 +466,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         S3Path s3TargetPath = (S3Path) target;
 
         if (s3Client == null) {
-            s3Client = getClientStore().getAsyncClientForBucketName(s3SourcePath.bucketName());
+            s3Client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3SourcePath.bucketName());
         }
 
         String prefix = s3SourcePath.toRealPath(NOFOLLOW_LINKS).getKey();
@@ -680,12 +663,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
     /**
      * Composable and testable version of {@code checkAccess} that uses the provided client to check access
-     * @param s3Client the client to use for S3 operations
-     * @param path  the path to the file to check
-     * @param modes The access modes to check; may have zero elements
-     * @throws IOException if an IO error occurs when trying to check access
-     * @throws ExecutionException if the async operation execution fails
-     * @throws InterruptedException if the async operation is interrupted
      */
     protected void checkAccess(S3AsyncClient s3Client, Path path, AccessMode... modes) throws IOException, ExecutionException, InterruptedException {
         assert path instanceof S3Path;
@@ -693,7 +670,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final String bucketName = s3Path.getFileSystem().bucketName();
 
         if (s3Client == null) {
-            s3Client = getClientStore().getAsyncClientForBucketName(bucketName);
+            s3Client = S3ClientStore.getInstance().getAsyncClientForBucketName(bucketName);
         }
 
         final CompletableFuture<? extends S3Response> response;
@@ -779,7 +756,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         if (type.equals(BasicFileAttributes.class) || type.equals(S3BasicFileAttributes.class)) {
             if (s3AsyncClient == null) {
-                s3AsyncClient = getClientStore().getAsyncClientForBucketName(s3Path.bucketName());
+                s3AsyncClient = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
             }
             @SuppressWarnings("unchecked")
             A a = (A) new S3BasicFileAttributes(s3Path, s3AsyncClient);
@@ -819,7 +796,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         S3Path s3Path = (S3Path) path;
 
         if (client == null) {
-            client = getClientStore().getAsyncClientForBucketName(s3Path.bucketName());
+            client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
         }
 
         if (s3Path.isDirectory() || attributes.trim().isEmpty())
@@ -843,19 +820,5 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws UnsupportedOperationException {
         throw new UnsupportedOperationException("s3 file attributes cannot be modified by this class");
-    }
-
-    /**
-     * Creates if needed and returns the S3ClientStore caching all created
-     * clients. This is not public on purpose, as it is an intermediate solution
-     * that will be replaced by instance accessors.
-     *
-     * @return the cache of clients as a S3ClientStore
-     */
-    protected static S3ClientStore getClientStore() {
-        if (clientStore == null) {
-            clientStore = new S3ClientStore();
-        }
-        return clientStore;
     }
 }

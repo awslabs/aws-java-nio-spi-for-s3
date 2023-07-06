@@ -5,9 +5,9 @@
 
 package software.amazon.nio.spi.s3;
 
-import org.junit.jupiter.api.Assertions;
-import static org.junit.jupiter.api.Assertions.*;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class PosixLikePathRepresentationTest {
     String root = "/";
@@ -27,9 +27,9 @@ public class PosixLikePathRepresentationTest {
 
 
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void ofNullWithMore() {
-        assertThrows(IllegalArgumentException.class, () -> PosixLikePathRepresentation.of(null, "foo"));
+        PosixLikePathRepresentation.of(null, "foo");
     }
 
     @Test
@@ -37,9 +37,9 @@ public class PosixLikePathRepresentationTest {
         assertEquals(PosixLikePathRepresentation.EMPTY_PATH, PosixLikePathRepresentation.of(null));
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void ofEmptyWithMore(){
-        assertThrows(IllegalArgumentException.class, () -> PosixLikePathRepresentation.of("", "foo"));
+        PosixLikePathRepresentation.of("", "foo");
     }
 
     @Test

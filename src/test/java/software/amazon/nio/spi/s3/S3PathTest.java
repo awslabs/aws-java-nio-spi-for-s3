@@ -5,16 +5,17 @@
 
 package software.amazon.nio.spi.s3;
 
+import org.junit.Before;
+import org.junit.Test;
 
+import java.io.File;
 import java.net.URI;
 import java.nio.file.LinkOption;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.junit.Assert.*;
 
 public class S3PathTest {
     String uriString = "s3://mybucket";
@@ -26,7 +27,7 @@ public class S3PathTest {
     S3Path absoluteObject;
     S3Path relativeObject;
 
-    @BeforeEach
+    @Before
     public void init(){
         root = S3Path.getPath(fileSystem, S3Path.PATH_SEPARATOR);
         absoluteDirectory = S3Path.getPath(fileSystem, S3Path.PATH_SEPARATOR, "dir1", "dir2/");
@@ -35,19 +36,19 @@ public class S3PathTest {
         relativeObject = S3Path.getPath(fileSystem, "dir1", "dir2", "object");
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void getPathNullFileSystem() {
-        assertThrows(IllegalArgumentException.class, () -> S3Path.getPath(null, "/", "foo"));
+        S3Path.getPath(null, "/", "foo");
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void getPathNullFirst() {
-        assertThrows(IllegalArgumentException.class, () -> S3Path.getPath(fileSystem, null, "foo"));
+        S3Path.getPath(fileSystem, null, "foo");
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void getPathEmptyFirst() {
-        assertThrows(IllegalArgumentException.class, () -> S3Path.getPath(fileSystem, " ", "foo"));
+        S3Path.getPath(fileSystem, " ", "foo");
     }
 
     @Test
@@ -133,14 +134,16 @@ public class S3PathTest {
         assertEquals(object, absoluteObject.getName(2));
     }
 
-    @Test
+    @SuppressWarnings("unused")
+    @Test (expected = IllegalArgumentException.class)
     public void getNameNegativeIllegalArgument() {
-        assertThrows(IllegalArgumentException.class, () -> absoluteObject.getName(-1));
+        final S3Path path = absoluteObject.getName(-1);
     }
 
-    @Test
+    @SuppressWarnings("unused")
+    @Test (expected = IllegalArgumentException.class)
     public void getNameOOBIllegalArgument() {
-        assertThrows(IllegalArgumentException.class, () -> absoluteObject.getName(3));
+        final S3Path path = absoluteObject.getName(3);
     }
 
     @Test
@@ -358,14 +361,14 @@ public class S3PathTest {
                 S3Path.getPath(fileSystem, "/bar/").toRealPath(LinkOption.NOFOLLOW_LINKS).toString());
     }
 
-    @Test
+    @Test(expected = UnsupportedOperationException.class)
     public void toFile() {
-        assertThrows(UnsupportedOperationException.class, () -> absoluteObject.toFile());
+        final File file = absoluteObject.toFile();
     }
 
-    @Test
+    @Test(expected = UnsupportedOperationException.class)
     public void register() {
-        assertThrows(UnsupportedOperationException.class, () -> absoluteObject.register(null));
+        absoluteObject.register(null);
     }
 
     @Test

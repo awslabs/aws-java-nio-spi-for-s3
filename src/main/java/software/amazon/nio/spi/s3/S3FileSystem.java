@@ -21,7 +21,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import software.amazon.awssdk.services.s3.S3Client;
 
 /**
  * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
@@ -38,7 +37,6 @@ public class S3FileSystem extends FileSystem {
     private final S3FileSystemProvider provider;
     private boolean open = true;
     private final Set<S3SeekableByteChannel> openChannels = new HashSet<>();
-    private final String endpoint;
 
     /**
      * Create a filesystem that represents the bucket specified by the URI
@@ -57,24 +55,8 @@ public class S3FileSystem extends FileSystem {
     protected S3FileSystem(URI uri, S3FileSystemProvider s3FileSystemProvider) {
         super();
         assert uri.getScheme().equals(S3FileSystemProvider.SCHEME);
-
-        String authority = uri.getAuthority();
-        //
-        // does the uri contain a server?
-        //
-        if (authority.contains(".") || authority.contains(":") || authority.contains("@")) {
-            //
-            // Yes, it does!
-            //
-            endpoint = authority;
-            bucketName = uri.getPath().split(S3Path.PATH_SEPARATOR)[1];
-            logger.debug("creating FileSystem for 's3://{}/{}'", this.endpoint, this.bucketName);
-        } else {
-            endpoint = null;
-            bucketName = uri.getAuthority();
-            logger.debug("creating FileSystem for 's3://{}'", this.bucketName);
-        }
-
+        this.bucketName = uri.getAuthority();
+        logger.debug("creating FileSystem for 's3://{}'", this.bucketName);
         this.provider = s3FileSystemProvider;
     }
 
@@ -406,14 +388,6 @@ public class S3FileSystem extends FileSystem {
      */
     protected Set<Channel> getOpenChannels(){
         return Collections.unmodifiableSet(openChannels);
-    }
-
-    /**
-     * @return the S3Client associated with this FileSystem
-     */
-    protected S3Client client() {
-        // TODO: create the client directly in the file system
-        return provider.getClientStore().getClientForBucketName(endpoint + S3Path.PATH_SEPARATOR + bucketName);
     }
 
     protected void registerOpenChannel(S3SeekableByteChannel channel){
