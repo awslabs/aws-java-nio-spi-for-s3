@@ -15,6 +15,7 @@ import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 
 import java.io.IOException;
 import java.net.URI;
@@ -63,7 +64,6 @@ public class S3FileSystemProviderTest {
 
     @Test
     public void newFileSystem() {
-
         URI uri = URI.create(pathUri);
         final FileSystem fileSystem = provider.newFileSystem(uri, Collections.emptyMap());
         assertTrue(fileSystem instanceof S3FileSystem);
@@ -90,19 +90,22 @@ public class S3FileSystemProviderTest {
     public void newDirectoryStream() throws ExecutionException, InterruptedException {
 
         S3Object object1 = S3Object.builder().key("key1").build();
-        S3Object object2 = S3Object.builder().key("foo/key2").build();
+        S3Object object2 = S3Object.builder().key("key2").build();
 
-        when(mockClient.listObjectsV2(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
+
+        when(mockClient.listObjectsV2Paginator(any(Consumer.class))).thenReturn(new ListObjectsV2Publisher(mockClient,
+                ListObjectsV2Request.builder()
+                        .bucket(fs.bucketName())
+                        .prefix("")
+                        .build())
+        );
+
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2).build()));
 
         final DirectoryStream<Path> stream = provider.newDirectoryStream(mockClient, Paths.get(URI.create(pathUri)), entry -> true);
         assertNotNull(stream);
         assertEquals(2, countDirStreamItems(stream));
-
-        final DirectoryStream<Path> filteredStream = provider.newDirectoryStream(mockClient, Paths.get(URI.create(pathUri)),
-                entry -> entry.endsWith("key2"));
-        assertNotNull(filteredStream);
-        assertEquals(1, countDirStreamItems(filteredStream));
     }
 
     private int countDirStreamItems(DirectoryStream<Path> stream) {

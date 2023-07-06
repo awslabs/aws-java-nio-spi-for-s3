@@ -5,12 +5,14 @@
 
 package software.amazon.nio.spi.s3;
 
+import io.reactivex.rxjava3.core.Flowable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.CopyRequest;
 import software.amazon.nio.spi.s3.util.TimeOutUtils;
@@ -251,65 +253,71 @@ public class S3FileSystemProvider extends FileSystemProvider {
             s3Client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
         }
 
-        String pathString = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
+        String pathString = s3Path.getKey();
         if (!pathString.endsWith(S3Path.PATH_SEPARATOR) && !pathString.isEmpty()) {
             pathString = pathString + S3Path.PATH_SEPARATOR;
         }
 
         final String bucketName = s3Path.bucketName();
-        final S3FileSystem fs = new S3FileSystem(bucketName);
-        final String prefix = pathString;
 
-        long timeOut = TIMEOUT_TIME_LENGTH_1;
-        final TimeUnit unit = MINUTES;
-        try {
-            final Iterator<S3Path> filteredDirectoryContents = s3Client.listObjectsV2(req -> req
-                            .bucket(bucketName)
-                            .prefix(prefix))
-                    .get(timeOut, unit)
-                    .contents()
-                    .stream()
-                    .map(s3Object -> truncateByPrefix(fs, prefix, s3Object))
-                    .filter(path -> {
-                        try {
-                            return filter.accept(path);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            return false;
-                        }
+        try (final S3FileSystem fs = new S3FileSystem(bucketName)) {
+            final String finalPathString = pathString;
+
+            //SubscribingDirectoryStream directoryStream = new SubscribingDirectoryStream(fs, filter, finalPathString);
+
+            final ListObjectsV2Publisher listObjectsV2Publisher = s3Client.listObjectsV2Paginator(req -> req
+                    .bucket(bucketName)
+                    .prefix(finalPathString)
+                    .delimiter(S3Path.PATH_SEPARATOR));
+
+            final Iterator<Path> iterator = Flowable.fromPublisher(listObjectsV2Publisher)
+                    .flatMapIterable(response -> {
+
+                        //add common prefixes from this page
+                        List<String> items = response
+                                .commonPrefixes().stream()
+                                .map(CommonPrefix::prefix)
+                                .collect(Collectors.toList());
+
+                        //add s3 objects from this page
+                        items.addAll(response
+                                .contents().stream()
+                                .map(S3Object::key)
+                                .collect(Collectors.toList()));
+
+                        // trim keys, convert to S3Path and apply directory stream filter
+                        return items.stream()
+                                .map(item -> item.replaceFirst("^"+finalPathString, ""))
+                                .map(fs::getPath)
+                                .filter(path -> {
+                                    try {
+                                        return filter.accept(path);
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                        return false;
+                                    }
+                                }).collect(Collectors.toList());
                     })
+                    .blockingStream()
+                    .map(Path.class::cast)
                     .iterator();
 
             return new DirectoryStream<Path>() {
-                final Iterator<? extends Path> iterator = filteredDirectoryContents;
-
                 @Override
-                @SuppressWarnings("unchecked")
-                public Iterator<Path> iterator() {
-                    return (Iterator<Path>) iterator;
+                public void close() throws IOException {
+
                 }
 
                 @Override
-                public void close() {
-                    // nothing to close
+                public Iterator<Path> iterator() {
+                    return iterator;
                 }
             };
-        } catch (TimeoutException e) {
-            throw logAndGenerateExceptionOnTimeOut(logger, "newDirectoryStream", timeOut, unit);
-        }
-    }
 
-    /**
-     * truncate objects whose key after the prefix contains a "/" to the first "/" after the prefix
-     */
-    private S3Path truncateByPrefix(final S3FileSystem fs, final String prefix, final S3Object object) {
-        if (object.key().indexOf(prefix) != 0 || object.key().equals(prefix)) {
-            return S3Path.getPath(fs, object);
-        }
 
-        int indexOfNextSeparator = object.key().indexOf(S3Path.PATH_SEPARATOR, prefix.length());
-        String truncated = indexOfNextSeparator == -1 ? object.key() : object.key().substring(0, indexOfNextSeparator);
-        return fs.getPath(truncated);
+        } catch (IOException e){
+            throw new RuntimeException("Cannot construct filesystem for path "+pathString, e);
+        }
     }
 
     /**
