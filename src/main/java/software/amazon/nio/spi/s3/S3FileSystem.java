@@ -12,7 +12,16 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.Channel;
-import java.nio.file.*;
+import java.nio.file.ClosedFileSystemException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.FileStore;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.PathMatcher;
+import java.nio.file.WatchService;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Collections;
@@ -182,7 +191,7 @@ public class S3FileSystem extends FileSystem {
      */
     @Override
     public Iterable<Path> getRootDirectories() {
-        return S3Path.getPath(this, "/");
+        return Collections.singleton(S3Path.getPath(this, "/"));
     }
 
     /**
