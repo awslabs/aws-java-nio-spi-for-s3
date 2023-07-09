@@ -9,11 +9,11 @@ build.gradle
 build
 bin
 
-# Ignore maven build output
+# Maven
 target
-
-# Ignore other IDEs files
-.vscode
 
 # MacOS
 .DS_Store
+
+# IDEs
+.vscode
