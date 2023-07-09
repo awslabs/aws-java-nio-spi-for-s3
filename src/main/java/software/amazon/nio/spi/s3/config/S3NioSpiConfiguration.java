@@ -189,7 +189,7 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
         if (!"http".equals(protocol) && !"https".equals(protocol)) {
             throw new IllegalArgumentException("endpoint prococol must be one of ('http', 'https')");
         }
-        put(S3_SPI_ENDPOINT_PROPERTY, protocol); return this;
+        put(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, protocol); return this;
     }
 
     /**
@@ -229,7 +229,7 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
      * @return the configured value or the default if not overridden
      */
     public String getEndpointProtocol() {
-        String protocol = put(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
+        String protocol = getOrDefault(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
         if ("http".equalsIgnoreCase(protocol) || "https".equalsIgnoreCase(protocol)) {
             return protocol;
         }

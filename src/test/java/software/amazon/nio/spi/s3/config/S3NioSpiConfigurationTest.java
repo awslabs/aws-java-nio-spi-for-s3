@@ -8,8 +8,6 @@ package software.amazon.nio.spi.s3.config;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +21,10 @@ import static org.assertj.core.api.BDDAssertions.then;
 
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.*;
 
+
+//
+// TODO: add withRegion(), withAccessKey(), withSecretAccessKey()
+//
 public class S3NioSpiConfigurationTest {
 
     S3NioSpiConfiguration config = new S3NioSpiConfiguration();
@@ -43,12 +45,6 @@ public class S3NioSpiConfigurationTest {
         badOverriddenConfig = new S3NioSpiConfiguration(badOverrides);
     }
 
-        public void constructors() {
-        then(String.valueOf(String.valueOf(config.getMaxFragmentNumber()))).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT);
-        then(String.valueOf(String.valueOf(config.getMaxFragmentSize()))).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT);
-    }
-
-
     @Test
     public void constructors() {
         then(config instanceof Map<String, String>).isTrue();
@@ -66,8 +62,8 @@ public class S3NioSpiConfigurationTest {
         then(config.withEndpoint(" somewhere.com:8080\t").getEndpoint()).isEqualTo("somewhere.com:8080");
         then(config.withEndpoint("   ").getEndpoint()).isEqualTo("");
         then(config.withEndpoint(null).getEndpoint()).isEqualTo("");
-        then(config.withEndpointProtocol("http").getEndpoint()).isEqualTo("http");
-        then(config.withEndpointProtocol("  http\n").getEndpoint()).isEqualTo("http");
+        then(config.withEndpointProtocol("http").getEndpointProtocol()).isEqualTo("http");
+        then(config.withEndpointProtocol("  http\n").getEndpointProtocol()).isEqualTo("http");
     }
 
     @Test
