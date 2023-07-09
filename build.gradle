@@ -36,7 +36,7 @@ java {
 
 compileJava {
     // see https://docs.gradle.org/6.6/userguide/building_java_projects.html#sec:java_cross_compilation
-    options.release = 16
+    options.release = 11
 }
 
 dependencies {
