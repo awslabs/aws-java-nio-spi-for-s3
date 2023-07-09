@@ -30,7 +30,7 @@ public class S3NioSpiConfigurationTest {
     S3NioSpiConfiguration badOverriddenConfig;
 
 
-    @Before
+    @BeforeEach
     public void setup(){
         overrides.setProperty(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, "1111");
         overrides.setProperty(S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY, "2");
@@ -41,6 +41,12 @@ public class S3NioSpiConfigurationTest {
         badOverriddenConfig = new S3NioSpiConfiguration(badOverrides);
     }
 
+        public void constructors() {
+        then(String.valueOf(String.valueOf(config.getMaxFragmentNumber()))).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT);
+        then(String.valueOf(String.valueOf(config.getMaxFragmentSize()))).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT);
+    }
+
+
     @Test
     public void overridesAsMap() {
         assertThrows(NullPointerException.class, () -> new S3NioSpiConfiguration((Map)null));
@@ -50,11 +56,6 @@ public class S3NioSpiConfigurationTest {
         S3NioSpiConfiguration c = new S3NioSpiConfiguration(map);
 
         assertEquals(1212, c.getMaxFragmentSize());
-    }
-    
-    public void constructors() {
-        then(String.valueOf(config.getMaxFragmentNumber())).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT);
-        then(String.valueOf(config.getMaxFragmentSize())).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT);
     }
 
     @Test
@@ -86,7 +87,7 @@ public class S3NioSpiConfigurationTest {
     @Test
     public void getEndpointProtocol() {
         assertEquals(S3NioSpiConfiguration.S3_SPI_ENDPOINT_PROTOCOL_DEFAULT, new S3NioSpiConfiguration().getEndpointProtocol());
-        assertEquals("http", overriddenConfig.getEndpointProtocol());
+        assertEquals("https", overriddenConfig.getEndpointProtocol());
         assertEquals(S3NioSpiConfiguration.S3_SPI_ENDPOINT_PROTOCOL_DEFAULT, badOverriddenConfig.getEndpointProtocol());
     }
 
