@@ -23,6 +23,10 @@ import static org.assertj.core.api.BDDAssertions.then;
 
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.*;
 
+
+//
+// TODO: add withRegion(), withAccessKey(), withSecretAccessKey()
+//
 public class S3NioSpiConfigurationTest {
 
     S3NioSpiConfiguration config = new S3NioSpiConfiguration();
@@ -60,8 +64,8 @@ public class S3NioSpiConfigurationTest {
         then(config.withEndpoint(" somewhere.com:8080\t").getEndpoint()).isEqualTo("somewhere.com:8080");
         then(config.withEndpoint("   ").getEndpoint()).isEqualTo("");
         then(config.withEndpoint(null).getEndpoint()).isEqualTo("");
-        then(config.withEndpointProtocol("http").getEndpoint()).isEqualTo("http");
-        then(config.withEndpointProtocol("  http\n").getEndpoint()).isEqualTo("http");
+        then(config.withEndpointProtocol("http").getEndpointProtocol()).isEqualTo("http");
+        then(config.withEndpointProtocol("  http\n").getEndpointProtocol()).isEqualTo("http");
     }
 
     @Test
