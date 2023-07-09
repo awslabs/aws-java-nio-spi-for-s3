@@ -111,6 +111,11 @@ public class S3NioSpiConfigurationTest {
 
         assertEquals(1212, c.getMaxFragmentSize());
     }
+    
+    public void constructors() {
+        then(String.valueOf(config.getMaxFragmentNumber())).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT);
+        then(String.valueOf(config.getMaxFragmentSize())).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT);
+    }
 
     @Test
     public void getS3SpiReadMaxFragmentSize() {
