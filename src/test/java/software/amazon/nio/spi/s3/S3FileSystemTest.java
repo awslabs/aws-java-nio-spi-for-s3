@@ -10,13 +10,20 @@ import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
+import static org.mockito.Mockito.lenient;
 import org.mockito.junit.jupiter.MockitoExtension;
-import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 @ExtendWith(MockitoExtension.class)
 public class S3FileSystemTest {
@@ -25,12 +32,20 @@ public class S3FileSystemTest {
     S3FileSystem s3FileSystem;
 
     @Mock
-    S3Client mockClient; //client used to determine bucket location
+    S3AsyncClient mockClient;
 
     @BeforeEach
     public void init() {
-        this.provider = new S3FileSystemProvider();
-        s3FileSystem = (S3FileSystem) this.provider.newFileSystem(s3Uri, Collections.emptyMap());
+        provider = new S3FileSystemProvider();
+        s3FileSystem = this.provider.newFileSystem(s3Uri, Collections.emptyMap());
+        s3FileSystem.clientProvider = new FakeS3ClientProvider(mockClient);
+        lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
+                CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
+    }
+
+    @AfterEach
+    public void after() throws Exception {
+        s3FileSystem.close();
     }
 
     @Test
@@ -53,7 +68,7 @@ public class S3FileSystemTest {
     @Test
     public void bucketName() {
         assertEquals("mybucket", s3FileSystem.bucketName());
-        assertEquals("mybucket", new S3FileSystem("s3://key:secret@endpoint/mybucket/myresource", provider).bucketName());
+        assertEquals("mybucket", new S3FileSystem("s3://key:secret@endpoint.com:9000/mybucket/myresource", provider).bucketName());
     }
 
     @Test
@@ -65,8 +80,12 @@ public class S3FileSystemTest {
     public void getRootDirectories() {
         final Iterable<Path> rootDirectories = s3FileSystem.getRootDirectories();
         assertNotNull(rootDirectories);
-        assertEquals(S3Path.PATH_SEPARATOR, rootDirectories.toString());
-        assertFalse(s3FileSystem.getRootDirectories().iterator().hasNext());
+
+        final Iterator<Path> rootDirectoriesIterator = rootDirectories.iterator();
+
+        assertTrue(rootDirectoriesIterator.hasNext());
+        assertEquals(S3Path.PATH_SEPARATOR, rootDirectoriesIterator.next().toString());
+        assertFalse(rootDirectoriesIterator.hasNext());
     }
 
     @Test

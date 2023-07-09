@@ -13,6 +13,7 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.OpenOption;
@@ -21,6 +22,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,7 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("unchecked")
@@ -54,8 +57,15 @@ public class S3SeekableByteChannelTest {
                         GetObjectResponse.builder().contentLength(6L).build(),
                         bytes)));
 
-        fs = new S3FileSystem("test-bucket");
+        S3FileSystemProvider provider = new S3FileSystemProvider();
+        fs = provider.newFileSystem(URI.create("s3://test-bucket"));
+        fs.clientProvider = new FakeS3ClientProvider(mockClient);
         path = fs.getPath("/object");
+    }
+
+    @AfterEach
+    public void after() throws IOException {
+        fs.close();
     }
 
     @Test
