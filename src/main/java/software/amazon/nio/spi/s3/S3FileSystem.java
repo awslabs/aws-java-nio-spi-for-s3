@@ -269,7 +269,7 @@ public class S3FileSystem extends FileSystem {
      */
     @Override
     public Iterable<Path> getRootDirectories() {
-        return S3Path.getPath(this, "/");
+        return Collections.singleton(S3Path.getPath(this, "/"));
     }
 
     /**

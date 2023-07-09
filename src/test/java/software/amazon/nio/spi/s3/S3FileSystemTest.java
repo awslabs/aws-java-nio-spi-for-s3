@@ -10,6 +10,7 @@ import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
@@ -79,8 +80,12 @@ public class S3FileSystemTest {
     public void getRootDirectories() {
         final Iterable<Path> rootDirectories = s3FileSystem.getRootDirectories();
         assertNotNull(rootDirectories);
-        assertEquals(S3Path.PATH_SEPARATOR, rootDirectories.toString());
-        assertFalse(s3FileSystem.getRootDirectories().iterator().hasNext());
+
+        final Iterator<Path> rootDirectoriesIterator = rootDirectories.iterator();
+
+        assertTrue(rootDirectoriesIterator.hasNext());
+        assertEquals(S3Path.PATH_SEPARATOR, rootDirectoriesIterator.next().toString());
+        assertFalse(rootDirectoriesIterator.hasNext());
     }
 
     @Test

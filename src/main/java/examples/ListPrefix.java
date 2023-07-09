@@ -9,7 +9,7 @@ import java.nio.file.Path;
 
 public class ListPrefix {
     public static void main(String[] args) throws IOException, URISyntaxException {
-        if(args.length == 0){
+        if (args.length == 0) {
             System.out.println("Provide an s3 prefix to list.");
             System.exit(1);
         }
