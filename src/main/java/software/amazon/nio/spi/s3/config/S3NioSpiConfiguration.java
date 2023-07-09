@@ -83,7 +83,6 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
         //
         put(S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY, String .valueOf(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT));
         put(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, String .valueOf(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT));
-        put(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
 
         //
         // With the below we pick existing environment variables and system
