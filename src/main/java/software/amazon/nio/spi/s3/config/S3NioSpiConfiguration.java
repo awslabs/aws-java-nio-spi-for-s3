@@ -34,7 +34,7 @@ public class S3NioSpiConfiguration {
     /**
      * The default value of the maximum fragment size property
      */
-    public static final String S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT = "5242880";
+    public static final int S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT = 5242880;
     /**
      * The name of the maximum fragment number property
      */
@@ -42,7 +42,7 @@ public class S3NioSpiConfiguration {
     /**
      * The default value of the maximum fragment size property
      */
-    public static final String S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT = "50";
+    public static final int S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT = 50;
     /**
      * The name of the endpoint protocol property
      */
@@ -119,8 +119,10 @@ public class S3NioSpiConfiguration {
      * @return the configured value or the default if not overridden
      */
     public int getMaxFragmentSize(){
-        return parseIntProperty(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY,
-                Integer.parseInt(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT));
+        return parseIntProperty(
+            S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY,
+            S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT
+        );
     }
 
     /**
@@ -128,8 +130,10 @@ public class S3NioSpiConfiguration {
      * @return the configured value or the default if not overridden
      */
     public int getMaxFragmentNumber(){
-        return parseIntProperty(S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY,
-                Integer.parseInt(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT));
+        return parseIntProperty(
+            S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY,
+            S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT
+        );
     }
 
     /**
