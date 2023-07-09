@@ -8,10 +8,12 @@ build.gradle
 # Ignore Gradle build output directory
 build
 bin
+
+# Ignore maven build output
 target
 
-#MacOS
-.DS_Store
-
-#IDEs
+# Ignore other IDEs files
 .vscode
+
+# MacOS
+.DS_Store
