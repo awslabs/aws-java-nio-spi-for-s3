@@ -7,6 +7,7 @@ package software.amazon.nio.spi.s3;
 
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.http.SdkHttpResponse;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationResponse;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -39,7 +41,7 @@ public class S3ClientStoreTest {
 
     @BeforeEach
     public void setUp() throws Exception {
-        instance = new S3ClientStore();
+        instance = S3ClientStore.getInstance();
     }
 
     @Test
