@@ -11,6 +11,9 @@ import org.junit.Test;
 import java.util.Properties;
 
 import static org.junit.Assert.*;
+import static org.assertj.core.api.BDDAssertions.then;
+
+import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.*;
 
 public class S3NioSpiConfigurationTest {
 
@@ -22,29 +25,35 @@ public class S3NioSpiConfigurationTest {
 
     @Before
     public void setup(){
-        overrides.setProperty(S3NioSpiConfiguration.S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, "1111");
-        overrides.setProperty(S3NioSpiConfiguration.S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY, "2");
+        overrides.setProperty(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, "1111");
+        overrides.setProperty(S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY, "2");
         overriddenConfig = new S3NioSpiConfiguration(overrides);
 
-        badOverrides.setProperty(S3NioSpiConfiguration.S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY, "abcd");
-        badOverrides.setProperty(S3NioSpiConfiguration.S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, "abcd");
+        badOverrides.setProperty(S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY, "abcd");
+        badOverrides.setProperty(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, "abcd");
         badOverriddenConfig = new S3NioSpiConfiguration(badOverrides);
     }
 
     @Test
+    public void constructors() {
+        then(String.valueOf(config.getMaxFragmentNumber())).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT);
+        then(String.valueOf(config.getMaxFragmentSize())).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT);
+    }
+
+    @Test
     public void getS3SpiReadMaxFragmentSize() {
-        assertEquals(Integer.parseInt(S3NioSpiConfiguration.S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT), config.getMaxFragmentSize());
+        assertEquals(Integer.parseInt(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT), config.getMaxFragmentSize());
 
         assertEquals(1111, overriddenConfig.getMaxFragmentSize());
-        assertEquals(Integer.parseInt(S3NioSpiConfiguration.S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT), badOverriddenConfig.getMaxFragmentSize());
+        assertEquals(Integer.parseInt(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT), badOverriddenConfig.getMaxFragmentSize());
     }
 
     @Test
     public void getS3SpiReadMaxFragmentNumber() {
-        assertEquals(Integer.parseInt(S3NioSpiConfiguration.S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT), config.getMaxFragmentNumber());
+        assertEquals(Integer.parseInt(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT), config.getMaxFragmentNumber());
 
         assertEquals(2, overriddenConfig.getMaxFragmentNumber());
-        assertEquals(Integer.parseInt(S3NioSpiConfiguration.S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT), badOverriddenConfig.getMaxFragmentNumber());
+        assertEquals(Integer.parseInt(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT), badOverriddenConfig.getMaxFragmentNumber());
     }
 
     @Test
