@@ -110,6 +110,15 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
     }
 
     /**
+     * Create a new, empty configuration
+     */
+    public S3NioSpiConfiguration(Map<String, ?> overrides){
+        Objects.requireNonNull(overrides);
+        overrides.keySet()
+            .forEach(key -> properties.setProperty(key, String.valueOf(overrides.get(key))));
+    }
+
+    /**
      * Create a new configuration with overrides
      * @param overrides the overrides
      */
