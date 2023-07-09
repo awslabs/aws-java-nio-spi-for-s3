@@ -25,8 +25,8 @@ archivesBaseName = 'nio-spi-for-s3'
 version = '1.2.3'
 
 apply plugin: 'java'
-sourceCompatibility = 16
-targetCompatibility = 16
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 
 java {
@@ -46,7 +46,6 @@ dependencies {
     // Use JUnit test framework.
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:5.4.0'
-    testImplementation 'org.assertj:assertj-core:3.24.2'
 
     implementation platform('software.amazon.awssdk:bom:2.20.99')
 
