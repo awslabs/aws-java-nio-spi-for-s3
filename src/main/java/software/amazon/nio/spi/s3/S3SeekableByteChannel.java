@@ -43,6 +43,10 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
     /**
      * @deprecated startAt is only a valid parameter for the read mode and is
      * therefore discouraged to be used during creation of the channel
+     * @param s3Client the client to use for S3 operations
+     * @param s3Path the path to open a byte channel for
+     * @param startAt the byte offset to start at. Implicitly for a read channel.
+     * @throws IOException if the channel cannot be created.
      */
     @Deprecated
     protected S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, long startAt) throws IOException {
@@ -52,14 +56,17 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
     /**
      * @deprecated startAt is only a valid parameter for the read mode and is
      * therefore discouraged to be used during creation of the channel
+     * @param s3Path the path to open a byte channel for
+     * @param startAt the byte offset to start at. Implicitly for a read channel.
+     * @throws IOException if the channel cannot be created.
      */
     @Deprecated
     protected S3SeekableByteChannel(S3Path s3Path, long startAt) throws IOException {
-        this(s3Path, S3FileSystemProvider.getClientStore().getAsyncClientForBucketName(s3Path.bucketName()), startAt);
+        this(s3Path, s3Path.getFileSystem().client(), startAt);
     }
 
     protected S3SeekableByteChannel(S3Path s3Path) throws IOException {
-        this(s3Path, S3FileSystemProvider.getClientStore().getAsyncClientForBucketName(s3Path.bucketName()), Collections.singleton(StandardOpenOption.READ));
+        this(s3Path, s3Path.getFileSystem().client(), Collections.singleton(StandardOpenOption.READ));
     }
 
     protected S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, Set<? extends OpenOption> options) throws IOException {
