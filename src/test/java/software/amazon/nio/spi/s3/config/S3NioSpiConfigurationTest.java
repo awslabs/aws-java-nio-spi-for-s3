@@ -8,6 +8,8 @@ package software.amazon.nio.spi.s3.config;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +52,54 @@ public class S3NioSpiConfigurationTest {
         then(config.getEndpoint()).isEmpty();
     }
 
+    @Test
+    public void fluentSetupOK() {
+        then(config.withMaxFragmentNumber(1000).getMaxFragmentNumber()).isEqualTo(1000);
+        then(config.withMaxFragmentSize(4000).getMaxFragmentSize()).isEqualTo(4000);
+        then(config.withEndpoint("somewhere.com:8000").getEndpoint()).isEqualTo("somewhere.com:8000");
+        then(config.withEndpoint(" somewhere.com:8080\t").getEndpoint()).isEqualTo("somewhere.com:8080");
+        then(config.withEndpoint("   ").getEndpoint()).isEqualTo("");
+        then(config.withEndpoint(null).getEndpoint()).isEqualTo("");
+        then(config.withEndpointProtocol("http").getEndpoint()).isEqualTo("http");
+        then(config.withEndpointProtocol("  http\n").getEndpoint()).isEqualTo("http");
+    }
+
+    @Test
+    public void fluentSetupKO() {
+        try {
+            config.withMaxFragmentNumber(-1);
+            fail("missing sanity check");
+        } catch (IllegalArgumentException x) {
+            then(x).hasMessage("maxFragmentNumber must be positive");
+        }
+        try {
+            config.withMaxFragmentSize(-1);
+            fail("missing sanity check");
+        } catch (IllegalArgumentException x) {
+            then(x).hasMessage("maxFragmentSize must be positive");
+        }
+
+        try {
+           config.withEndpoint("noport.somewhere.com");
+           fail("missing sanity check");
+        } catch (IllegalArgumentException x) {
+            then(x).hasMessage("endpoint 'noport.somewhere.com' does not match format host:port");
+        }
+
+        try {
+            config.withEndpoint("wrongport.somewhere.com:aabbcc");
+            fail("missing sanity check");
+        } catch (IllegalArgumentException x) {
+            then(x).hasMessage("endpoint 'wrongport.somewhere.com:aabbcc' does not match format host:port");
+        }
+
+        try {
+            config.withEndpointProtocol("ftp");
+            fail("missing sanity check");
+        } catch (IllegalArgumentException x) {
+            then(x).hasMessage("endpoint prococol must be one of ('http', 'https')");
+        }
+    }
 
     @Test
     public void overridesAsMap() {

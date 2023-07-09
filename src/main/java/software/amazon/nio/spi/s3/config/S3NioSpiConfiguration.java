@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.regex.Pattern;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
@@ -61,13 +62,14 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
      */
     public static final String S3_SPI_ENDPOINT_PROTOCOL_DEFAULT = "https";
 
+    private final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)(?::(\\d+))");
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     /**
      * Create a new, empty configuration
      */
     public S3NioSpiConfiguration(){
-        this(new Properties());
+        this(new HashMap<>());
     }
 
     /**
@@ -112,10 +114,83 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
      * Create a new configuration with overrides
      * @param overrides the overrides
      */
+    //
+    // TODO: to be removed if not used
+    //
     protected S3NioSpiConfiguration(Properties overrides) {
         Objects.requireNonNull(overrides);
         overrides.stringPropertyNames()
             .forEach(key -> put(key, overrides.getProperty(key)));
+    }
+
+    /**
+     * Fluently sets the value of maximum fragment number
+     *
+     * @param maxFragmentNumber the maximum fragment number
+     *
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withMaxFragmentNumber(int maxFragmentNumber) {
+        if (maxFragmentNumber < 1) {
+            throw new IllegalArgumentException("maxFragmentNumber must be positive");
+        }
+        put(S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY, String.valueOf(maxFragmentNumber));
+        return this;
+    }
+
+    /**
+     * Fluently sets the value of maximum fragment size
+     *
+     * @param maxFragmentSize the maximum fragment size
+     *
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withMaxFragmentSize(int maxFragmentSize) {
+        if (maxFragmentSize < 1) {
+            throw new IllegalArgumentException("maxFragmentSize must be positive");
+        }
+        put(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, String.valueOf(maxFragmentSize));
+        return this;
+    }
+
+    /**
+     * Fluently sets the value of the endpoint
+     *
+     * @param endpoint the endpoint
+     *
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withEndpoint(String endpoint) {
+
+        if (endpoint == null) {
+            endpoint = "";
+        }
+        endpoint = endpoint.trim();
+
+        if ((endpoint.length() > 0) && !ENDPOINT_REGEXP.matcher(endpoint).find()) {
+            throw new IllegalArgumentException(
+                String.format("endpoint '%s' does not match format host:port", endpoint)
+            );
+        }
+
+        put(S3_SPI_ENDPOINT_PROPERTY, endpoint); return this;
+    }
+
+    /**
+     * Fluently sets the value of the endpoint's protocol
+     *
+     * @param protocol the endpoint's protcol
+     *
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withEndpointProtocol(String protocol) {
+        if (protocol != null) {
+            protocol = protocol.trim();
+        }
+        if (!"http".equals(protocol) && !"https".equals(protocol)) {
+            throw new IllegalArgumentException("endpoint prococol must be one of ('http', 'https')");
+        }
+        put(S3_SPI_ENDPOINT_PROPERTY, protocol); return this;
     }
 
     /**
@@ -141,6 +216,16 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
     }
 
     /**
+     * Get the value of the endpoint. Not that no endvar/sysprop is taken as
+     * default.
+     *
+     * @return the configured value or the default ("") if not overridden
+     */
+    public String getEndpoint() {
+        return getOrDefault(S3_SPI_ENDPOINT_PROPERTY, S3_SPI_ENDPOINT_DEFAULT);
+    }
+
+    /**
      * Get the value of the endpoint protocol
      * @return the configured value or the default if not overridden
      */
@@ -149,19 +234,9 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
         if ("http".equalsIgnoreCase(protocol) || "https".equalsIgnoreCase(protocol)) {
             return protocol;
         }
-        logger.warn("the value of '{}' for '{}' is not an integer, using default value of '{}'",
+        logger.warn("the value of '{}' for '{}' is not 'http'|'https', using default value of '{}'",
                     protocol, S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
         return S3_SPI_ENDPOINT_PROTOCOL_DEFAULT;
-    }
-
-    /**
-     * Get the value of the endpoint. Not that no endvar/sysprop is taken as
-     * default.
-     *
-     * @return the configured value or the default ("") if not overridden
-     */
-    public String getEndpoint() {
-        return S3_SPI_ENDPOINT_DEFAULT;
     }
 
     /**
