@@ -5,27 +5,29 @@
 
 package software.amazon.nio.spi.s3;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.Collections;
-import java.util.Iterator;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.services.s3.S3Client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
+@ExtendWith(MockitoExtension.class)
 public class S3FileSystemTest {
     S3FileSystemProvider provider;
     URI s3Uri = URI.create("s3://mybucket/some/path/to/object.txt");
     S3FileSystem s3FileSystem;
 
-    @Before
+    @Mock
+    S3Client mockClient; //client used to determine bucket location
+
+    @BeforeEach
     public void init() {
         this.provider = new S3FileSystemProvider();
         s3FileSystem = (S3FileSystem) this.provider.newFileSystem(s3Uri, Collections.emptyMap());
@@ -42,12 +44,12 @@ public class S3FileSystemTest {
     public void close() throws IOException {
         assertEquals(0, s3FileSystem.getOpenChannels().size());
         s3FileSystem.close();
-        assertFalse("File system should return false from isOpen when closed has been called", s3FileSystem.isOpen());
+        assertFalse(s3FileSystem.isOpen(), "File system should return false from isOpen when closed has been called");
     }
 
     @Test
     public void isOpen() {
-        assertTrue("File system should be open when newly created", s3FileSystem.isOpen());
+        assertTrue(s3FileSystem.isOpen(), "File system should be open when newly created");
     }
 
     @Test
@@ -94,10 +96,11 @@ public class S3FileSystemTest {
                 s3FileSystem.getPathMatcher("glob:*.*").getClass());
     }
 
-
-    @Test(expected = UnsupportedOperationException.class)
-    //thrown because cannot be modified
+    @Test
     public void testGetOpenChannelsIsNotModifiable() {
-        s3FileSystem.getOpenChannels().add(null);
+        //
+        // thrown because cannot be modified
+        //
+        assertThrows(UnsupportedOperationException.class, () -> s3FileSystem.getOpenChannels().add(null));
     }
 }
