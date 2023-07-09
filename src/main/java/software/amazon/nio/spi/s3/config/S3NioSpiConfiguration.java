@@ -239,6 +239,16 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
     }
 
     /**
+     * Get the value of the endpoint. Not that no endvar/sysprop is taken as
+     * default.
+     *
+     * @return the configured value or the default ("") if not overridden
+     */
+    public String getEndpoint() {
+        return S3_SPI_ENDPOINT_DEFAULT;
+    }
+
+    /**
      * Get the configured credentials
      * @return the configured value or null if not provided
      */
