@@ -43,6 +43,12 @@ public class S3NioSpiConfigurationTest {
         badOverriddenConfig = new S3NioSpiConfiguration(badOverrides);
     }
 
+        public void constructors() {
+        then(String.valueOf(String.valueOf(config.getMaxFragmentNumber()))).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT);
+        then(String.valueOf(String.valueOf(config.getMaxFragmentSize()))).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT);
+    }
+
+
     @Test
     public void constructors() {
         then(config instanceof Map<String, String>).isTrue();
@@ -110,11 +116,6 @@ public class S3NioSpiConfigurationTest {
         S3NioSpiConfiguration c = new S3NioSpiConfiguration(map);
 
         assertEquals(1212, c.getMaxFragmentSize());
-    }
-    
-    public void constructors() {
-        then(String.valueOf(config.getMaxFragmentNumber())).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT);
-        then(String.valueOf(config.getMaxFragmentSize())).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT);
     }
 
     @Test
