@@ -6,6 +6,7 @@
 package software.amazon.nio.spi.s3.config;
 
 
+import java.util.HashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.utils.Pair;
@@ -21,7 +22,7 @@ import software.amazon.awssdk.auth.credentials.AwsCredentials;
 /**
  * Object to hold configuration of the S3 NIO SPI
  */
-public class S3NioSpiConfiguration {
+public class S3NioSpiConfiguration extends HashMap<String, String> {
 
     public static final String AWS_REGION_PROPERTY = "aws.region";
     public static final String AWS_ACCESS_KEY_PROPERTY = "aws.accessKey";
@@ -44,25 +45,43 @@ public class S3NioSpiConfiguration {
      */
     public static final int S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT = 50;
     /**
+     * The name of the endpoint property
+     */
+    public static final String S3_SPI_ENDPOINT_PROPERTY = "s3.spi.endpoint";
+    /**
+     * The default value of the endpoint property
+     */
+    public static final String S3_SPI_ENDPOINT_DEFAULT = "";
+    /**
      * The name of the endpoint protocol property
      */
     public static final String S3_SPI_ENDPOINT_PROTOCOL_PROPERTY = "s3.spi.endpoint-protocol";
     /**
-     * The default value of the endpoint protocolproperty
+     * The default value of the endpoint protocol property
      */
     public static final String S3_SPI_ENDPOINT_PROTOCOL_DEFAULT = "https";
 
-    private final Properties properties;
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    {
-        final Properties defaults = new Properties();
-        defaults.put(S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY, S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT);
-        defaults.put(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT);
-        defaults.put(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
+    /**
+     * Create a new, empty configuration
+     */
+    public S3NioSpiConfiguration(){
+        this(new Properties());
+    }
 
-        //setup defaults
-        properties = new Properties(defaults);
+    /**
+     * Create a new, empty configuration
+     */
+    public S3NioSpiConfiguration(Map<String, ?> overrides) {
+        Objects.requireNonNull(overrides);
+
+        //
+        // setup defaults
+        //
+        put(S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY, String .valueOf(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT));
+        put(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, String .valueOf(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT));
+        put(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
 
         //
         // With the below we pick existing environment variables and system
@@ -76,32 +95,17 @@ public class S3NioSpiConfiguration {
         //
 
         //add env var overrides if present
-        properties.stringPropertyNames().stream()
+        keySet().stream()
                 .map(key -> Pair.of(key,
                         Optional.ofNullable(System.getenv().get(this.convertPropertyNameToEnvVar(key)))))
-                .forEach(pair -> pair.right().ifPresent(val -> properties.setProperty(pair.left(), val)));
+                .forEach(pair -> pair.right().ifPresent(val -> put(pair.left(), val)));
 
         //add System props as overrides if present
-        properties.stringPropertyNames()
-                .forEach(key -> Optional.ofNullable(System.getProperty(key))
-                        .ifPresent(val -> properties.put(key, val)));
+        keySet().forEach(
+            key -> Optional.ofNullable(System.getProperty(key)).ifPresent(val -> put(key, val))
+        );
 
-    }
-
-    /**
-     * Create a new, empty configuration
-     */
-    public S3NioSpiConfiguration(){
-        this(new Properties());
-    }
-
-    /**
-     * Create a new, empty configuration
-     */
-    public S3NioSpiConfiguration(Map<String, ?> overrides){
-        Objects.requireNonNull(overrides);
-        overrides.keySet()
-            .forEach(key -> properties.setProperty(key, String.valueOf(overrides.get(key))));
+        overrides.keySet().forEach(key -> put(key, String.valueOf(overrides.get(key))));
     }
 
     /**
@@ -111,7 +115,7 @@ public class S3NioSpiConfiguration {
     protected S3NioSpiConfiguration(Properties overrides) {
         Objects.requireNonNull(overrides);
         overrides.stringPropertyNames()
-            .forEach(key -> properties.setProperty(key, overrides.getProperty(key)));
+            .forEach(key -> put(key, overrides.getProperty(key)));
     }
 
     /**
@@ -141,7 +145,7 @@ public class S3NioSpiConfiguration {
      * @return the configured value or the default if not overridden
      */
     public String getEndpointProtocol() {
-        String protocol = properties.getProperty(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
+        String protocol = put(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
         if ("http".equalsIgnoreCase(protocol) || "https".equalsIgnoreCase(protocol)) {
             return protocol;
         }
@@ -151,13 +155,24 @@ public class S3NioSpiConfiguration {
     }
 
     /**
+     * Get the value of the endpoint. Not that no endvar/sysprop is taken as
+     * default.
+     *
+     * @return the configured value or the default ("") if not overridden
+     */
+    public String getEndpoint() {
+        return S3_SPI_ENDPOINT_DEFAULT;
+    }
+
+    /**
      * Get the configured credentials
      * @return the configured value or null if not provided
      */
     public AwsCredentials getCredentials() {
-        if (properties.containsKey(AWS_ACCESS_KEY_PROPERTY)) {
-            return AwsBasicCredentials.create(properties.getProperty(AWS_ACCESS_KEY_PROPERTY),
-                properties.getProperty(AWS_SECRET_ACCESS_KEY_PROPERTY)
+        if (containsKey(AWS_ACCESS_KEY_PROPERTY)) {
+            return AwsBasicCredentials.create(
+                get(AWS_ACCESS_KEY_PROPERTY),
+                get(AWS_SECRET_ACCESS_KEY_PROPERTY)
            );
         }
 
@@ -170,7 +185,7 @@ public class S3NioSpiConfiguration {
      * @return the configured value or null if not provided
      */
     public String getRegion() {
-        return properties.getProperty(AWS_REGION_PROPERTY);
+        return get(AWS_REGION_PROPERTY);
     }
 
     // ------------------------------------------------------- protected methods
@@ -192,7 +207,7 @@ public class S3NioSpiConfiguration {
     // --------------------------------------------------------- private methods
 
     private int parseIntProperty(String propName, int defaultVal){
-        String propertyVal = properties.getProperty(propName);
+        String propertyVal = get(propName);
         try{
             return Integer.parseInt(propertyVal);
         } catch (NumberFormatException e){
