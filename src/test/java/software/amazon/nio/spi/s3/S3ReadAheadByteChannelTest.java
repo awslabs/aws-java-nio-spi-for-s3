@@ -5,11 +5,7 @@
 
 package software.amazon.nio.spi.s3;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.internal.async.ByteArrayAsyncResponseTransformer;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -20,12 +16,17 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 @SuppressWarnings("unchecked")
 public class S3ReadAheadByteChannelTest {
 
@@ -40,16 +41,16 @@ public class S3ReadAheadByteChannelTest {
     S3ReadAheadByteChannel readAheadByteChannel;
 
 
-    @Before
+    @BeforeEach
     public void setup() throws IOException {
 
         // mocking
-        when(delegator.size()).thenReturn(52L);
+        lenient().when(delegator.size()).thenReturn(52L);
 
         final GetObjectResponse response = GetObjectResponse.builder().build();
         final ResponseBytes<GetObjectResponse> bytes1 = ResponseBytes.fromByteArray(response, "abcdefghijklmnopqrstuvwxyz".getBytes(StandardCharsets.UTF_8));
         final ResponseBytes<GetObjectResponse> bytes2 = ResponseBytes.fromByteArray(response, "ABCDEFGHIJKLMNOPQRSTUVWXYZ".getBytes(StandardCharsets.UTF_8));
-        when(client.getObject(any(Consumer.class), any(ByteArrayAsyncResponseTransformer.class))).thenReturn(CompletableFuture.supplyAsync(() -> bytes1), CompletableFuture.supplyAsync(() -> bytes2));
+        lenient().when(client.getObject(any(Consumer.class), any(ByteArrayAsyncResponseTransformer.class))).thenReturn(CompletableFuture.supplyAsync(() -> bytes1), CompletableFuture.supplyAsync(() -> bytes2));
 
         readAheadByteChannel = new S3ReadAheadByteChannel(path, 26, 2, client, delegator, null, null);
     }

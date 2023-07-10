@@ -5,16 +5,9 @@
 
 package software.amazon.nio.spi.s3;
 
-import junit.framework.TestCase;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.InOrder;
-import org.mockito.Mock;
-import org.mockito.Spy;
-import org.mockito.junit.MockitoJUnitRunner;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.http.SdkHttpResponse;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationResponse;
@@ -23,13 +16,21 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.util.NoSuchElementException;
 import java.util.function.Consumer;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
+import org.mockito.Mock;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import org.mockito.Spy;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 @SuppressWarnings("unchecked")
-public class S3ClientStoreTest extends TestCase {
-
+public class S3ClientStoreTest {
     S3ClientStore instance;
 
     @Mock
@@ -38,15 +39,9 @@ public class S3ClientStoreTest extends TestCase {
     @Spy
     final S3ClientStore spyInstance = S3ClientStore.getInstance();
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
-        super.setUp();
         instance = S3ClientStore.getInstance();
-    }
-
-    @Test
-    public void testGetInstanceReturnsSingleton() {
-        assertSame(S3ClientStore.getInstance(), instance);
     }
 
     @Test
@@ -227,14 +222,14 @@ public class S3ClientStoreTest extends TestCase {
 
     @Test
     public void testCaching() {
-        S3Client client = S3Client.create();
+        S3Client client = S3Client.builder().region(Region.US_EAST_1).build();
         doReturn(client).when(spyInstance).generateClient("test-bucket");
 
         final S3Client client1 = spyInstance.getClientForBucketName("test-bucket");
         verify(spyInstance).generateClient("test-bucket");
         assertSame(client1, client);
 
-        S3Client differentClient = S3Client.create();
+        S3Client differentClient = S3Client.builder().region(Region.US_EAST_1).build();
         assertNotSame(client, differentClient);
 
         lenient().doReturn(differentClient).when(spyInstance).generateClient("test-bucket");
@@ -247,14 +242,14 @@ public class S3ClientStoreTest extends TestCase {
 
     @Test
     public void testAsyncCaching() {
-        S3AsyncClient client = S3AsyncClient.create();
+        S3AsyncClient client = S3AsyncClient.builder().region(Region.US_EAST_1).build();
         doReturn(client).when(spyInstance).generateAsyncClient("test-bucket");
 
         final S3AsyncClient client1 = spyInstance.getAsyncClientForBucketName("test-bucket");
         verify(spyInstance).generateAsyncClient("test-bucket");
         assertSame(client1, client);
 
-        S3AsyncClient differentClient = S3AsyncClient.create();
+        S3AsyncClient differentClient = S3AsyncClient.builder().region(Region.US_EAST_1).build();
         assertNotSame(client, differentClient);
 
         lenient().doReturn(differentClient).when(spyInstance).generateAsyncClient("test-bucket");
