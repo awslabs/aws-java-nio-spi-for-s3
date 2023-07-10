@@ -5,12 +5,11 @@
 
 package software.amazon.nio.spi.s3.config;
 
-import org.junit.Before;
-import org.junit.Test;
 
 import java.util.Properties;
-
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class S3NioSpiConfigurationTest {
 
@@ -20,7 +19,7 @@ public class S3NioSpiConfigurationTest {
     S3NioSpiConfiguration overriddenConfig;
     S3NioSpiConfiguration badOverriddenConfig;
 
-    @Before
+    @BeforeEach
     public void setup(){
         overrides.setProperty(S3NioSpiConfiguration.S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, "1111");
         overrides.setProperty(S3NioSpiConfiguration.S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY, "2");
