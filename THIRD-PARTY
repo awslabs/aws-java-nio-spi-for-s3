@@ -1,6 +1,7 @@
 The Amazon AWS Java NIO SPI for S3 Product includes the following third-party software/licensing:
 
 ** Junit 4.x -- https://junit.org/junit4/
+** AssertJ 3.x -- https://assertj.github.io/
 ** Logback Classic 1.2.x -- https://logback.qos.ch/ -- Copyright © 2021 QOS.ch
 ** Logback Core 1.2.x -- https://logback.qos.ch/ -- Copyright © 2021 QOS.ch
 
