@@ -9,14 +9,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
-import static org.junit.jupiter.api.Assertions.*;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
-import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_ACCESS_KEY_PROPERTY;
-import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_REGION_PROPERTY;
-import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_SECRET_ACCESS_KEY_PROPERTY;
-import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY;
 import static org.assertj.core.api.BDDAssertions.then;
 
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.*;
@@ -32,7 +24,6 @@ public class S3NioSpiConfigurationTest {
     Properties badOverrides = new Properties();
     S3NioSpiConfiguration overriddenConfig;
     S3NioSpiConfiguration badOverriddenConfig;
-
 
     @BeforeEach
     public void setup(){
