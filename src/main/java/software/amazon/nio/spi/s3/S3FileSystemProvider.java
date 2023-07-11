@@ -11,7 +11,18 @@ import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm;
+import software.amazon.awssdk.services.s3.model.CommonPrefix;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.Delete;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.model.S3Response;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.CopyRequest;
@@ -26,7 +37,14 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -253,71 +271,63 @@ public class S3FileSystemProvider extends FileSystemProvider {
             s3Client = S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName());
         }
 
-        String pathString = s3Path.getKey();
-        if (!pathString.endsWith(S3Path.PATH_SEPARATOR) && !pathString.isEmpty()) {
-            pathString = pathString + S3Path.PATH_SEPARATOR;
+        String dirName = s3Path.toAbsolutePath().getKey();
+
+        if (!s3Path.isDirectory()) {
+            dirName = dirName + S3Path.PATH_SEPARATOR;
         }
 
         final String bucketName = s3Path.bucketName();
+        final FileSystem fs = s3Path.getFileSystem();
+        final String finalDirName = dirName;
 
-        try (final S3FileSystem fs = new S3FileSystem(bucketName)) {
-            final String finalPathString = pathString;
+        final ListObjectsV2Publisher listObjectsV2Publisher = s3Client.listObjectsV2Paginator(req -> req
+                .bucket(bucketName)
+                .prefix(finalDirName)
+                .delimiter(S3Path.PATH_SEPARATOR));
 
-            //SubscribingDirectoryStream directoryStream = new SubscribingDirectoryStream(fs, filter, finalPathString);
+        final Iterator<Path> iterator = Flowable.fromPublisher(listObjectsV2Publisher)
+                .flatMapIterable(response -> {
 
-            final ListObjectsV2Publisher listObjectsV2Publisher = s3Client.listObjectsV2Paginator(req -> req
-                    .bucket(bucketName)
-                    .prefix(finalPathString)
-                    .delimiter(S3Path.PATH_SEPARATOR));
+                    //add common prefixes from this page
+                    List<String> items = response
+                            .commonPrefixes().stream()
+                            .map(CommonPrefix::prefix)
+                            .collect(Collectors.toList());
 
-            final Iterator<Path> iterator = Flowable.fromPublisher(listObjectsV2Publisher)
-                    .flatMapIterable(response -> {
+                    //add s3 objects from this page
+                    items.addAll(response
+                            .contents().stream()
+                            .map(S3Object::key)
+                            .collect(Collectors.toList()));
 
-                        //add common prefixes from this page
-                        List<String> items = response
-                                .commonPrefixes().stream()
-                                .map(CommonPrefix::prefix)
-                                .collect(Collectors.toList());
+                    // convert to S3Path and apply directory stream filter
+                    return items.stream()
+                            .filter(p -> !p.equals(finalDirName))  // including the parent will induce loops
+                            .map(fs::getPath)
+                            .filter(path -> {
+                                try {
+                                    return filter.accept(path);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                    return false;
+                                }
+                            }).collect(Collectors.toList());
+                })
+                .blockingStream()
+                .map(Path.class::cast) // upcast to Path from S3Path
+                .iterator();
 
-                        //add s3 objects from this page
-                        items.addAll(response
-                                .contents().stream()
-                                .map(S3Object::key)
-                                .collect(Collectors.toList()));
+        return new DirectoryStream<Path>() {
+            @Override
+            public void close() throws IOException {
+            }
 
-                        // trim keys, convert to S3Path and apply directory stream filter
-                        return items.stream()
-                                .map(item -> item.replaceFirst("^"+finalPathString, ""))
-                                .map(fs::getPath)
-                                .filter(path -> {
-                                    try {
-                                        return filter.accept(path);
-                                    } catch (IOException e) {
-                                        e.printStackTrace();
-                                        return false;
-                                    }
-                                }).collect(Collectors.toList());
-                    })
-                    .blockingStream()
-                    .map(Path.class::cast)
-                    .iterator();
-
-            return new DirectoryStream<Path>() {
-                @Override
-                public void close() throws IOException {
-
-                }
-
-                @Override
-                public Iterator<Path> iterator() {
-                    return iterator;
-                }
-            };
-
-
-        } catch (IOException e){
-            throw new RuntimeException("Cannot construct filesystem for path "+pathString, e);
-        }
+            @Override
+            public Iterator<Path> iterator() {
+                return iterator;
+            }
+        };
     }
 
     /**
