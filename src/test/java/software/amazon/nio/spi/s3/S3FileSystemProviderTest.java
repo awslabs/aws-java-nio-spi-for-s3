@@ -310,6 +310,12 @@ public class S3FileSystemProviderTest {
         assertEquals(2, countDirStreamItems(stream));
     }
 
+    private int countDirStreamItems(DirectoryStream<Path> stream) {
+        AtomicInteger count = new AtomicInteger(0);
+        stream.iterator().forEachRemaining(item -> count.incrementAndGet());
+        return count.get();
+    }
+
     @Test
     public void createDirectory() throws Exception {
         when(mockClient.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class))).thenReturn(CompletableFuture.supplyAsync(() ->
