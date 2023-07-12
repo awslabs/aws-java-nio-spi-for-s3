@@ -15,9 +15,9 @@ import static java.lang.String.format;
 
 public class TimeOutUtils {
 
-    public static long TIMEOUT_TIME_LENGTH_1 = 1L;
+    public static final long TIMEOUT_TIME_LENGTH_1 = 1L;
     public static long TIMEOUT_TIME_LENGTH_3 = 3L;
-    public static long TIMEOUT_TIME_LENGTH_5 = 5L;
+    public static final long TIMEOUT_TIME_LENGTH_5 = 5L;
 
     /**
      * Generate a time-out message string.
@@ -32,7 +32,7 @@ public class TimeOutUtils {
     }
 
     /**
-     * Creates a time out message and logs the same to the <code>logger</code>
+     * Creates a time-out message and logs the same to the <code>logger</code>
      * @param logger to which the message is logged
      * @param operationName the name of the operation that timed out
      * @param length the length of time

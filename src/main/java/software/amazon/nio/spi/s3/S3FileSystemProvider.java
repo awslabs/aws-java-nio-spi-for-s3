@@ -177,6 +177,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @throws SecurityException           If a security manager is installed, and it denies an unspecified
      *                                     permission.
      */
+    @SuppressWarnings("NullableProblems")
     @Override
     public S3Path getPath(URI uri) {
         Objects.requireNonNull(uri);
@@ -218,6 +219,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
     /**
      * Construct a byte channel for the path with the specified client. A more composable and testable (by using a Mock Client)
      * version of the public method
+     * @param client The client to use for the channel
+     * @param path The path to open
+     * @param options The options to use
+     * @param attrs The attributes to use
+     * @return A new byte channel for the object at {@code path}
+     * @throws IOException If the channel could not be created
      */
     protected SeekableByteChannel newByteChannel(S3AsyncClient client, Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
         if (Objects.isNull(options)) {
@@ -263,6 +270,13 @@ public class S3FileSystemProvider extends FileSystemProvider {
     /**
      * Get a new directory stream that will use the specified client. A composable and testable version of the public
      * version of {@code newDirectoryStream}
+     * @param s3Client The client to use for the directory stream
+     * @param dir the directory to stream
+     * @param filter the filter to apply to paths returned from the stream. Paths that are not accepted by the filter
+     *               are not returned.
+     * @return a stream for the directory. The stream may not be null but may be empty.
+     * @throws ExecutionException if the client async call(s) are interrupted or time out.
+     * @throws InterruptedException if the client async call(s) are interrupted or time out.
      */
     protected DirectoryStream<Path> newDirectoryStream(S3AsyncClient s3Client, Path dir, DirectoryStream.Filter<? super Path> filter) throws ExecutionException, InterruptedException {
         S3Path s3Path = (S3Path) dir;
@@ -290,7 +304,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         return new DirectoryStream<Path>() {
             @Override
-            public void close() throws IOException {
+            public void close() {
             }
 
             @Override
@@ -696,8 +710,15 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
     }
 
+
     /**
      * Composable and testable version of {@code checkAccess} that uses the provided client to check access
+     * @param s3Client the client to use to check access or {@code null} to use the default client
+     * @param path     the path to the file to check
+     * @param modes    the access modes to check; may have zero elements. Currently, ignored.
+     * @throws IOException          if an I/O error occurs
+     * @throws ExecutionException   if an execution error occurs during the Async call to S3
+     * @throws InterruptedException if the call thread it interrupted
      */
     protected void checkAccess(S3AsyncClient s3Client, Path path, AccessMode... modes) throws IOException, ExecutionException, InterruptedException {
         assert path instanceof S3Path;
