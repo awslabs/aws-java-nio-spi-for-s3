@@ -10,7 +10,14 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 import java.io.File;
 import java.io.IOError;
 import java.net.URI;
-import java.nio.file.*;
+import java.nio.file.FileSystem;
+import java.nio.file.InvalidPathException;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.ProviderMismatchException;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -748,7 +755,7 @@ public class S3Path implements Path {
      */
     @Override
     public int hashCode() {
-        return toRealPath(NOFOLLOW_LINKS).pathRepresentation.hashCode();
+        return this.bucketName().hashCode() + toRealPath(NOFOLLOW_LINKS).pathRepresentation.hashCode();
     }
 
     /**

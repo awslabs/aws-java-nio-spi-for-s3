@@ -17,7 +17,9 @@ public class ListPrefix {
         String prefix = args[0];
         try (final FileSystem fileSystem = FileSystems.getFileSystem(URI.create(prefix))) {
             Path s3Path = fileSystem.getPath(prefix);
-            fileSystem.provider().newDirectoryStream(s3Path, item -> true).forEach(System.out::println);
+            fileSystem.provider()
+                    .newDirectoryStream(s3Path, item -> true)
+                    .forEach(path -> System.out.println(path.getFileName()));
         }
     }
 }
