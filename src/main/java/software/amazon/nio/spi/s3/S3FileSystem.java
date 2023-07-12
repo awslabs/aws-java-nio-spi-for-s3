@@ -35,7 +35,7 @@ import java.util.regex.PatternSyntaxException;
  * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
  */
 public class S3FileSystem extends FileSystem {
-    Logger logger = LoggerFactory.getLogger(this.getClass());
+    final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     /**
      * View required by Java NIO
@@ -49,7 +49,7 @@ public class S3FileSystem extends FileSystem {
 
     /**
      * Create a filesystem that represents the bucket specified by the URI
-     * @param uriString a valid S3 URI to a bucket, e.g "s3://mybucket"
+     * @param uriString a valid S3 URI to a bucket, e.g "{@code s3://mybucket}"
      * @param s3FileSystemProvider the provider to be used with this fileSystem
      */
     protected S3FileSystem(String uriString, S3FileSystemProvider s3FileSystemProvider){
@@ -58,7 +58,7 @@ public class S3FileSystem extends FileSystem {
 
     /**
      * Create a filesystem that represents the bucket specified by the URI
-     * @param uri a valid S3 URI to a bucket, e.g <code>URI.create("s3://mybucket")</code>
+     * @param uri a valid S3 URI to a bucket, e.g {@code URI.create("s3://mybucket")}
      * @param s3FileSystemProvider the provider to be used with this fileSystem
      */
     protected S3FileSystem(URI uri, S3FileSystemProvider s3FileSystemProvider) {
@@ -123,7 +123,7 @@ public class S3FileSystem extends FileSystem {
     }
 
     /**
-     * Tells whether or not this file system is open.
+     * Tells whether this file system is open.
      *
      * <p> File systems created by the default provider are always open.
      *
@@ -135,7 +135,7 @@ public class S3FileSystem extends FileSystem {
     }
 
     /**
-     * Tells whether or not this file system allows only read-only access to
+     * Tells whether this file system allows only read-only access to
      * its file stores.
      * <br>
      * This is currently always false. The ability to write an individual object depend on the IAM role that is used by the principal
@@ -181,7 +181,7 @@ public class S3FileSystem extends FileSystem {
      * top-level directory.
      *
      * <p> When a security manager is installed, it is invoked to check access
-     * to the each root directory. If denied, the root directory is not returned
+     * to the root directory. If denied, the root directory is not returned
      * by the iterator. In the case of the default provider, the {@link
      * SecurityManager#checkRead(String)} method is invoked to check read access
      * to each root directory. It is system dependent if the permission checks
@@ -226,10 +226,10 @@ public class S3FileSystem extends FileSystem {
      *
      * <p>If {@code more} does not specify any
      * elements then the value of the {@code first} parameter is the path string
-     * to convert. If {@code more} specifies one or more elements then each
+     * to convert. If {@code more} specifies one or more elements, then each
      * non-empty string, including {@code first}, is considered to be a sequence
      * of name elements (see {@link Path}) and is joined to form a path string.
-     * The details as to how the Strings are joined is provider specific but
+     * The details as to how the Strings are joined is provider specific, but
      * typically they will be joined using the {@link #getSeparator
      * name-separator} as the separator. For example, if the name separator is
      * "{@code /}" and {@code getPath("/foo","bar","gus")} is invoked, then the
@@ -267,6 +267,7 @@ public class S3FileSystem extends FileSystem {
      * @return the resulting {@code Path}
      * @throws InvalidPathException If the path string cannot be converted
      */
+    @SuppressWarnings("NullableProblems")
     @Override
     public S3Path getPath(String first, String... more) {
         return S3Path.getPath(this, first, more);
@@ -285,7 +286,7 @@ public class S3FileSystem extends FileSystem {
      * where {@code ':'} stands for itself.
      *
      * <p> A {@code FileSystem} implementation supports the "{@code glob}" and
-     * "{@code regex}" syntaxes. The value of the syntax
+     * "{@code regex}" syntax's. The value of the syntax
      * component is compared without regard to case.
      *
      * <p> When the syntax is "{@code glob}" then the {@code String}
@@ -325,9 +326,9 @@ public class S3FileSystem extends FileSystem {
      *   it is the first character within the brackets, or the first character
      *   after the {@code !} if negating.</p></li>
      *
-     *   <li><p> The {@code { }} characters are a group of subpatterns, where
+     *   <li><p> The {@code { }} characters are a group of sub-patterns, where
      *   the group matches if any subpattern in the group matches. The {@code ","}
-     *   character is used to separate the subpatterns. Groups cannot be nested.
+     *   character is used to separate the sub-patterns. Groups cannot be nested.
      *   </p></li>
      *
      *   <li><p> Leading period dot characters in file name are
@@ -351,7 +352,7 @@ public class S3FileSystem extends FileSystem {
      * class.
      *
      * <p>  For both the glob and regex syntaxes, the matching details, such as
-     * whether the matching is case sensitive, are implementation-dependent
+     * whether the matching is case-sensitive, are implementation-dependent
      * and therefore not specified.
      *
      * @param syntaxAndPattern The syntax and pattern

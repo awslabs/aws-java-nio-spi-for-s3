@@ -2,13 +2,12 @@ package examples;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 
 public class ListPrefix {
-    public static void main(String[] args) throws IOException, URISyntaxException {
+    public static void main(String[] args) throws IOException {
         if (args.length == 0) {
             System.out.println("Provide an s3 prefix to list.");
             System.exit(1);

@@ -12,24 +12,30 @@ import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
 import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
 import software.amazon.awssdk.core.exception.RetryableException;
 import software.amazon.awssdk.core.retry.backoff.EqualJitterBackoffStrategy;
-import software.amazon.awssdk.core.retry.conditions.*;
+import software.amazon.awssdk.core.retry.conditions.OrRetryCondition;
+import software.amazon.awssdk.core.retry.conditions.RetryCondition;
+import software.amazon.awssdk.core.retry.conditions.RetryOnClockSkewCondition;
+import software.amazon.awssdk.core.retry.conditions.RetryOnExceptionsCondition;
+import software.amazon.awssdk.core.retry.conditions.RetryOnStatusCodeCondition;
+import software.amazon.awssdk.core.retry.conditions.RetryOnThrottlingCondition;
 import software.amazon.awssdk.http.HttpStatusCode;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
-import software.amazon.awssdk.services.s3.S3ClientBuilder;
-import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
 
 /**
  * A Singleton cache of clients for buckets configured for the region of those buckets
@@ -46,6 +52,7 @@ public class S3ClientStore {
     /**
      * Default client using the "https://s3.us-east-1.amazonaws.com" endpoint
      */
+    @SuppressWarnings("JavadocLinkAsPlainText")
     public static final S3Client DEFAULT_CLIENT = S3Client.builder()
             .endpointOverride(URI.create("https://s3.us-east-1.amazonaws.com"))
             .region(Region.US_EAST_1)
@@ -54,6 +61,7 @@ public class S3ClientStore {
     /**
      * Default asynchronous client using the "https://s3.us-east-1.amazonaws.com" endpoint
      */
+    @SuppressWarnings("JavadocLinkAsPlainText")
     public static final S3AsyncClient DEFAULT_ASYNC_CLIENT = S3AsyncClient.builder()
             .endpointOverride(URI.create("https://s3.us-east-1.amazonaws.com"))
             .region(Region.US_EAST_1)
@@ -91,7 +99,7 @@ public class S3ClientStore {
         );
     }
 
-    Logger logger = LoggerFactory.getLogger("S3ClientStore");
+    final Logger logger = LoggerFactory.getLogger("S3ClientStore");
 
     private S3ClientStore(){}
 
