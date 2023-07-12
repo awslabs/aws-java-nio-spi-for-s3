@@ -301,13 +301,13 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     * Get an iterator for a {@ListObjectsV2Publisher}. This method is protected level access only for testing
+     * Get an iterator for a {@code ListObjectsV2Publisher}. This method is protected level access only for testing
      * purposes. It is not intended to be used by any other code outside of this class.
      * @param filter a filter to apply to returned Paths. Only accepted paths will be included.
      * @param fs the Filesystem.
      * @param finalDirName the directory name that will be streamed.
      * @param listObjectsV2Publisher the publisher that returns objects and common prefixes that are iterated on.
-     * @return an iterator for {@code Path}s constructed from the {@ListObjectsV2Publisher}s responses.
+     * @return an iterator for {@code Path}s constructed from the {@code ListObjectsV2Publisher}s responses.
      */
     protected Iterator<Path> pathIteratorForPublisher(
             final DirectoryStream.Filter<? super Path> filter,
