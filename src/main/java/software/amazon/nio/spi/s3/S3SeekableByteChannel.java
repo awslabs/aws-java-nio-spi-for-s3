@@ -14,7 +14,12 @@ import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.*;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.NonReadableChannelException;
+import java.nio.channels.NonWritableChannelException;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
 import java.util.Collections;
@@ -43,10 +48,10 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
     /**
      * @deprecated startAt is only a valid parameter for the read mode and is
      * therefore discouraged to be used during creation of the channel
-     * @param s3Client the client to use for S3 operations
-     * @param s3Path the path to open a byte channel for
-     * @param startAt the byte offset to start at. Implicitly for a read channel.
-     * @throws IOException if the channel cannot be created.
+     * @param s3Client the s3 client to use to obtain bytes for the byte channel
+     * @param s3Path the path to the file
+     * @param startAt the position to start at
+     * @throws IOException if there is an error creating the channel
      */
     @Deprecated
     protected S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, long startAt) throws IOException {
@@ -56,9 +61,9 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
     /**
      * @deprecated startAt is only a valid parameter for the read mode and is
      * therefore discouraged to be used during creation of the channel
-     * @param s3Path the path to open a byte channel for
-     * @param startAt the byte offset to start at. Implicitly for a read channel.
-     * @throws IOException if the channel cannot be created.
+     * @param s3Path the path to the file
+     * @param startAt the position to start at
+     * @throws IOException if there is an error creating the channel
      */
     @Deprecated
     protected S3SeekableByteChannel(S3Path s3Path, long startAt) throws IOException {
@@ -137,8 +142,8 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
      * the channel is connected to an entity such as a file that is opened with
      * the {@link StandardOpenOption#APPEND APPEND} option, in
      * which case the position is first advanced to the end. The entity to which
-     * the channel is connected is grown, if necessary, to accommodate the
-     * written bytes, and then the position is updated with the number of bytes
+     * the channel is connected will grow to accommodate the
+     * written bytes, and the position updates with the number of bytes
      * actually written. Otherwise, this method behaves exactly as specified by
      * the {@link WritableByteChannel} interface.
      *

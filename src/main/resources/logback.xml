@@ -13,4 +13,5 @@
     <root level="info">
         <appender-ref ref="STDOUT" />
     </root>
+    <logger name="software.amazon.awssdk.profiles.internal.ProfileFileReader" level="error"/>
 </configuration>
