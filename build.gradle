@@ -22,7 +22,7 @@ repositories {
 
 group = 'software.amazon.nio.s3'
 archivesBaseName = 'nio-spi-for-s3'
-version = '1.2.3'
+version = '1.2.4-dev'
 
 apply plugin: 'java'
 sourceCompatibility = 1.8
