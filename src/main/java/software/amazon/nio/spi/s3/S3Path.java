@@ -10,7 +10,14 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 import java.io.File;
 import java.io.IOError;
 import java.net.URI;
-import java.nio.file.*;
+import java.nio.file.FileSystem;
+import java.nio.file.InvalidPathException;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.ProviderMismatchException;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -18,6 +25,7 @@ import java.util.Objects;
 
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 
+@SuppressWarnings("NullableProblems")
 public class S3Path implements Path {
 
     public static final String PATH_SEPARATOR = "/";
@@ -180,8 +188,8 @@ public class S3Path implements Path {
      * component, if any, and each element in the path except for the
      * <em>farthest</em> from the root in the directory hierarchy. This method
      * does not access the file system; the path or its parent may not exist.
-     * Furthermore, this method does not eliminate special names such as "."
-     * and ".." that may be used in some implementations. On UNIX for example,
+     * Furthermore, this method does not eliminate special names such as "{@code .}"
+     * and "{@code ..}" that may be used in some implementations. On UNIX for example,
      * the parent of "{@code /a/b/c}" is "{@code /a/b}", and the parent of
      * {@code "x/y/.}" is "{@code x/y}". This method may be used with the {@link
      * #normalize normalize} method, to eliminate redundant names, for cases where
@@ -736,7 +744,7 @@ public class S3Path implements Path {
 
     /**
      * Tests this path for equality with the given object.
-     *
+     * <p>
      * {@code true} if {@code other} is also an {@code S3Path} from the same bucket and the two paths have the same
      * real path.
      * @param other the object to which this object is to be compared
@@ -764,7 +772,7 @@ public class S3Path implements Path {
      */
     @Override
     public int hashCode() {
-        return toRealPath(NOFOLLOW_LINKS).pathRepresentation.hashCode();
+        return this.bucketName().hashCode() + toRealPath(NOFOLLOW_LINKS).pathRepresentation.hashCode();
     }
 
     /**
@@ -796,8 +804,8 @@ public class S3Path implements Path {
     private final class S3PathIterator implements Iterator<Path> {
         private final Iterator<String> delegate;
         boolean first;
-        boolean isAbsolute;
-        boolean hasTrailingSeparator;
+        final boolean isAbsolute;
+        final boolean hasTrailingSeparator;
 
         public S3PathIterator(Iterator<String> delegate, boolean isAbsolute, boolean hasTrailingSeparator){
             this.delegate = delegate;

@@ -43,6 +43,7 @@ public class S3ReadAheadByteChannelTest {
 
     S3ReadAheadByteChannel readAheadByteChannel;
 
+
     @BeforeEach
     public void setup() throws IOException {
         path = S3Path.getPath(provider.getFileSystem(URI.create("s3://my-bucket"), true), "/object");

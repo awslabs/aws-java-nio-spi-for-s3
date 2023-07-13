@@ -5,7 +5,11 @@
 
 package software.amazon.nio.spi.s3;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -17,9 +21,9 @@ import java.util.stream.Collectors;
  */
 class PosixLikePathRepresentation {
 
-    public static PosixLikePathRepresentation ROOT = new PosixLikePathRepresentation("/");
-    public static PosixLikePathRepresentation EMPTY_PATH = new PosixLikePathRepresentation("");
-    public static char PATH_SEPARATOR_CHAR = S3Path.PATH_SEPARATOR.charAt(0);
+    public static final PosixLikePathRepresentation ROOT = new PosixLikePathRepresentation("/");
+    public static final PosixLikePathRepresentation EMPTY_PATH = new PosixLikePathRepresentation("");
+    public static final char PATH_SEPARATOR_CHAR = S3Path.PATH_SEPARATOR.charAt(0);
 
     private String path;
 

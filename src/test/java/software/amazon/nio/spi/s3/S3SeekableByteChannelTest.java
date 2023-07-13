@@ -32,7 +32,6 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("unchecked")

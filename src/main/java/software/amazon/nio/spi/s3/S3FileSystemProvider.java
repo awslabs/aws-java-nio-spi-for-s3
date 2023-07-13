@@ -11,7 +11,18 @@ import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm;
+import software.amazon.awssdk.services.s3.model.CommonPrefix;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.Delete;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.model.S3Response;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.CopyRequest;
@@ -26,7 +37,14 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -34,6 +52,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
+import java.util.HashMap;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static software.amazon.awssdk.http.HttpStatusCode.FORBIDDEN;
 import static software.amazon.awssdk.http.HttpStatusCode.NOT_FOUND;
@@ -236,6 +255,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @throws SecurityException           If a security manager is installed, and it denies an unspecified
      *                                     permission.
      */
+    @SuppressWarnings("NullableProblems")
     @Override
     public S3Path getPath(URI uri) {
         Objects.requireNonNull(uri);
@@ -314,23 +334,51 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
         S3Path s3Path = (S3Path) dir;
-        String pathString = s3Path.getKey();
-        if (!pathString.endsWith(S3Path.PATH_SEPARATOR) && !pathString.isEmpty()) {
-            pathString = pathString + S3Path.PATH_SEPARATOR;
+
+        String dirName = s3Path.toAbsolutePath().getKey();
+
+        if (!s3Path.isDirectory()) {
+            dirName = dirName + S3Path.PATH_SEPARATOR;
         }
 
         final String bucketName = s3Path.bucketName();
+        final FileSystem fs = s3Path.getFileSystem();
+        final String finalDirName = dirName;
 
-
-        S3FileSystem fs = s3Path.getFileSystem();
-        final String finalPathString = pathString;
-
-        final ListObjectsV2Publisher listObjectsV2Publisher = fs.client().listObjectsV2Paginator(req -> req
+        final ListObjectsV2Publisher listObjectsV2Publisher = s3Path.getFileSystem().client().listObjectsV2Paginator(req -> req
                 .bucket(bucketName)
-                .prefix(finalPathString)
+                .prefix(finalDirName)
                 .delimiter(S3Path.PATH_SEPARATOR));
 
-        final Iterator<Path> iterator = Flowable.fromPublisher(listObjectsV2Publisher)
+        final Iterator<Path> iterator = pathIteratorForPublisher(filter, fs, finalDirName, listObjectsV2Publisher);
+
+        return new DirectoryStream<Path>() {
+            @Override
+            public void close() {
+            }
+
+            @Override
+            public Iterator<Path> iterator() {
+                return iterator;
+            }
+        };
+    }
+
+    /**
+     * Get an iterator for a {@code ListObjectsV2Publisher}. This method is protected level access only for testing
+     * purposes. It is not intended to be used by any other code outside of this class.
+     * @param filter a filter to apply to returned Paths. Only accepted paths will be included.
+     * @param fs the Filesystem.
+     * @param finalDirName the directory name that will be streamed.
+     * @param listObjectsV2Publisher the publisher that returns objects and common prefixes that are iterated on.
+     * @return an iterator for {@code Path}s constructed from the {@code ListObjectsV2Publisher}s responses.
+     */
+    protected Iterator<Path> pathIteratorForPublisher(
+            final DirectoryStream.Filter<? super Path> filter,
+            final FileSystem fs, String finalDirName,
+            final ListObjectsV2Publisher listObjectsV2Publisher) {
+
+        return Flowable.fromPublisher(listObjectsV2Publisher)
                 .flatMapIterable(response -> {
 
                     //add common prefixes from this page
@@ -345,9 +393,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
                             .map(S3Object::key)
                             .collect(Collectors.toList()));
 
-                    // trim keys, convert to S3Path and apply directory stream filter
+                    // convert to S3Path and apply directory stream filter
                     return items.stream()
-                            //.map(item -> item.replaceFirst("^"+finalPathString, ""))
+                            .filter(p -> !p.equals(finalDirName))  // including the parent will induce loops
                             .map(fs::getPath)
                             .filter(path -> {
                                 try {
@@ -359,20 +407,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
                             }).collect(Collectors.toList());
                 })
                 .blockingStream()
-                .map(Path.class::cast)
+                .map(Path.class::cast) // upcast to Path from S3Path
                 .iterator();
-
-        return new DirectoryStream<Path>() {
-            @Override
-            public void close() throws IOException {
-
-            }
-
-            @Override
-            public Iterator<Path> iterator() {
-                return iterator;
-            }
-        };
     }
 
     /**
@@ -700,6 +736,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
             throw new RuntimeException(e);
         }
     }
+
 
     /**
      * Returns a file attribute view of a given type.This method works in

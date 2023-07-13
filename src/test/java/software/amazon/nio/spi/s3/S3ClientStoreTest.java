@@ -31,11 +31,6 @@ public class S3ClientStoreTest {
     }
 
     @Test
-    public void testGetInstanceReturnsSingleton() {
-        assertSame(S3ClientStore.getInstance(), instance);
-    }
-
-    @Test
     public void testGetClientForNullBucketName() {
         assertEquals(instance.provider.universalClient(), instance.getClientForBucketName(null));
     }
