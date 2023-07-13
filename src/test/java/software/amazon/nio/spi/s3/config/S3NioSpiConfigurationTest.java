@@ -50,10 +50,15 @@ public class S3NioSpiConfigurationTest {
         then(config.getMaxFragmentSize()).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT);
         then(config.getEndpointProtocol()).isEqualTo("https");
         then(config.getEndpoint()).isEmpty();
+        then(config.getRegion()).isNull();
+        then(config.getCredentials()).isNull();
     }
 
     @Test
     public void fluentSetupOK() {
+        //
+        // TODO: break this in the dedicated withAndGetXXX methods
+        //
         then(config.withMaxFragmentNumber(1000).getMaxFragmentNumber()).isEqualTo(1000);
         then(config.withMaxFragmentSize(4000).getMaxFragmentSize()).isEqualTo(4000);
         then(config.withEndpoint("somewhere.com:8000").getEndpoint()).isEqualTo("somewhere.com:8000");
@@ -66,6 +71,9 @@ public class S3NioSpiConfigurationTest {
 
     @Test
     public void fluentSetupKO() {
+        //
+        // TODO: break this in the dedicated withAndGetXXX methods
+        //
         try {
             config.withMaxFragmentNumber(-1);
             fail("missing sanity check");
@@ -129,13 +137,18 @@ public class S3NioSpiConfigurationTest {
     }
 
     @Test
-    public void getRegion() {
-        assertNull(new S3NioSpiConfiguration().getRegion());
+    public void withAndGetRegion() {
+        then(new S3NioSpiConfiguration().getRegion()).isNull();
 
         Properties env = new Properties();
         env.setProperty(AWS_REGION_PROPERTY, "region1");
 
-        assertEquals("region1", new S3NioSpiConfiguration(env).getRegion());
+        final S3NioSpiConfiguration C = new S3NioSpiConfiguration(env);
+        then(C.getRegion()).isEqualTo("region1");
+        then(C.withRegion("\tregion2 ")).isSameAs(C); then(C.getRegion()).isEqualTo("region2");
+        then(C.withRegion(" \t ").getRegion()).isNull();
+        then(C.withRegion("").getRegion()).isNull();
+        then(C.withRegion(null).getRegion()).isNull();
     }
 
     @Test
@@ -146,16 +159,24 @@ public class S3NioSpiConfigurationTest {
     }
 
     @Test
-    public void getCredentials() {
-        assertNull(new S3NioSpiConfiguration().getCredentials());
+    public void withAndGetCredentials() {
+        final S3NioSpiConfiguration C = new S3NioSpiConfiguration();
 
-        Properties env = new Properties();
-        env.setProperty(AWS_ACCESS_KEY_PROPERTY, "envkey");
-        env.put(AWS_SECRET_ACCESS_KEY_PROPERTY, "envsecret");
+        then(C.withCredentials("akey", "asecret")).isSameAs(C);
 
-        AwsCredentials credentials = new S3NioSpiConfiguration(env).getCredentials();
-        assertEquals("envkey", credentials.accessKeyId());
-        assertEquals("envsecret", credentials.secretAccessKey());
+        AwsCredentials credentials = C.getCredentials();
+        then(credentials.accessKeyId()).isEqualTo("akey");
+        then(credentials.secretAccessKey()).isEqualTo("asecret");
+
+        credentials = C.withCredentials("anotherkey", "anothersecret").getCredentials();
+        then(credentials.accessKeyId()).isEqualTo("anotherkey");
+        then(credentials.secretAccessKey()).isEqualTo("anothersecret");
+
+        then(C.withCredentials(null, "something").getCredentials()).isNull();
+
+        //
+        // TODO: ko path
+        //
     }
 
     @Test

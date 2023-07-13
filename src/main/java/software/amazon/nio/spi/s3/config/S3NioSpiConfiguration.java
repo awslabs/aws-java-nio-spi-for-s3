@@ -193,6 +193,40 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
     }
 
     /**
+     * Fluently sets the value of the region
+     *
+     * @param region the region; if null or blank the property is removed
+     *
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withRegion(String region) {
+        if ((region == null) || region.isBlank()) {
+            remove(AWS_REGION_PROPERTY);
+        } else {
+            put(AWS_REGION_PROPERTY, region.trim());
+        }
+
+        return this;
+    }
+
+    /**
+     * Fluently sets the value of accessKey and secretAccessKey
+     *
+     * @param accessKey the accesskey; if null, credentials are removed
+     * @param secretAccessKey the secretAccesskey; if accessKey is not null, it can not be null
+     *
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withCredentials(String accessKey, String secretAccessKey) {
+        if (accessKey == null) {
+            remove(AWS_ACCESS_KEY_PROPERTY); remove(AWS_SECRET_ACCESS_KEY_PROPERTY);
+        } else {
+            put(AWS_ACCESS_KEY_PROPERTY, accessKey); put(AWS_SECRET_ACCESS_KEY_PROPERTY, secretAccessKey);
+        }
+        return this;
+    }
+
+    /**
      * Get the value of the Maximum Fragment Size
      * @return the configured value or the default if not overridden
      */
