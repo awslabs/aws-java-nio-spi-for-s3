@@ -221,6 +221,9 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
         if (accessKey == null) {
             remove(AWS_ACCESS_KEY_PROPERTY); remove(AWS_SECRET_ACCESS_KEY_PROPERTY);
         } else {
+            if (secretAccessKey == null) {
+                throw new IllegalArgumentException("secretAccessKey can not be null");
+            }
             put(AWS_ACCESS_KEY_PROPERTY, accessKey); put(AWS_SECRET_ACCESS_KEY_PROPERTY, secretAccessKey);
         }
         return this;
