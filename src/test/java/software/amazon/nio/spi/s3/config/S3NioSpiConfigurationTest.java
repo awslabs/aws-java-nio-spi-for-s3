@@ -2,9 +2,9 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0
  */
-
 package software.amazon.nio.spi.s3.config;
 
+import static com.github.stefanbirkner.systemlambda.SystemLambda.restoreSystemProperties;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -19,7 +19,6 @@ import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.*;
 
-
 public class S3NioSpiConfigurationTest {
 
     S3NioSpiConfiguration config = new S3NioSpiConfiguration();
@@ -29,7 +28,7 @@ public class S3NioSpiConfigurationTest {
     S3NioSpiConfiguration badOverriddenConfig;
 
     @BeforeEach
-    public void setup(){
+    public void setup() {
         overrides.setProperty(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, "1111");
         overrides.setProperty(S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY, "2");
         overriddenConfig = new S3NioSpiConfiguration(overrides);
@@ -52,7 +51,7 @@ public class S3NioSpiConfigurationTest {
 
     @Test
     public void overridesAsMap() {
-        assertThrows(NullPointerException.class, () -> new S3NioSpiConfiguration((Map)null));
+        assertThrows(NullPointerException.class, () -> new S3NioSpiConfiguration((Map) null));
 
         Map<String, String> map = new HashMap<>();
         map.put(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, "1212");
@@ -86,7 +85,8 @@ public class S3NioSpiConfigurationTest {
 
         final S3NioSpiConfiguration C = new S3NioSpiConfiguration(env);
         then(C.getRegion()).isEqualTo("region1");
-        then(C.withRegion("\tregion2 ")).isSameAs(C); then(C.getRegion()).isEqualTo("region2");
+        then(C.withRegion("\tregion2 ")).isSameAs(C);
+        then(C.getRegion()).isEqualTo("region2");
         then(C.withRegion(" \t ").getRegion()).isNull();
         then(C.withRegion("").getRegion()).isNull();
         then(C.withRegion(null).getRegion()).isNull();
@@ -101,8 +101,8 @@ public class S3NioSpiConfigurationTest {
         then(config.withEndpoint(null).getEndpoint()).isEqualTo("");
 
         try {
-           config.withEndpoint("noport.somewhere.com");
-           fail("missing sanity check");
+            config.withEndpoint("noport.somewhere.com");
+            fail("missing sanity check");
         } catch (IllegalArgumentException x) {
             then(x).hasMessage("endpoint 'noport.somewhere.com' does not match format host:port");
         }
@@ -177,7 +177,14 @@ public class S3NioSpiConfigurationTest {
         } catch (IllegalArgumentException x) {
             then(x).hasMessage("secretAccessKey can not be null");
         }
+    }
 
+    @Test
+    public void getHttpProtocolFromEnvironment() throws Exception {
+        restoreSystemProperties(() -> {
+            System.setProperty(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, "http");
+            then(new S3NioSpiConfiguration().getEndpointProtocol()).isEqualTo("http");
+        });
     }
 
     @Test

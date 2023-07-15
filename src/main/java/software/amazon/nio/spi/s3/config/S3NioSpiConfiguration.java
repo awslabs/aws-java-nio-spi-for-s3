@@ -17,8 +17,6 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.regex.Pattern;
 import software.amazon.awssdk.utils.Pair;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 import software.amazon.nio.spi.s3.util.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -87,6 +85,7 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
         //
         put(S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY, String .valueOf(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT));
         put(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, String .valueOf(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT));
+        put(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
 
         //
         // With the below we pick existing environment variables and system
