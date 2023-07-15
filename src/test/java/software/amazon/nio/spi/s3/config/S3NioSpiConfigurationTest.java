@@ -5,6 +5,7 @@
 package software.amazon.nio.spi.s3.config;
 
 import static com.github.stefanbirkner.systemlambda.SystemLambda.restoreSystemProperties;
+import static com.github.stefanbirkner.systemlambda.SystemLambda.withEnvironmentVariable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -181,9 +182,14 @@ public class S3NioSpiConfigurationTest {
 
     @Test
     public void getHttpProtocolFromEnvironment() throws Exception {
-        restoreSystemProperties(() -> {
-            System.setProperty(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, "http");
+        withEnvironmentVariable("S3_SPI_ENDPOINT_PROTOCOL", "http")
+        .execute(() -> {
             then(new S3NioSpiConfiguration().getEndpointProtocol()).isEqualTo("http");
+
+            restoreSystemProperties(() -> {
+                System.setProperty(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, "https");
+                then(new S3NioSpiConfiguration().getEndpointProtocol()).isEqualTo("https");
+            });
         });
     }
 
