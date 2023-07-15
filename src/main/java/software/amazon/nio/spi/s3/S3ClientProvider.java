@@ -304,6 +304,17 @@ public class S3ClientProvider {
 
         if ((endpoint != null) && (endpoint.length() > 0)) {
             asyncClientBuilder.endpointOverride(URI.create(configuration.getEndpointProtocol() + "://" + endpoint));
+            //
+            // if region is not provided but we are going to use an endpoint
+            // (therefore a not S3 bucket), we need to use a default region,
+            // otherwise aws client builder will require one
+            //
+            // TODO: use a default region in configuration or withRegion() in
+            // the FileSystemProvider <- preferred
+            //
+            if (region == null) {
+                clientBuilder.region(Region.US_WEST_1);
+            }
         }
 
         if (credentials != null) {
@@ -317,6 +328,9 @@ public class S3ClientProvider {
         return clientForRegion(null, null, regionString, null);
     }
 
+    //
+    // TODO: remove bucket as it is not used
+    //
     private S3AsyncClient asyncClientForRegion(String endpoint, String bucket, String region, AwsCredentials credentials){
         // It may be useful to further cache clients for regions although at some point clients for buckets may need to be
         // specialized beyond just region end points.
@@ -332,6 +346,17 @@ public class S3ClientProvider {
 
         if ((endpoint != null) && (endpoint.length() > 0)) {
             asyncClientBuilder.endpointOverride(URI.create(configuration.getEndpointProtocol() + "://" + endpoint));
+            //
+            // if region is not provided but we are going to use an endpoint
+            // (therefore a not S3 bucket), we need to use a default region,
+            // otherwise aws client builder will require one
+            //
+            // TODO: use a default region in configuration or withRegion() in
+            // the FileSystemProvider <- preferred
+            //
+            if (region == null) {
+                asyncClientBuilder.region(Region.US_WEST_1);
+            }
         }
 
         if (credentials != null) {
