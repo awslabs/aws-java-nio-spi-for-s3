@@ -9,7 +9,6 @@ package software.amazon.nio.spi.s3.config;
 import java.util.HashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.utils.Pair;
 
 import java.util.Locale;
 import java.util.Map;
@@ -17,6 +16,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.regex.Pattern;
+import software.amazon.awssdk.utils.Pair;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+
+import software.amazon.nio.spi.s3.util.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
@@ -200,7 +204,7 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
      * @return this instance
      */
     public S3NioSpiConfiguration withRegion(String region) {
-        if ((region == null) || region.isBlank()) {
+        if ((region == null) || StringUtils.isBlank(region)) {
             remove(AWS_REGION_PROPERTY);
         } else {
             put(AWS_REGION_PROPERTY, region.trim());

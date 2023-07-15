@@ -41,7 +41,7 @@ public class S3NioSpiConfigurationTest {
 
     @Test
     public void constructors() {
-        then(config instanceof Map<String, String>).isTrue();
+        then(config).isInstanceOf(Map.class);
         then(config.getMaxFragmentNumber()).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT);
         then(config.getMaxFragmentSize()).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT);
         then(config.getEndpointProtocol()).isEqualTo("https");

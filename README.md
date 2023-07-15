@@ -4,7 +4,12 @@
 
 A Java NIO.2 service provider for S3, allowing Java NIO operations to be performed on paths using the `s3` scheme. This
 package implements the service provider interface (SPI) defined for Java NIO.2 in JDK 1.7 providing "plug-in" non-blocking
-access to S3 objects for Java applications using Java NIO.2 for file access.
+access to S3 objects for Java applications using Java NIO.2 for file access. Using this package allows Java applications
+to access S3 without having to modify or recompile the application. You also avoid having to set up any kind of FUSE mount.
+
+For a general overview see the 
+[AWS Blog Post](https://aws.amazon.com/blogs/storage/extending-java-applications-to-directly-access-files-in-amazon-s3-without-recompiling/) 
+announcing this package.
 
 ## Using this package as a provider
 
@@ -56,7 +61,7 @@ For example:
 <dependency>
     <groupId>software.amazon.nio.s3</groupId>
     <artifactId>aws-java-nio-spi-for-s3</artifactId>
-    <version>1.2.2</version>
+    <version>1.2.3</version>
 </dependency>
 ```
 
