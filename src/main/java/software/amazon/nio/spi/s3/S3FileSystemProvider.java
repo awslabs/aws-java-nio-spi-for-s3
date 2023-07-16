@@ -309,7 +309,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
             options = Collections.emptySet();
         }
 
-        final S3Path s3Path = getPath(path.toUri());
+        final S3Path s3Path = (S3Path)path;
         final S3SeekableByteChannel channel;
         final S3FileSystem fs = s3Path.getFileSystem();
 
