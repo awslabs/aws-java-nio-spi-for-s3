@@ -23,7 +23,6 @@ import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
 import static org.mockito.Mockito.lenient;
 import org.mockito.junit.jupiter.MockitoExtension;
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
@@ -41,6 +40,7 @@ public class S3PathTest {
     S3Path relativeDirectory;
     S3Path absoluteObject;
     S3Path relativeObject;
+    S3Path withSpecialChars;
 
     @BeforeEach
     public void init(){
@@ -54,6 +54,7 @@ public class S3PathTest {
         relativeDirectory = S3Path.getPath(fileSystem, "..", "dir3/");
         absoluteObject = S3Path.getPath(fileSystem, S3Path.PATH_SEPARATOR, "dir1", "dir2", "object");
         relativeObject = S3Path.getPath(fileSystem, "dir1", "dir2", "object");
+        withSpecialChars = S3Path.getPath(fileSystem, "dir with space/and\tspecial&chars");
     }
 
     @AfterEach
@@ -352,12 +353,14 @@ public class S3PathTest {
         final URI uri1 = URI.create("s3://mybucket/dir1/dir2/object");
         final URI uri2 = URI.create("s3://mybucket/");
         final URI uri3 = URI.create("s3://mybucket/dir3/");
+        final URI uri4 = URI.create("s3://mybucket/dir+with+space/and%09special%26chars");
 
         assertEquals(uri, absoluteDirectory.toUri());
         assertEquals(uri3, relativeDirectory.toUri());
         assertEquals(uri1, relativeObject.toUri());
         assertEquals(uri1, absoluteObject.toUri());
         assertEquals(uri2, root.toUri());
+        assertEquals(uri4, withSpecialChars.toUri());
     }
 
     @Test
