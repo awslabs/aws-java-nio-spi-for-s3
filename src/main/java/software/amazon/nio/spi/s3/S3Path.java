@@ -9,7 +9,10 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.File;
 import java.io.IOError;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.nio.file.FileSystem;
 import java.nio.file.InvalidPathException;
 import java.nio.file.LinkOption;
@@ -612,10 +615,32 @@ public class S3Path implements Path {
      */
     @Override
     public URI toUri() {
-        return URI.create(
-                fileSystem.provider().getScheme() + "://"
-                        + bucketName()
-                        + this.toAbsolutePath().toRealPath(NOFOLLOW_LINKS));
+        Path path = toAbsolutePath().toRealPath(NOFOLLOW_LINKS);
+        Iterator<Path> elements = path.iterator();
+
+        StringBuilder uri = new StringBuilder(fileSystem.provider().getScheme() + "://");
+        uri.append(bucketName());
+        elements.forEachRemaining(
+            (e) -> {
+                String name = e.getFileName().toString();
+                try {
+                    if (name.endsWith(PATH_SEPARATOR)) {
+                        name = name.substring(0, name.length()-1);
+                    }
+                    uri.append(PATH_SEPARATOR).append(URLEncoder.encode(name, "UTF-8"));
+                } catch (UnsupportedEncodingException x) {
+                    //
+                    // NOTE: I do not know how to reproduce this case...
+                    //
+                    throw new IllegalArgumentException("path '" + uri + "' can not be converted to URI: " + x.getMessage(), x);
+                }
+            }
+        );
+        if (isDirectory()) {
+            uri.append(PATH_SEPARATOR);
+        }
+
+        return URI.create(uri.toString());
     }
 
     /**
