@@ -93,9 +93,6 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
         // aws.accessKey, leaving the framework and the underlying AWS client
         // the possibility to use the standard behaviour.
         //
-        // TOTO: shall we return an Optional instead returning null?
-        // TOTO: shall we return an Optional instead returning null?
-        //
 
         //add env var overrides if present
         keySet().stream()
@@ -115,9 +112,6 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
      * Create a new configuration with overrides
      * @param overrides the overrides
      */
-    //
-    // TODO: to be removed if not used
-    //
     protected S3NioSpiConfiguration(Properties overrides) {
         Objects.requireNonNull(overrides);
         overrides.stringPropertyNames()
@@ -229,6 +223,27 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
             put(AWS_ACCESS_KEY_PROPERTY, accessKey); put(AWS_SECRET_ACCESS_KEY_PROPERTY, secretAccessKey);
         }
         return this;
+    }
+
+    /**
+     * Fluently sets the value of accessKey and secretAccessKey given a
+     * {@code AwsCredentials} object.
+     *
+     * @param credentials the credentials; if null, credentials are removed
+     *
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withCredentials(AwsCredentials credentials) {
+        //
+        // We do not store the credentials object directly for consistency with
+        // the other settings and to kee 1:1 relationship between the defined
+        // properties and the content of this map
+        //
+        if (credentials == null) {
+            return withCredentials(null, null);
+        }
+
+        return withCredentials(credentials.accessKeyId(), credentials.secretAccessKey());
     }
 
     /**

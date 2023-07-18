@@ -8,6 +8,7 @@ package software.amazon.nio.spi.s3.config;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import static org.assertj.core.api.BDDAssertions.entry;
 
 import static org.assertj.core.api.BDDAssertions.then;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -15,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.*;
@@ -158,7 +160,7 @@ public class S3NioSpiConfigurationTest {
     }
 
     @Test
-    public void withAndGetCredentials() {
+    public void withAndGetPlainCredentials() {
         then(config.withCredentials("akey", "asecret")).isSameAs(config);
 
         AwsCredentials credentials = config.getCredentials();
@@ -178,6 +180,27 @@ public class S3NioSpiConfigurationTest {
             then(x).hasMessage("secretAccessKey can not be null");
         }
 
+    }
+
+    @Test
+    public void withAndGetCredentials() {
+        final AwsCredentials C1 = AwsBasicCredentials.create("key", "secret");
+        final AwsCredentials C2 = AwsBasicCredentials.create("key", "secret");
+
+        then(config.withCredentials(C1)).isSameAs(config);
+        AwsCredentials c = config.getCredentials();
+        then(c.accessKeyId()).isEqualTo(C1.accessKeyId());
+        then(c.secretAccessKey()).isEqualTo(C1.secretAccessKey());
+
+        then(config.withCredentials(C2)).isSameAs(config);
+        c = config.getCredentials();
+        then(c.accessKeyId()).isEqualTo(C2.accessKeyId());
+        then(c.secretAccessKey()).isEqualTo(C2.secretAccessKey());
+
+        then(config.withCredentials(null)).doesNotContainKeys(
+            AWS_ACCESS_KEY_PROPERTY, AWS_SECRET_ACCESS_KEY_PROPERTY
+        );
+        then(config.getCredentials()).isNull();
     }
 
     @Test
