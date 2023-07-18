@@ -345,7 +345,6 @@ public class S3ClientProvider {
         }
 
         if ((endpoint != null) && (endpoint.length() > 0)) {
-            System.out.println("uri: " + configuration.getEndpointProtocol() + "://" + endpoint);
             asyncClientBuilder.endpointOverride(URI.create(configuration.getEndpointProtocol() + "://" + endpoint));
             //
             // if region is not provided but we are going to use an endpoint
