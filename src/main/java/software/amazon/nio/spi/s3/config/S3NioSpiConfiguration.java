@@ -17,10 +17,10 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.regex.Pattern;
 import software.amazon.awssdk.utils.Pair;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 import software.amazon.nio.spi.s3.util.StringUtils;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 /**
  * Object to hold configuration of the S3 NIO SPI
@@ -69,7 +69,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      */
     public static final String S3_SPI_CREDENTIALS_PROPERTY = "s3.spi.credentials";
 
-    private final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)(?::(\\d+))");
+    private final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     /**
@@ -90,6 +90,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         //
         put(S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY, String .valueOf(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT));
         put(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, String .valueOf(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT));
+        put(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
 
         //
         // With the below we pick existing environment variables and system
@@ -167,9 +168,9 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         }
         endpoint = endpoint.trim();
 
-        if ((endpoint.length() > 0) && !ENDPOINT_REGEXP.matcher(endpoint).find()) {
+        if ((endpoint.length() > 0) && !ENDPOINT_REGEXP.matcher(endpoint).matches()) {
             throw new IllegalArgumentException(
-                String.format("endpoint '%s' does not match format host:port", endpoint)
+                String.format("endpoint '%s' does not match format host:port where port is a number", endpoint)
             );
         }
 
@@ -298,10 +299,23 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     }
 
     /**
-     * Get the configured credentials
+     * Get the configured credentials. Note that credentials can be provided in
+     * two ways:
+     * <nl>
+     * <li>{@code withCredentials(String accessKey, String secretAcccessKey)}
+     * <li>{@code withCredentials(AwsCredentials credentials)}
+     * </nl>
+     *
+     * The latter takes the priority, so if both are used, {@code getCredentials()}
+     * returns the most complete object, which is the value of the property
+     * {@code S3_SPI_CREDENTIALS_PROPERTY}
+     *
      * @return the configured value or null if not provided
      */
     public AwsCredentials getCredentials() {
+        if (containsKey(S3_SPI_CREDENTIALS_PROPERTY)) {
+            return (AwsCredentials)get(S3_SPI_CREDENTIALS_PROPERTY);
+        }
         if (containsKey(AWS_ACCESS_KEY_PROPERTY)) {
             return AwsBasicCredentials.create(
                 (String)get(AWS_ACCESS_KEY_PROPERTY),

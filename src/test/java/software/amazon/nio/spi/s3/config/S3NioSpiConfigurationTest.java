@@ -2,9 +2,10 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0
  */
-
 package software.amazon.nio.spi.s3.config;
 
+import static com.github.stefanbirkner.systemlambda.SystemLambda.restoreSystemProperties;
+import static com.github.stefanbirkner.systemlambda.SystemLambda.withEnvironmentVariable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -20,7 +21,6 @@ import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.*;
 
-
 public class S3NioSpiConfigurationTest {
 
     S3NioSpiConfiguration config = new S3NioSpiConfiguration();
@@ -30,7 +30,7 @@ public class S3NioSpiConfigurationTest {
     S3NioSpiConfiguration badOverriddenConfig;
 
     @BeforeEach
-    public void setup(){
+    public void setup() {
         overrides.setProperty(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, "1111");
         overrides.setProperty(S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY, "2");
         overriddenConfig = new S3NioSpiConfiguration(overrides);
@@ -87,7 +87,8 @@ public class S3NioSpiConfigurationTest {
 
         final S3NioSpiConfiguration C = new S3NioSpiConfiguration(env);
         then(C.getRegion()).isEqualTo("region1");
-        then(C.withRegion("\tregion2 ")).isSameAs(C); then(C.getRegion()).isEqualTo("region2");
+        then(C.withRegion("\tregion2 ")).isSameAs(C);
+        then(C.getRegion()).isEqualTo("region2");
         then(C.withRegion(" \t ").getRegion()).isNull();
         then(C.withRegion("").getRegion()).isNull();
         then(C.withRegion(null).getRegion()).isNull();
@@ -100,19 +101,13 @@ public class S3NioSpiConfigurationTest {
         then(config.withEndpoint(" somewhere.com:8080\t").getEndpoint()).isEqualTo("somewhere.com:8080");
         then(config.withEndpoint("   ").getEndpoint()).isEqualTo("");
         then(config.withEndpoint(null).getEndpoint()).isEqualTo("");
-
-        try {
-           config.withEndpoint("noport.somewhere.com");
-           fail("missing sanity check");
-        } catch (IllegalArgumentException x) {
-            then(x).hasMessage("endpoint 'noport.somewhere.com' does not match format host:port");
-        }
+        then(config.withEndpoint("noport.somewhere.com").getEndpoint()).isEqualTo("noport.somewhere.com");
 
         try {
             config.withEndpoint("wrongport.somewhere.com:aabbcc");
             fail("missing sanity check");
         } catch (IllegalArgumentException x) {
-            then(x).hasMessage("endpoint 'wrongport.somewhere.com:aabbcc' does not match format host:port");
+            then(x).hasMessage("endpoint 'wrongport.somewhere.com:aabbcc' does not match format host:port where port is a number");
         }
     }
 
@@ -178,7 +173,19 @@ public class S3NioSpiConfigurationTest {
         } catch (IllegalArgumentException x) {
             then(x).hasMessage("secretAccessKey can not be null");
         }
+    }
 
+    @Test
+    public void getHttpProtocolFromEnvironment() throws Exception {
+        withEnvironmentVariable("S3_SPI_ENDPOINT_PROTOCOL", "http")
+        .execute(() -> {
+            then(new S3NioSpiConfiguration().getEndpointProtocol()).isEqualTo("http");
+
+            restoreSystemProperties(() -> {
+                System.setProperty(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, "https");
+                then(new S3NioSpiConfiguration().getEndpointProtocol()).isEqualTo("https");
+            });
+        });
     }
 
     @Test
@@ -190,7 +197,7 @@ public class S3NioSpiConfigurationTest {
         then(config.getCredentials()).isSameAs(C1);
         then(config.withCredentials(C2)).isSameAs(config);
         then(config.getCredentials()).isSameAs(C2);
-        then(config.getCredentials()).isNull();
+        then(config.withCredentials(null).getCredentials()).isNull();
 
         //
         // withCredentials(AwsCredentials) takes priority over withCredentialas(String, String)
