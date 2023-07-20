@@ -9,7 +9,6 @@ import static com.github.stefanbirkner.systemlambda.SystemLambda.withEnvironment
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-import static org.assertj.core.api.BDDAssertions.entry;
 
 import static org.assertj.core.api.BDDAssertions.then;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -102,19 +101,13 @@ public class S3NioSpiConfigurationTest {
         then(config.withEndpoint(" somewhere.com:8080\t").getEndpoint()).isEqualTo("somewhere.com:8080");
         then(config.withEndpoint("   ").getEndpoint()).isEqualTo("");
         then(config.withEndpoint(null).getEndpoint()).isEqualTo("");
-
-        try {
-            config.withEndpoint("noport.somewhere.com");
-            fail("missing sanity check");
-        } catch (IllegalArgumentException x) {
-            then(x).hasMessage("endpoint 'noport.somewhere.com' does not match format host:port");
-        }
+        then(config.withEndpoint("noport.somewhere.com").getEndpoint()).isEqualTo("noport.somewhere.com");
 
         try {
             config.withEndpoint("wrongport.somewhere.com:aabbcc");
             fail("missing sanity check");
         } catch (IllegalArgumentException x) {
-            then(x).hasMessage("endpoint 'wrongport.somewhere.com:aabbcc' does not match format host:port");
+            then(x).hasMessage("endpoint 'wrongport.somewhere.com:aabbcc' does not match format host:port where port is a number");
         }
     }
 
@@ -197,23 +190,23 @@ public class S3NioSpiConfigurationTest {
 
     @Test
     public void withAndGetCredentials() {
-        final AwsCredentials C1 = AwsBasicCredentials.create("key", "secret");
-        final AwsCredentials C2 = AwsBasicCredentials.create("key", "secret");
+        final AwsCredentials C1 = AwsBasicCredentials.create("key1", "secret1");
+        final AwsCredentials C2 = AwsBasicCredentials.create("key2", "secret2");
 
         then(config.withCredentials(C1)).isSameAs(config);
-        AwsCredentials c = config.getCredentials();
-        then(c.accessKeyId()).isEqualTo(C1.accessKeyId());
-        then(c.secretAccessKey()).isEqualTo(C1.secretAccessKey());
-
+        then(config.getCredentials()).isSameAs(C1);
         then(config.withCredentials(C2)).isSameAs(config);
-        c = config.getCredentials();
-        then(c.accessKeyId()).isEqualTo(C2.accessKeyId());
-        then(c.secretAccessKey()).isEqualTo(C2.secretAccessKey());
+        then(config.getCredentials()).isSameAs(C2);
+        then(config.withCredentials(null).getCredentials()).isNull();
 
-        then(config.withCredentials(null)).doesNotContainKeys(
-            AWS_ACCESS_KEY_PROPERTY, AWS_SECRET_ACCESS_KEY_PROPERTY
-        );
-        then(config.getCredentials()).isNull();
+        //
+        // withCredentials(AwsCredentials) takes priority over withCredentialas(String, String)
+        //
+        then(
+            config.withCredentials(C1.accessKeyId(), C2.secretAccessKey())
+            .withCredentials(C2)
+            .getCredentials()
+        ).isSameAs(C2);
     }
 
     @Test

@@ -25,7 +25,7 @@ import software.amazon.awssdk.auth.credentials.AwsCredentials;
 /**
  * Object to hold configuration of the S3 NIO SPI
  */
-public class S3NioSpiConfiguration extends HashMap<String, String> {
+public class S3NioSpiConfiguration extends HashMap<String, Object> {
 
     public static final String AWS_REGION_PROPERTY = "aws.region";
     public static final String AWS_ACCESS_KEY_PROPERTY = "aws.accessKey";
@@ -64,7 +64,12 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
      */
     public static final String S3_SPI_ENDPOINT_PROTOCOL_DEFAULT = "https";
 
-    private final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)(?::(\\d+))");
+    /**
+     * The default value of the endpoint protocol property
+     */
+    public static final String S3_SPI_CREDENTIALS_PROPERTY = "s3.spi.credentials";
+
+    private final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     /**
@@ -163,9 +168,9 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
         }
         endpoint = endpoint.trim();
 
-        if ((endpoint.length() > 0) && !ENDPOINT_REGEXP.matcher(endpoint).find()) {
+        if ((endpoint.length() > 0) && !ENDPOINT_REGEXP.matcher(endpoint).matches()) {
             throw new IllegalArgumentException(
-                String.format("endpoint '%s' does not match format host:port", endpoint)
+                String.format("endpoint '%s' does not match format host:port where port is a number", endpoint)
             );
         }
 
@@ -235,16 +240,11 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
      * @return this instance
      */
     public S3NioSpiConfiguration withCredentials(AwsCredentials credentials) {
-        //
-        // We do not store the credentials object directly for consistency with
-        // the other settings and to kee 1:1 relationship between the defined
-        // properties and the content of this map
-        //
+        /*
         if (credentials == null) {
             return withCredentials(null, null);
-        }
-
-        return withCredentials(credentials.accessKeyId(), credentials.secretAccessKey());
+        }*/
+        put(S3_SPI_CREDENTIALS_PROPERTY, credentials); return this;
     }
 
     /**
@@ -276,7 +276,7 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
      * @return the configured value or the default ("") if not overridden
      */
     public String getEndpoint() {
-        return getOrDefault(S3_SPI_ENDPOINT_PROPERTY, S3_SPI_ENDPOINT_DEFAULT);
+        return (String)getOrDefault(S3_SPI_ENDPOINT_PROPERTY, S3_SPI_ENDPOINT_DEFAULT);
     }
 
     /**
@@ -284,7 +284,7 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
      * @return the configured value or the default if not overridden
      */
     public String getEndpointProtocol() {
-        String protocol = getOrDefault(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
+        String protocol = (String)getOrDefault(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
         if ("http".equalsIgnoreCase(protocol) || "https".equalsIgnoreCase(protocol)) {
             return protocol;
         }
@@ -294,14 +294,27 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
     }
 
     /**
-     * Get the configured credentials
+     * Get the configured credentials. Note that credentials can be provided in
+     * two ways:
+     * <nl>
+     * <li>{@code withCredentials(String accessKey, String secretAcccessKey)}
+     * <li>{@code withCredentials(AwsCredentials credentials)}
+     * </nl>
+     *
+     * The latter takes the priority, so if both are used, {@code getCredentials()}
+     * returns the most complete object, which is the value of the property
+     * {@code S3_SPI_CREDENTIALS_PROPERTY}
+     *
      * @return the configured value or null if not provided
      */
     public AwsCredentials getCredentials() {
+        if (containsKey(S3_SPI_CREDENTIALS_PROPERTY)) {
+            return (AwsCredentials)get(S3_SPI_CREDENTIALS_PROPERTY);
+        }
         if (containsKey(AWS_ACCESS_KEY_PROPERTY)) {
             return AwsBasicCredentials.create(
-                get(AWS_ACCESS_KEY_PROPERTY),
-                get(AWS_SECRET_ACCESS_KEY_PROPERTY)
+                (String)get(AWS_ACCESS_KEY_PROPERTY),
+                (String)get(AWS_SECRET_ACCESS_KEY_PROPERTY)
            );
         }
 
@@ -314,10 +327,8 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
      * @return the configured value or null if not provided
      */
     public String getRegion() {
-        return get(AWS_REGION_PROPERTY);
+        return (String)get(AWS_REGION_PROPERTY);
     }
-
-    // ------------------------------------------------------- protected methods
 
     /**
      * Generates an environment variable name from a property name. E.g 'some.property' becomes 'SOME_PROPERTY'
@@ -333,10 +344,8 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
                 .toUpperCase(Locale.ROOT);
     }
 
-    // --------------------------------------------------------- private methods
-
     private int parseIntProperty(String propName, int defaultVal){
-        String propertyVal = get(propName);
+        String propertyVal = (String)get(propName);
         try{
             return Integer.parseInt(propertyVal);
         } catch (NumberFormatException e){
