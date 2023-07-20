@@ -240,15 +240,6 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * @return this instance
      */
     public S3NioSpiConfiguration withCredentials(AwsCredentials credentials) {
-        //
-        // We do not store the credentials object directly for consistency with
-        // the other settings and to kee 1:1 relationship between the defined
-        // properties and the content of this map
-        //
-        if (credentials == null) {
-            return withCredentials(null, null);
-        }
-
         return withCredentials(credentials.accessKeyId(), credentials.secretAccessKey());
     }
 
