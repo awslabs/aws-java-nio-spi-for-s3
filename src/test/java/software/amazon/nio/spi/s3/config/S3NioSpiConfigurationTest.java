@@ -8,7 +8,6 @@ package software.amazon.nio.spi.s3.config;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-import static org.assertj.core.api.BDDAssertions.entry;
 
 import static org.assertj.core.api.BDDAssertions.then;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -184,23 +183,23 @@ public class S3NioSpiConfigurationTest {
 
     @Test
     public void withAndGetCredentials() {
-        final AwsCredentials C1 = AwsBasicCredentials.create("key", "secret");
-        final AwsCredentials C2 = AwsBasicCredentials.create("key", "secret");
+        final AwsCredentials C1 = AwsBasicCredentials.create("key1", "secret1");
+        final AwsCredentials C2 = AwsBasicCredentials.create("key2", "secret2");
 
         then(config.withCredentials(C1)).isSameAs(config);
-        AwsCredentials c = config.getCredentials();
-        then(c.accessKeyId()).isEqualTo(C1.accessKeyId());
-        then(c.secretAccessKey()).isEqualTo(C1.secretAccessKey());
-
+        then(config.getCredentials()).isSameAs(C1);
         then(config.withCredentials(C2)).isSameAs(config);
-        c = config.getCredentials();
-        then(c.accessKeyId()).isEqualTo(C2.accessKeyId());
-        then(c.secretAccessKey()).isEqualTo(C2.secretAccessKey());
-
-        then(config.withCredentials(null)).doesNotContainKeys(
-            AWS_ACCESS_KEY_PROPERTY, AWS_SECRET_ACCESS_KEY_PROPERTY
-        );
+        then(config.getCredentials()).isSameAs(C2);
         then(config.getCredentials()).isNull();
+
+        //
+        // withCredentials(AwsCredentials) takes priority over withCredentialas(String, String)
+        //
+        then(
+            config.withCredentials(C1.accessKeyId(), C2.secretAccessKey())
+            .withCredentials(C2)
+            .getCredentials()
+        ).isSameAs(C2);
     }
 
     @Test

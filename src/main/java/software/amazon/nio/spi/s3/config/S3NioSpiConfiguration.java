@@ -25,7 +25,7 @@ import software.amazon.nio.spi.s3.util.StringUtils;
 /**
  * Object to hold configuration of the S3 NIO SPI
  */
-public class S3NioSpiConfiguration extends HashMap<String, String> {
+public class S3NioSpiConfiguration extends HashMap<String, Object> {
 
     public static final String AWS_REGION_PROPERTY = "aws.region";
     public static final String AWS_ACCESS_KEY_PROPERTY = "aws.accessKey";
@@ -63,6 +63,11 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
      * The default value of the endpoint protocol property
      */
     public static final String S3_SPI_ENDPOINT_PROTOCOL_DEFAULT = "https";
+
+    /**
+     * The default value of the endpoint protocol property
+     */
+    public static final String S3_SPI_CREDENTIALS_PROPERTY = "s3.spi.credentials";
 
     private final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)(?::(\\d+))");
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -275,7 +280,7 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
      * @return the configured value or the default ("") if not overridden
      */
     public String getEndpoint() {
-        return getOrDefault(S3_SPI_ENDPOINT_PROPERTY, S3_SPI_ENDPOINT_DEFAULT);
+        return (String)getOrDefault(S3_SPI_ENDPOINT_PROPERTY, S3_SPI_ENDPOINT_DEFAULT);
     }
 
     /**
@@ -283,7 +288,7 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
      * @return the configured value or the default if not overridden
      */
     public String getEndpointProtocol() {
-        String protocol = getOrDefault(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
+        String protocol = (String)getOrDefault(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
         if ("http".equalsIgnoreCase(protocol) || "https".equalsIgnoreCase(protocol)) {
             return protocol;
         }
@@ -299,8 +304,8 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
     public AwsCredentials getCredentials() {
         if (containsKey(AWS_ACCESS_KEY_PROPERTY)) {
             return AwsBasicCredentials.create(
-                get(AWS_ACCESS_KEY_PROPERTY),
-                get(AWS_SECRET_ACCESS_KEY_PROPERTY)
+                (String)get(AWS_ACCESS_KEY_PROPERTY),
+                (String)get(AWS_SECRET_ACCESS_KEY_PROPERTY)
            );
         }
 
@@ -313,10 +318,8 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
      * @return the configured value or null if not provided
      */
     public String getRegion() {
-        return get(AWS_REGION_PROPERTY);
+        return (String)get(AWS_REGION_PROPERTY);
     }
-
-    // ------------------------------------------------------- protected methods
 
     /**
      * Generates an environment variable name from a property name. E.g 'some.property' becomes 'SOME_PROPERTY'
@@ -332,10 +335,8 @@ public class S3NioSpiConfiguration extends HashMap<String, String> {
                 .toUpperCase(Locale.ROOT);
     }
 
-    // --------------------------------------------------------- private methods
-
     private int parseIntProperty(String propName, int defaultVal){
-        String propertyVal = get(propName);
+        String propertyVal = (String)get(propName);
         try{
             return Integer.parseInt(propertyVal);
         } catch (NumberFormatException e){
