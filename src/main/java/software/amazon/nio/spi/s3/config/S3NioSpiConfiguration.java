@@ -292,10 +292,9 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     /**
      * Get the configured credentials. Note that credentials can be provided in
      * two ways:
-     * <nl>
-     * <li>{@code withCredentials(String accessKey, String secretAcccessKey)}
-     * <li>{@code withCredentials(AwsCredentials credentials)}
-     * </nl>
+     * 
+     * 1. {@code withCredentials(String accessKey, String secretAcccessKey)}
+     * 2. {@code withCredentials(AwsCredentials credentials)}
      *
      * The latter takes the priority, so if both are used, {@code getCredentials()}
      * returns the most complete object, which is the value of the property
