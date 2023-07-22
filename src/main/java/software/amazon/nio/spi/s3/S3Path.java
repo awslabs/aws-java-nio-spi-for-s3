@@ -610,13 +610,15 @@ public class S3Path implements Path {
      * object key, which must be encoded when creating a Path and that will be
      * encoded when creating a URI. E.g.:
      * 
+     * <pre>
      * {@code 
      * S3Path p = (S3Path)Paths.get("s3://mybucket/with+blank+and+%25"); // -> s3://mybucket/with blank and %
      * String s = p.toString; // -> /mybucket/with blank and %
-     * URI u = p.toUri(); --> // -> s3://mybucket/with blank and %
+     * URI u = p.toUri(); --> // -> s3://mybucket/with+blank+and+%25
      * ...
      * String s = p.getFileSystem().get("with space").toString(); // -> /with space 
      * }
+     * </pre>
      *
      * @return the URI representing this path
      * @throws IOError           if an I/O error occurs obtaining the absolute path, or where a
