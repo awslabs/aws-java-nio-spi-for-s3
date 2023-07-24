@@ -9,7 +9,9 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.File;
 import java.io.IOError;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.nio.file.FileSystem;
 import java.nio.file.InvalidPathException;
 import java.nio.file.LinkOption;
@@ -599,7 +601,24 @@ public class S3Path implements Path {
      *
      * <p> This method constructs an absolute and normalized {@link URI} with a {@link
      * URI#getScheme() scheme} equal to the URI scheme that identifies the
-     * provider (s3).
+     * provider (s3). Please note that the returned URI is a well formed URI,
+     * which means all special characters (e.g. blanks, %, ?, etc.) are encoded.
+     * This may result in a different string from the real path (object key),
+     * which instead allows those characters. 
+     * 
+     * For instance, the S3 URI "s3://mybucket/with space and %" is a valid S3
+     * object key, which must be encoded when creating a Path and that will be
+     * encoded when creating a URI. E.g.:
+     * 
+     * <pre>
+     * {@code 
+     * S3Path p = (S3Path)Paths.get("s3://mybucket/with+blank+and+%25"); // -> s3://mybucket/with blank and %
+     * String s = p.toString; // -> /mybucket/with blank and %
+     * URI u = p.toUri(); --> // -> s3://mybucket/with+blank+and+%25
+     * ...
+     * String s = p.getFileSystem().get("with space").toString(); // -> /with space 
+     * }
+     * </pre>
      *
      * @return the URI representing this path
      * @throws IOError           if an I/O error occurs obtaining the absolute path, or where a
@@ -610,12 +629,35 @@ public class S3Path implements Path {
      *                           is installed, the {@link #toAbsolutePath toAbsolutePath} method
      *                           throws a security exception.
      */
+    
     @Override
     public URI toUri() {
-        return URI.create(
-                fileSystem.provider().getScheme() + "://"
-                        + bucketName()
-                        + this.toAbsolutePath().toRealPath(NOFOLLOW_LINKS));
+        Path path = toAbsolutePath().toRealPath(NOFOLLOW_LINKS);
+        Iterator<Path> elements = path.iterator();
+
+        StringBuilder uri = new StringBuilder(fileSystem.provider().getScheme() + "://");
+        uri.append(bucketName());
+        elements.forEachRemaining(
+            (e) -> {
+                String name = e.getFileName().toString();
+                try {
+                    if (name.endsWith(PATH_SEPARATOR)) {
+                        name = name.substring(0, name.length()-1);
+                    }
+                    uri.append(PATH_SEPARATOR).append(URLEncoder.encode(name, "UTF-8"));
+                } catch (UnsupportedEncodingException x) {
+                    //
+                    // NOTE: I do not know how to reproduce this case...
+                    //
+                    throw new IllegalArgumentException("path '" + uri + "' can not be converted to URI: " + x.getMessage(), x);
+                }
+            }
+        );
+        if (isDirectory()) {
+            uri.append(PATH_SEPARATOR);
+        }
+
+        return URI.create(uri.toString());
     }
 
     /**
