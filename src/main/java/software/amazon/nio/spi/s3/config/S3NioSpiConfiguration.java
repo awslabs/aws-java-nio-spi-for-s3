@@ -220,6 +220,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * @return this instance
      */
     public S3NioSpiConfiguration withCredentials(String accessKey, String secretAccessKey) {
+        AwsCredentials credentials = null;
         if (accessKey == null) {
             remove(AWS_ACCESS_KEY_PROPERTY); remove(AWS_SECRET_ACCESS_KEY_PROPERTY);
         } else {
@@ -227,7 +228,10 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
                 throw new IllegalArgumentException("secretAccessKey can not be null");
             }
             put(AWS_ACCESS_KEY_PROPERTY, accessKey); put(AWS_SECRET_ACCESS_KEY_PROPERTY, secretAccessKey);
+            credentials = AwsBasicCredentials.create(accessKey, secretAccessKey);
         }
+        withCredentials(credentials);
+
         return this;
     }
 
@@ -240,7 +244,12 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * @return this instance
      */
     public S3NioSpiConfiguration withCredentials(AwsCredentials credentials) {
-        return withCredentials(credentials.accessKeyId(), credentials.secretAccessKey());
+        if (credentials == null) {
+            remove(S3_SPI_CREDENTIALS_PROPERTY);
+        } else {
+            put(S3_SPI_CREDENTIALS_PROPERTY, credentials);
+        }
+        return this;
     }
 
     /**
@@ -292,7 +301,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     /**
      * Get the configured credentials. Note that credentials can be provided in
      * two ways:
-     * 
+     *
      * 1. {@code withCredentials(String accessKey, String secretAcccessKey)}
      * 2. {@code withCredentials(AwsCredentials credentials)}
      *
