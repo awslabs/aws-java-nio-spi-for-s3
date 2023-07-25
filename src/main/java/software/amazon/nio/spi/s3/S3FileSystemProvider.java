@@ -717,6 +717,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
                 SdkHttpResponse httpResponse = response.get(timeOut, unit).sdkHttpResponse();
                 if (httpResponse.isSuccessful()) return;
 
+                //
+                // TODO: it looks like if status is not SUCCESS an ExecutionException
+                // is thrown, therefore the following error handling is never
+                // triggered
+                //
+                
                 if (httpResponse.statusCode() == FORBIDDEN)
                     throw new AccessDeniedException(s3Path.toString());
 
