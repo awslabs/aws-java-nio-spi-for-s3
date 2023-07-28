@@ -99,4 +99,9 @@ public class FakeAsyncS3ClientBuilder implements S3CrtAsyncClientBuilder {
     public S3AsyncClient build() {
         return BUILDER.build();
     }
+
+    @Override
+    public S3CrtAsyncClientBuilder crossRegionAccessEnabled(Boolean b) {
+        return BUILDER.crossRegionAccessEnabled(b);
+    }
 }
