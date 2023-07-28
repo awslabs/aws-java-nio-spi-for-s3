@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Properties;
 
 import static org.assertj.core.api.BDDAssertions.then;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,29 +52,29 @@ public class S3NioSpiConfigurationTest {
 
     @Test
     public void overridesAsMap() {
-        assertThrows(NullPointerException.class, () -> new S3NioSpiConfiguration((Map) null));
+        assertThrows(NullPointerException.class, () -> new S3NioSpiConfiguration((Map)null));
 
         Map<String, String> map = new HashMap<>();
         map.put(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, "1212");
         S3NioSpiConfiguration c = new S3NioSpiConfiguration(map);
 
-        assertEquals(1212, c.getMaxFragmentSize());
+        then(c.getMaxFragmentSize()).isEqualTo(1212);
     }
 
     @Test
     public void getS3SpiReadMaxFragmentSize() {
-        assertEquals(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT, config.getMaxFragmentSize());
+        then(config.getMaxFragmentSize()).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT);
 
-        assertEquals(1111, overriddenConfig.getMaxFragmentSize());
-        assertEquals(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT, badOverriddenConfig.getMaxFragmentSize());
+        then(overriddenConfig.getMaxFragmentSize()).isEqualTo(1111);
+        then(badOverriddenConfig.getMaxFragmentSize()).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT);
     }
 
     @Test
     public void getS3SpiReadMaxFragmentNumber() {
-        assertEquals(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT, config.getMaxFragmentNumber());
+        then(config.getMaxFragmentNumber()).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT);
 
-        assertEquals(2, overriddenConfig.getMaxFragmentNumber());
-        assertEquals(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT, badOverriddenConfig.getMaxFragmentNumber());
+        then(overriddenConfig.getMaxFragmentNumber()).isEqualTo(2);
+        then(badOverriddenConfig.getMaxFragmentNumber()).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT);
     }
 
     @Test
@@ -198,6 +197,7 @@ public class S3NioSpiConfigurationTest {
         then(config.withCredentials(C2)).isSameAs(config);
         then(config.getCredentials()).isSameAs(C2);
         then(config.withCredentials(null).getCredentials()).isNull();
+        then(config.withCredentials(C1).withCredentials(null, null).getCredentials()).isNull();
 
         //
         // withCredentials(AwsCredentials) takes priority over withCredentialas(String, String)
@@ -212,10 +212,10 @@ public class S3NioSpiConfigurationTest {
     @Test
     public void convertPropertyNameToEnvVar() {
         String expected = "FOO_BAA_FIZZ_BUZZ";
-        assertEquals(expected, config.convertPropertyNameToEnvVar("foo.baa.fizz-buzz"));
+        then(config.convertPropertyNameToEnvVar("foo.baa.fizz-buzz")).isEqualTo(expected);
 
         expected = "";
-        assertEquals(expected, config.convertPropertyNameToEnvVar(null));
-        assertEquals(expected, config.convertPropertyNameToEnvVar("  "));
+        then(config.convertPropertyNameToEnvVar(null)).isEqualTo(expected);
+        then(config.convertPropertyNameToEnvVar("  ")).isEqualTo(expected);
     }
 }
