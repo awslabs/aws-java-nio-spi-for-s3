@@ -12,16 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.Channel;
-import java.nio.file.ClosedFileSystemException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.FileStore;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Path;
-import java.nio.file.PathMatcher;
-import java.nio.file.WatchService;
+import java.nio.file.*;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Collections;
@@ -30,9 +21,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 /**
  * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
+ *
+ * TODO: replace uriString in constructors with endpoint, bucket and credentials
  */
 public class S3FileSystem extends FileSystem {
     final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -42,17 +36,21 @@ public class S3FileSystem extends FileSystem {
      */
     public static final String BASIC_FILE_ATTRIBUTE_VIEW = "basic";
 
-    private final String bucketName;
+    protected S3ClientProvider clientProvider;
+
     private final S3FileSystemProvider provider;
     private boolean open = true;
     private final Set<S3SeekableByteChannel> openChannels = new HashSet<>();
+
+    private S3AsyncClient client;
+    private String bucketName;
 
     /**
      * Create a filesystem that represents the bucket specified by the URI
      * @param uriString a valid S3 URI to a bucket, e.g "{@code s3://mybucket}"
      * @param s3FileSystemProvider the provider to be used with this fileSystem
      */
-    protected S3FileSystem(String uriString, S3FileSystemProvider s3FileSystemProvider){
+    protected S3FileSystem(String uriString, S3FileSystemProvider s3FileSystemProvider) {
         this(URI.create(uriString), s3FileSystemProvider);
     }
 
@@ -74,7 +72,7 @@ public class S3FileSystem extends FileSystem {
      * @param bucketName the name of the bucket. Must not be null or empty
      */
     protected S3FileSystem(String bucketName){
-        this (URI.create(S3FileSystemProvider.SCHEME + "://" + bucketName), new S3FileSystemProvider());
+        this(URI.create(S3FileSystemProvider.SCHEME + "://" + bucketName), new S3FileSystemProvider());
     }
 
 
@@ -89,7 +87,36 @@ public class S3FileSystem extends FileSystem {
     }
 
     /**
-     * Obtain the name of the bucket represented by this FileSystem instance
+     * Returns the client provider used to build aws clients
+     *
+     * @return the client provider
+     */
+    public S3ClientProvider clientProvider() {
+        return clientProvider;
+    }
+
+    /**
+     * Sets the client provider to use to build aws clients
+     *
+     * @param clientProvider the client provider
+     */
+    public void clientProvider(S3ClientProvider clientProvider) {
+        this.clientProvider = clientProvider;
+    }
+
+    /**
+     * @return the S3Client associated with this FileSystem
+     */
+    public S3AsyncClient client() {
+        if (client == null) {
+            client = clientProvider.generateAsyncClient(bucketName);
+        }
+
+        return client;
+    }
+
+    /**
+     * Obtain the name of the bucket represented by this <code>FileSystem</code> instance
      * @return the bucket name
      */
     public String bucketName() {
@@ -120,6 +147,7 @@ public class S3FileSystem extends FileSystem {
             }
             deregisterClosedChannel(channel);
         }
+        provider.closeFileSystem(this);
     }
 
     /**

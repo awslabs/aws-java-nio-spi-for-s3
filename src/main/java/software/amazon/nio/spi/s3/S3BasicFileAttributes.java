@@ -47,7 +47,7 @@ public class S3BasicFileAttributes implements BasicFileAttributes {
      * @param path the path to represent the attributes of
      */
     protected S3BasicFileAttributes(S3Path path){
-        this(path, S3ClientStore.getInstance().getAsyncClientForBucketName(path.bucketName()));
+         this(path, path.getFileSystem().client());
     }
 
     /**

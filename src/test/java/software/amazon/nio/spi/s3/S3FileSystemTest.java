@@ -12,13 +12,20 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Iterator;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import static org.assertj.core.api.BDDAssertions.then;
+import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
+import static org.mockito.Mockito.lenient;
 import org.mockito.junit.jupiter.MockitoExtension;
-import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 @ExtendWith(MockitoExtension.class)
 public class S3FileSystemTest {
@@ -27,14 +34,21 @@ public class S3FileSystemTest {
     S3FileSystem s3FileSystem;
 
     @Mock
-    S3Client mockClient; //client used to determine bucket location
+    S3AsyncClient mockClient; //client used to determine bucket location
 
     @BeforeEach
     public void init() {
-        this.provider = new S3FileSystemProvider();
-        s3FileSystem = (S3FileSystem) this.provider.newFileSystem(s3Uri, Collections.emptyMap());
+        provider = new S3FileSystemProvider();
+        s3FileSystem = this.provider.newFileSystem(s3Uri, Collections.emptyMap());
+        s3FileSystem.clientProvider = new FixedS3ClientProvider(mockClient);
+        lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
+                CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
     }
 
+    @AfterEach
+    public void after() throws Exception {
+        s3FileSystem.close();
+    }
 
     @Test
     public void getSeparator() {
@@ -62,6 +76,14 @@ public class S3FileSystemTest {
     @Test
     public void isReadOnly() {
         assertFalse(s3FileSystem.isReadOnly());
+    }
+
+    @Test
+    public void getAndSetClientProvider() {
+        final S3ClientProvider P1 = new S3ClientProvider();
+        final S3ClientProvider P2 = new S3ClientProvider();
+        s3FileSystem.clientProvider(P1); then(s3FileSystem.clientProvider()).isSameAs(P1);
+        s3FileSystem.clientProvider(P2); then(s3FileSystem.clientProvider()).isSameAs(P2);
     }
 
     @Test

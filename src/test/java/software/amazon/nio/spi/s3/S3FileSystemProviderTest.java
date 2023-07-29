@@ -5,6 +5,7 @@
 
 package software.amazon.nio.spi.s3;
 
+import java.io.IOException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,7 +28,6 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 
-import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.AccessDeniedException;
@@ -35,6 +35,8 @@ import java.nio.file.AccessMode;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystem;
+import java.nio.file.FileSystemAlreadyExistsException;
+import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -54,6 +56,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import org.junit.jupiter.api.AfterEach;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -75,9 +78,15 @@ public class S3FileSystemProviderTest {
     @BeforeEach
     public void init() {
         provider = new S3FileSystemProvider();
-        fs = new S3FileSystem("s3://mybucket", provider);
         lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
+        fs = provider.newFileSystem(URI.create(pathUri));
+        fs.clientProvider = new FixedS3ClientProvider(mockClient);
+    }
+
+    @AfterEach
+    public void after() {
+       provider.closeFileSystem(fs);
     }
 
     @Test
@@ -87,30 +96,132 @@ public class S3FileSystemProviderTest {
 
     @Test
     public void newFileSystem() {
-        URI uri = URI.create(pathUri);
-        final FileSystem fileSystem = provider.newFileSystem(uri, Collections.emptyMap());
-        assertTrue(fileSystem instanceof S3FileSystem);
+        //
+        // A filesystem for pathUri has been created already ;)
+        //
+        try {
+            provider.newFileSystem(URI.create(pathUri));
+            fail("filesystem created twice!");
+        } catch (FileSystemAlreadyExistsException x) {
+            assertTrue(x.getMessage().contains("'foo'"));
+        }
+
+        //
+        // New AWS S3 file system
+        //
+        S3FileSystem fs = provider.newFileSystem(URI.create("s3://foo2/baa"));
+        assertNotNull(fs); assertEquals("foo2", fs.bucketName());
+
+        //
+        // New AWS S3 file system with same bucket but different path
+        //
+        try {
+            provider.newFileSystem(URI.create("s3://foo2/baa2"));
+            fail("filesystem created twice!");
+        } catch (FileSystemAlreadyExistsException x) {
+            assertTrue(x.getMessage().contains("'foo2'"));
+        }
+        provider.closeFileSystem(fs);
+
+    }
+
+    @Test
+    public void newFileSystemWrongArguments() {
+        //
+        // IllegalArgumentException if URI is not good
+        //
+        try {
+            provider.newFileSystem((URI)null);
+            fail("mising argument check!");
+        } catch (IllegalArgumentException x) {
+            assertEquals("uri can not be null", x.getMessage());
+        }
+
+        try {
+            provider.newFileSystem(URI.create("noscheme"));
+            fail("mising argument check!");
+        } catch (IllegalArgumentException x) {
+            assertEquals(
+                "invalid uri 'noscheme', please provide an uri as s3://[key:secret@][host:port]/bucket",
+                x.getMessage()
+            );
+        }
+
+        try {
+            provider.newFileSystem(URI.create("s3:///"));
+            fail("mising argument check!");
+        } catch (IllegalArgumentException x) {
+            assertEquals(
+                "invalid uri 's3:///', please provide an uri as s3://[key:secret@][host:port]/bucket",
+                x.getMessage()
+            );
+        }
     }
 
     @Test
     public void getFileSystem() {
-        assertNotNull(provider.getFileSystem(URI.create(pathUri)));
+        //
+        // A filesystem for pathUri has been created already ;)
+        //
+        assertSame(fs, provider.getFileSystem(URI.create(pathUri)));
+
+        //
+        // New AWS S3 file system
+        //
+        S3FileSystem cfs = provider.newFileSystem(URI.create("s3://foo2/baa"));
+        FileSystem gfs = provider.getFileSystem(URI.create("s3://foo2"));
+        assertNotSame(fs, gfs); assertSame(cfs, gfs);
+        gfs = provider.getFileSystem(URI.create("s3://foo2"));
+        assertNotSame(fs, gfs); assertSame(cfs, gfs);
+        provider.closeFileSystem(cfs);
+
+        //
+        // New AWS S3 file system with same bucket but different path
+        //
+        cfs = provider.newFileSystem(URI.create("s3://foo3"));
+        gfs = provider.getFileSystem(URI.create("s3://foo3/dir"));
+        assertNotSame(fs, gfs); assertSame(cfs, gfs);
+        gfs = provider.getFileSystem(URI.create("s3://foo3/dir"));
+        assertNotSame(fs, gfs); assertSame(cfs, gfs);
+        provider.closeFileSystem(cfs);
+
+        assertThrows(
+            FileSystemNotFoundException.class, () -> {
+                provider.getFileSystem(URI.create("s3://foo2/baa2"));
+            }
+        );
+    }
+
+    @Test
+    public void closingFileSystemDiscardsItFromCache() {
+        provider.closeFileSystem(fs);
+
+        assertThrows(
+            FileSystemNotFoundException.class,
+            () -> provider.getFileSystem(URI.create(pathUri))
+        );
     }
 
     @Test
     public void getPath() {
         assertNotNull(provider.getPath(URI.create(pathUri)));
+        //
+        // Make sure a file system is created if not already done
+        //
+        final URI U = URI.create("s3://endpoint.com:1000/bucket");
+        assertNotNull(provider.getPath(U));
+        provider.closeFileSystem(provider.getFileSystem(U));
     }
 
     @Test
-    public void newByteChannel() throws IOException {
-        final SeekableByteChannel channel = provider.newByteChannel(mockClient, Paths.get(URI.create(pathUri)), Collections.singleton(StandardOpenOption.READ));
+    public void newByteChannel() throws Exception {
+        final SeekableByteChannel channel = provider.newByteChannel(Paths.get(URI.create(pathUri)), Collections.singleton(StandardOpenOption.READ));
         assertNotNull(channel);
         assertTrue(channel instanceof S3SeekableByteChannel);
     }
 
     @Test
-    public void newDirectoryStream() throws ExecutionException, InterruptedException {
+    public void newDirectoryStream() throws IOException, ExecutionException, InterruptedException {
 
         S3Object object1 = S3Object.builder().key(pathUri+"/key1").build();
         S3Object object2 = S3Object.builder().key(pathUri+"/key2").build();
@@ -125,7 +236,7 @@ public class S3FileSystemProviderTest {
         when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2).build()));
 
-        final DirectoryStream<Path> stream = provider.newDirectoryStream(mockClient, Paths.get(URI.create(pathUri+"/")), entry -> true);
+        final DirectoryStream<Path> stream = provider.newDirectoryStream(Paths.get(URI.create(pathUri+"/")), entry -> true);
         assertNotNull(stream);
         assertEquals(2, countDirStreamItems(stream));
     }
@@ -147,8 +258,7 @@ public class S3FileSystemProviderTest {
         when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2, object3).build()));
 
-        final Iterator<Path> pathIterator = provider.pathIteratorForPublisher(
-                path -> true,
+        final Iterator<Path> pathIterator = provider.pathIteratorForPublisher(path -> true,
                 fs,
                 pathUri+"/",
                 publisher);
@@ -176,8 +286,7 @@ public class S3FileSystemProviderTest {
         when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2, object3).build()));
 
-        final Iterator<Path> pathIterator = provider.pathIteratorForPublisher(
-                path -> path.toString().endsWith("key2"),
+        final Iterator<Path> pathIterator = provider.pathIteratorForPublisher(path -> path.toString().endsWith("key2"),
                 fs,
                 pathUri+"/",
                 publisher);
@@ -196,76 +305,76 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void createDirectory() throws ExecutionException, InterruptedException {
+    public void createDirectory() throws Exception {
         when(mockClient.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 PutObjectResponse.builder().build()));
 
-        provider.createDirectory(mockClient, fs.getPath("/foo/baa/baz/"));
+        provider.createDirectory(fs.getPath("/baa/baz/"));
 
         ArgumentCaptor<PutObjectRequest> argumentCaptor = ArgumentCaptor.forClass(PutObjectRequest.class);
         verify(mockClient, times(1)).putObject(argumentCaptor.capture(), any(AsyncRequestBody.class));
-        assertEquals("mybucket", argumentCaptor.getValue().bucket());
-        assertEquals("foo/baa/baz/", argumentCaptor.getValue().key());
+        assertEquals("foo", argumentCaptor.getValue().bucket());
+        assertEquals("baa/baz/", argumentCaptor.getValue().key());
     }
 
     @Test
-    public void delete() throws ExecutionException, InterruptedException {
-        S3Object object1 = S3Object.builder().key("foo/key1").build();
-        S3Object object2 = S3Object.builder().key("foo/subpath/key2").build();
+    public void delete() throws Exception {
+        S3Object object1 = S3Object.builder().key("dir/key1").build();
+        S3Object object2 = S3Object.builder().key("dir/subdir/key2").build();
         when(mockClient.listObjectsV2(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2).isTruncated(false).nextContinuationToken(null).build()));
         when(mockClient.deleteObjects(any(DeleteObjectsRequest.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 DeleteObjectsResponse.builder().build()));
 
-        provider.delete(mockClient, fs.getPath("/foo"));
+        provider.delete(fs.getPath("/dir"));
 
         ArgumentCaptor<DeleteObjectsRequest> argumentCaptor = ArgumentCaptor.forClass(DeleteObjectsRequest.class);
         verify(mockClient, times(1)).deleteObjects(argumentCaptor.capture());
         DeleteObjectsRequest captorValue = argumentCaptor.getValue();
-        assertEquals("mybucket", captorValue.bucket());
+        assertEquals("foo", captorValue.bucket());
         List<String> keys = captorValue.delete().objects().stream().map(objectIdentifier -> objectIdentifier.key()).collect(Collectors.toList());
         assertEquals(2, keys.size());
-        assertTrue(keys.contains("foo/key1"));
-        assertTrue(keys.contains("foo/subpath/key2"));
+        assertTrue(keys.contains("dir/key1"));
+        assertTrue(keys.contains("dir/subdir/key2"));
     }
 
     @Test
-    public void copy() throws IOException, ExecutionException, InterruptedException {
-        S3Object object1 = S3Object.builder().key("foo/key1").build();
-        S3Object object2 = S3Object.builder().key("foo/subpath/key2").build();
+    public void copy() throws Exception {
+        S3Object object1 = S3Object.builder().key("dir1/key1").build();
+        S3Object object2 = S3Object.builder().key("dir1/subdir/key2").build();
         when(mockClient.listObjectsV2(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2).isTruncated(false).nextContinuationToken(null).build()));
-        HeadObjectRequest headObjectRequest1 = HeadObjectRequest.builder().bucket("mybucket").key("baa/key1").build();
+        HeadObjectRequest headObjectRequest1 = HeadObjectRequest.builder().bucket("foo").key("dir2/key1").build();
         when(mockClient.headObject(headObjectRequest1)).thenReturn(CompletableFuture.supplyAsync(() ->
                 HeadObjectResponse.builder().build()));
         when(mockClient.copyObject(any(CopyObjectRequest.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 CopyObjectResponse.builder().build()));
 
-        S3Path foo = fs.getPath("/foo");
-        S3Path baa = fs.getPath("/baa");
-        assertThrows(FileAlreadyExistsException.class, () -> provider.copy(mockClient, foo, baa));
-        provider.copy(mockClient, foo, baa, StandardCopyOption.REPLACE_EXISTING);
+        S3Path dir1 = fs.getPath("/dir1");
+        S3Path dir2 = fs.getPath("/dir2");
+        assertThrows(FileAlreadyExistsException.class, () -> provider.copy(dir1, dir2));
+        provider.copy(dir1, dir2, StandardCopyOption.REPLACE_EXISTING);
 
         ArgumentCaptor<CopyObjectRequest> argumentCaptor = ArgumentCaptor.forClass(CopyObjectRequest.class);
         verify(mockClient, times(2)).copyObject(argumentCaptor.capture());
         List<CopyObjectRequest> requestValues = argumentCaptor.getAllValues();
-        assertEquals("mybucket", requestValues.get(0).sourceBucket());
-        assertEquals("foo/key1", requestValues.get(0).sourceKey());
-        assertEquals("mybucket", requestValues.get(0).destinationBucket());
-        assertEquals("baa/key1", requestValues.get(0).destinationKey());
-        assertEquals("mybucket", requestValues.get(1).sourceBucket());
-        assertEquals("foo/subpath/key2", requestValues.get(1).sourceKey());
-        assertEquals("mybucket", requestValues.get(1).destinationBucket());
-        assertEquals("baa/subpath/key2", requestValues.get(1).destinationKey());
+        assertEquals("foo", requestValues.get(0).sourceBucket());
+        assertEquals("dir1/key1", requestValues.get(0).sourceKey());
+        assertEquals("foo", requestValues.get(0).destinationBucket());
+        assertEquals("dir2/key1", requestValues.get(0).destinationKey());
+        assertEquals("foo", requestValues.get(1).sourceBucket());
+        assertEquals("dir1/subdir/key2", requestValues.get(1).sourceKey());
+        assertEquals("foo", requestValues.get(1).destinationBucket());
+        assertEquals("dir2/subdir/key2", requestValues.get(1).destinationKey());
     }
 
     @Test
-    public void move() throws IOException, ExecutionException, InterruptedException {
-        S3Object object1 = S3Object.builder().key("foo/key1").build();
-        S3Object object2 = S3Object.builder().key("foo/subpath/key2").build();
+    public void move() throws Exception {
+        S3Object object1 = S3Object.builder().key("dir1/key1").build();
+        S3Object object2 = S3Object.builder().key("dir1/subdir/key2").build();
         when(mockClient.listObjectsV2(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2).isTruncated(false).nextContinuationToken(null).build()));
-        HeadObjectRequest headObjectRequest1 = HeadObjectRequest.builder().bucket("mybucket").key("baa/key1").build();
+        HeadObjectRequest headObjectRequest1 = HeadObjectRequest.builder().bucket("foo").key("dir2/key1").build();
         when(mockClient.headObject(headObjectRequest1)).thenReturn(CompletableFuture.supplyAsync(() ->
                 HeadObjectResponse.builder().build()));
         when(mockClient.copyObject(any(CopyObjectRequest.class))).thenReturn(CompletableFuture.supplyAsync(() ->
@@ -273,32 +382,32 @@ public class S3FileSystemProviderTest {
         when(mockClient.deleteObjects(any(DeleteObjectsRequest.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 DeleteObjectsResponse.builder().build()));
 
-        S3Path foo = fs.getPath("/foo");
-        S3Path baa = fs.getPath("/baa");
-        assertThrows(FileAlreadyExistsException.class, () -> provider.copy(mockClient, foo, baa));
-        provider.move(mockClient, foo, baa, StandardCopyOption.REPLACE_EXISTING);
+        S3Path dir1 = fs.getPath("/dir1");
+        S3Path dir2 = fs.getPath("/dir2");
+        assertThrows(FileAlreadyExistsException.class, () -> provider.move(dir1, dir2));
+        provider.move(dir1, dir2, StandardCopyOption.REPLACE_EXISTING);
 
         ArgumentCaptor<CopyObjectRequest> argumentCaptor = ArgumentCaptor.forClass(CopyObjectRequest.class);
         verify(mockClient, times(2)).copyObject(argumentCaptor.capture());
         List<CopyObjectRequest> requestValues = argumentCaptor.getAllValues();
-        assertEquals("mybucket", requestValues.get(0).sourceBucket());
-        assertEquals("foo/key1", requestValues.get(0).sourceKey());
-        assertEquals("mybucket", requestValues.get(0).destinationBucket());
-        assertEquals("baa/key1", requestValues.get(0).destinationKey());
-        assertEquals("mybucket", requestValues.get(1).sourceBucket());
-        assertEquals("foo/subpath/key2", requestValues.get(1).sourceKey());
-        assertEquals("mybucket", requestValues.get(1).destinationBucket());
-        assertEquals("baa/subpath/key2", requestValues.get(1).destinationKey());
+        assertEquals("foo", requestValues.get(0).sourceBucket());
+        assertEquals("dir1/key1", requestValues.get(0).sourceKey());
+        assertEquals("foo", requestValues.get(0).destinationBucket());
+        assertEquals("dir2/key1", requestValues.get(0).destinationKey());
+        assertEquals("foo", requestValues.get(1).sourceBucket());
+        assertEquals("dir1/subdir/key2", requestValues.get(1).sourceKey());
+        assertEquals("foo", requestValues.get(1).destinationBucket());
+        assertEquals("dir2/subdir/key2", requestValues.get(1).destinationKey());
         ArgumentCaptor<DeleteObjectsRequest> deleteArgumentCaptor = ArgumentCaptor.forClass(DeleteObjectsRequest.class);
         verify(mockClient, times(1)).deleteObjects(deleteArgumentCaptor.capture());
         List<String> keys = deleteArgumentCaptor.getValue().delete().objects().stream().map(objectIdentifier -> objectIdentifier.key()).collect(Collectors.toList());
         assertEquals(2, keys.size());
-        assertTrue(keys.contains("foo/key1"));
-        assertTrue(keys.contains("foo/subpath/key2"));
+        assertTrue(keys.contains("dir1/key1"));
+        assertTrue(keys.contains("dir1/subdir/key2"));
     }
 
     @Test
-    public void isSameFile() throws IOException {
+    public void isSameFile() throws Exception {
         S3Path foo = fs.getPath("/foo");
         S3Path baa = fs.getPath("/baa");
 
@@ -330,7 +439,7 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void checkAccessWithoutException() throws IOException, ExecutionException, InterruptedException {
+    public void checkAccessWithoutException() throws Exception {
 
         when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 HeadObjectResponse.builder()
@@ -338,40 +447,40 @@ public class S3FileSystemProviderTest {
                         .build()));
 
         S3Path foo = fs.getPath("/foo");
-        provider.checkAccess(mockClient, foo, AccessMode.READ);
-        provider.checkAccess(mockClient, foo, AccessMode.EXECUTE);
-        provider.checkAccess(mockClient, foo);
+        provider.checkAccess(foo, AccessMode.READ);
+        provider.checkAccess(foo, AccessMode.EXECUTE);
+        provider.checkAccess(foo);
     }
 
     @Test
-    public void checkAccessWhenAccessDenied() throws IOException, ExecutionException, InterruptedException {
+    public void checkAccessWhenAccessDenied() throws Exception {
         when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 HeadObjectResponse.builder()
                         .sdkHttpResponse(SdkHttpResponse.builder().statusCode(403).build())
                         .build()));
 
         S3Path foo = fs.getPath("/foo");
-        assertThrows(AccessDeniedException.class, () -> provider.checkAccess(mockClient, foo));
+        assertThrows(AccessDeniedException.class, () -> provider.checkAccess(foo));
     }
 
     @Test
-    public void checkAccessWhenNoSuchFile() throws IOException, ExecutionException, InterruptedException {
+    public void checkAccessWhenNoSuchFile() throws Exception {
         when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 HeadObjectResponse.builder()
                         .sdkHttpResponse(SdkHttpResponse.builder().statusCode(404).build())
                         .build()));
 
         S3Path foo = fs.getPath("/foo");
-        assertThrows(NoSuchFileException.class, () -> provider.checkAccess(mockClient, foo));
+        assertThrows(NoSuchFileException.class, () -> provider.checkAccess(foo));
     }
 
     @Test
-    public void checkWriteAccess() throws IOException, ExecutionException, InterruptedException {
+    public void checkWriteAccess() throws Exception {
         when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 HeadObjectResponse.builder()
                         .sdkHttpResponse(SdkHttpResponse.builder().statusCode(200).build())
                         .build()));
-        provider.checkAccess(mockClient, fs.getPath("foo"), AccessMode.WRITE);
+        provider.checkAccess(fs.getPath("foo"), AccessMode.WRITE);
     }
 
     @Test
@@ -394,11 +503,11 @@ public class S3FileSystemProviderTest {
     @Test
     public void readAttributes() {
         S3Path foo = fs.getPath("/foo");
-        final BasicFileAttributes BasicFileAttributes = provider.readAttributes(mockClient, foo, BasicFileAttributes.class);
+        final BasicFileAttributes BasicFileAttributes = provider.readAttributes(foo, BasicFileAttributes.class);
         assertNotNull(BasicFileAttributes);
         assertTrue(BasicFileAttributes instanceof S3BasicFileAttributes);
 
-        final S3BasicFileAttributes s3BasicFileAttributes = provider.readAttributes(mockClient, foo, S3BasicFileAttributes.class);
+        final S3BasicFileAttributes s3BasicFileAttributes = provider.readAttributes(foo, S3BasicFileAttributes.class);
         assertNotNull(s3BasicFileAttributes);
     }
 
@@ -414,15 +523,15 @@ public class S3FileSystemProviderTest {
                         .eTag("abcdef")
                         .build()));
 
-        Map<String, Object> attributes = provider.readAttributes(mockClient, foo, "*");
+        Map<String, Object> attributes = provider.readAttributes(foo, "*");
         assertTrue(attributes.size() >= 9);
 
-        attributes = provider.readAttributes(mockClient, foo, "lastModifiedTime,size,fileKey");
+        attributes = provider.readAttributes(foo, "lastModifiedTime,size,fileKey");
         assertEquals(3, attributes.size());
         assertEquals(FileTime.from(Instant.EPOCH), attributes.get("lastModifiedTime"));
         assertEquals(100L, attributes.get("size"));
 
-        assertEquals(Collections.emptyMap(), provider.readAttributes(mockClient, fooDir, "*"));
+        assertEquals(Collections.emptyMap(), provider.readAttributes(fooDir, "*"));
     }
 
     @Test

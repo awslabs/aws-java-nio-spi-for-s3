@@ -11,15 +11,30 @@ import java.nio.file.LinkOption;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import org.junit.jupiter.api.AfterEach;
 
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.Mock;
+import static org.mockito.Mockito.lenient;
+import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
+@ExtendWith(MockitoExtension.class)
 public class S3PathTest {
-    String uriString = "s3://mybucket";
-    S3FileSystem fileSystem = new S3FileSystem(uriString, new S3FileSystemProvider());
+    final String uriString = "s3://mybucket";
+    final S3FileSystemProvider provider = new S3FileSystemProvider();
 
+    @Mock
+    S3AsyncClient mockClient;
+
+    S3FileSystem fileSystem;
     S3Path root;
     S3Path absoluteDirectory;
     S3Path relativeDirectory;
@@ -29,12 +44,21 @@ public class S3PathTest {
 
     @BeforeEach
     public void init(){
+        fileSystem = provider.newFileSystem(URI.create(uriString));
+        fileSystem.clientProvider = new FixedS3ClientProvider(mockClient);
+        lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
+                CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
         root = S3Path.getPath(fileSystem, S3Path.PATH_SEPARATOR);
         absoluteDirectory = S3Path.getPath(fileSystem, S3Path.PATH_SEPARATOR, "dir1", "dir2/");
         relativeDirectory = S3Path.getPath(fileSystem, "..", "dir3/");
         absoluteObject = S3Path.getPath(fileSystem, S3Path.PATH_SEPARATOR, "dir1", "dir2", "object");
         relativeObject = S3Path.getPath(fileSystem, "dir1", "dir2", "object");
         withSpecialChars = S3Path.getPath(fileSystem, "dir with space/and\tspecial&chars");
+    }
+
+    @AfterEach
+    public void after() throws Exception {
+        fileSystem.close();
     }
 
     @Test
@@ -179,7 +203,7 @@ public class S3PathTest {
 
         assertFalse(relativeObject.startsWith(S3Path.getPath(fileSystem, "dir1/dir2")));
         assertFalse(absoluteObject.startsWith(relativeBeginning));
-        assertFalse(absoluteObject.startsWith(S3Path.getPath(new S3FileSystem("s3://different-bucket", new S3FileSystemProvider()), "/dir1/")));
+        assertFalse(absoluteObject.startsWith(S3Path.getPath(provider.newFileSystem(URI.create("s3://different-bucket")), "/dir1/")));
     }
 
     @Test
@@ -434,7 +458,7 @@ public class S3PathTest {
         // the working directory, which is always "/" for a bucket.
         assertEquals(S3Path.getPath(fileSystem, "dir1/"), S3Path.getPath(fileSystem, "/dir1/"));
 
-        assertNotEquals(S3Path.getPath(fileSystem, "dir1/"), S3Path.getPath(new S3FileSystem("s3://foo", new S3FileSystemProvider()), "/dir1/"));
+        assertNotEquals(S3Path.getPath(fileSystem, "dir1/"), S3Path.getPath(provider.newFileSystem(URI.create("s3://foo")), "/dir1/"));
 
         // not equal because in s3 dir1 cannot be implied to be a directory unless it ends with "/"
         assertNotEquals(S3Path.getPath(fileSystem, "dir1/"), S3Path.getPath(fileSystem, "dir1"));
