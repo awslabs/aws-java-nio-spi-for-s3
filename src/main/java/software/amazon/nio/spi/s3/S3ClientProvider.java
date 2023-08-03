@@ -33,9 +33,10 @@ import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
-import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 /**
+ * Factory/builder clas that creates sync and async S3 clients. It also provides
+ * default clients that can be used for basic operations (e.g. bucket discovery).
  *
  */
 public class S3ClientProvider {
@@ -62,10 +63,10 @@ public class S3ClientProvider {
             .region(Region.US_EAST_1)
             .build();
 
-        private final EqualJitterBackoffStrategy backoffStrategy = EqualJitterBackoffStrategy.builder()
-            .baseDelay(Duration.ofMillis(200L))
-            .maxBackoffTime(Duration.ofSeconds(5L))
-            .build();
+    private final EqualJitterBackoffStrategy backoffStrategy = EqualJitterBackoffStrategy.builder()
+        .baseDelay(Duration.ofMillis(200L))
+        .maxBackoffTime(Duration.ofSeconds(5L))
+        .build();
 
     final RetryCondition retryCondition;
 
@@ -138,6 +139,13 @@ public class S3ClientProvider {
     }
 
     /**
+     * Generates a sync client for the named bucket using the provided location
+     * discovery client.
+     *
+     * @param bucketName the named of the bucket to make the client for
+     * @param locationClient the client used to determine the location of the named bucket, recommend using DEFAULT_CLIENT
+     *
+     * @return an S3 client appropriate for the region of the named bucket
      *
      */
     protected S3Client generateClient (String bucketName, S3Client locationClient) {
@@ -250,8 +258,6 @@ public class S3ClientProvider {
     }
 
     private S3Client clientForRegion(String region) {
-        // It may be useful to further cache clients for regions although at some point clients for buckets may need to be
-        // specialized beyond just region end points.
         logger.debug("bucket region is: '{}'", region);
 
         S3ClientBuilder clientBuilder =  S3Client.builder()

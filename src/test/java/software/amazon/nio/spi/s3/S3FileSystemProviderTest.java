@@ -142,7 +142,7 @@ public class S3FileSystemProviderTest {
             fail("mising argument check!");
         } catch (IllegalArgumentException x) {
             assertEquals(
-                "invalid uri 'noscheme', please provide an uri as s3://[key:secret@][host:port]/bucket",
+                "invalid uri 'noscheme', please provide an uri as s3://bucket",
                 x.getMessage()
             );
         }
@@ -152,7 +152,7 @@ public class S3FileSystemProviderTest {
             fail("mising argument check!");
         } catch (IllegalArgumentException x) {
             assertEquals(
-                "invalid uri 's3:///', please provide an uri as s3://[key:secret@][host:port]/bucket",
+                "invalid uri 's3:///', please provide an uri as s3://bucket",
                 x.getMessage()
             );
         }

@@ -123,12 +123,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
         if (uri.getScheme() == null) {
             throw new IllegalArgumentException(
-                String.format("invalid uri '%s', please provide an uri as s3://[key:secret@][host:port]/bucket", uri.toString())
+                String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
             );
         }
         if (uri.getAuthority() == null) {
             throw new IllegalArgumentException(
-                String.format("invalid uri '%s', please provide an uri as s3://[key:secret@][host:port]/bucket", uri.toString())
+                String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
             );
         }
 
@@ -148,7 +148,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
      *
      * @param uri URI reference
      *
-     * @return newFileSystem(uri, Collections.EMPTY_MPA)
+     * @return newFileSystem(uri, Collections.EMPTY_MAP)
+     *
+     * @throws FileSystemAlreadyExistsException if the file system has already been created
+     * @throws IllegalArgumentException if the pre-conditions for the uri parameter
+     *         are not met, or the env parameter does not contain properties
+     *         required by the provider, or a property value is invalid
      */
     public S3FileSystem newFileSystem(URI uri) {
         return newFileSystem(uri, Collections.EMPTY_MAP);
@@ -255,7 +260,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @SuppressWarnings("NullableProblems")
     @Override
-    public S3Path getPath(URI uri) {
+    public S3Path getPath(URI uri)
+    throws IllegalArgumentException, FileSystemNotFoundException, SecurityException {
         Objects.requireNonNull(uri);
         return getFileSystem(uri, true).getPath(uri.getScheme() + ":/" + uri.getPath());
     }

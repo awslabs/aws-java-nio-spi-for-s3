@@ -8,10 +8,11 @@ package software.amazon.nio.spi.s3;
 import software.amazon.awssdk.awscore.AwsClient;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.nio.spi.s3.S3ClientProvider;
 
 /**
- *
+ * Utility class that extends {@code S3ClientProvider} with a given
+ * implementation of S3AsyncClient. This may be helpful in tests or in use cases
+ * where a single instance of a S3 client should be used.
  */
 public class FixedS3ClientProvider extends S3ClientProvider {
 

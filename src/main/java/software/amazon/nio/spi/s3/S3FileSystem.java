@@ -26,7 +26,8 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 /**
  * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
  *
- * TODO: replace uriString in constructors with endpoint, bucket and credentials
+ * TODO: provide constructrs with configuration settings like endpoint, bucket
+ *       and credentials
  */
 public class S3FileSystem extends FileSystem {
     final Logger logger = LoggerFactory.getLogger(this.getClass());
