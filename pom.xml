@@ -25,6 +25,10 @@
         </license>
     </licenses>
 
+    <properties>
+        <jacoco.agent.arg/>
+    </properties>
+
     <developers>
         <developer>
             <id>markjschreiber</id>

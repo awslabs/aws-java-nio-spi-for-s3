@@ -37,7 +37,9 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 /**
- * TODO: remove credentials as they can now be constructed from configuration
+ * Factory/builder clas that creates sync and async S3 clients. It also provides
+ * default clients that can be used for basic operations (e.g. bucket discovery).
+ *
  */
 public class S3ClientProvider {
 
@@ -131,7 +133,9 @@ public class S3ClientProvider {
     }
 
     /**
-     * Same as generateClient(null, bucketName, null, universalClient())
+     * Generate a client for the named bucket using a default client to determine the location of the named bucket
+     * @param bucketName the named of the bucket to make the client for
+     * @return an S3 client appropriate for the region of the named bucket
      */
     protected S3Client generateClient(String bucketName){
         //
@@ -141,7 +145,11 @@ public class S3ClientProvider {
     }
 
     /**
-     * Same as generateAsyncClient(null, bucketName, null)
+     * Generate an asynchronous client for the named bucket using a default client to determine the location of the named bucket
+     *
+     * @param bucketName the named of the bucket to make the client for
+     * 
+     * @return an asynchronous S3 client appropriate for the region of the named bucket
      */
     protected S3AsyncClient generateAsyncClient(String bucketName){
         //
@@ -151,7 +159,13 @@ public class S3ClientProvider {
     }
 
     /**
-     * Same as generateAsyncClient(endpoint, bucketName, credentials, universalClient())
+     * Generates a sync client for the named bucket using the provided location
+     * discovery client.
+     *
+     * @param bucket the named of the bucket to make the client for
+     *
+     * @return an S3 client appropriate for the region of the named bucket
+     *
      */
     protected S3AsyncClient generateAsyncClient(String endpoint, String bucket, AwsCredentials credentials) {
         return generateAsyncClient(endpoint, bucket,  credentials, universalClient());

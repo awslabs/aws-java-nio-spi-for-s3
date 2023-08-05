@@ -29,8 +29,8 @@ import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 /**
  * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
  *
- * TODO: replace uriString in constructors with endpoint, bucket and credentials
- * TODO: make it closeable so that it is removed from the cache once not needed any more
+ * TODO: provide constructors with configuration settings like endpoint, bucket
+ *       and credentials
  */
 public class S3FileSystem extends FileSystem {
     final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -129,6 +129,24 @@ public class S3FileSystem extends FileSystem {
     @Override
     public FileSystemProvider provider() {
         return provider;
+    }
+
+    /**
+     * Returns the client provider used to build aws clients
+     *
+     * @return the client provider
+     */
+    public S3ClientProvider clientProvider() {
+        return clientProvider;
+    }
+
+    /**
+     * Sets the client provider to use to build aws clients
+     *
+     * @param clientProvider the client provider
+     */
+    public void clientProvider(S3ClientProvider clientProvider) {
+        this.clientProvider = clientProvider;
     }
 
     /**

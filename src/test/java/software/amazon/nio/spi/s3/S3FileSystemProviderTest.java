@@ -14,7 +14,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
@@ -66,6 +65,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_REGION_PROPERTY;
 
 @SuppressWarnings("unchecked")
@@ -78,15 +78,13 @@ public class S3FileSystemProviderTest {
     @Mock
     S3AsyncClient mockClient;
 
-
     @BeforeEach
     public void init() {
         provider = new S3FileSystemProvider();
         lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
-
         fs = provider.newFileSystem(URI.create(pathUri));
-        fs.clientProvider = new FakeS3ClientProvider(mockClient);
+        fs.clientProvider = new FixedS3ClientProvider(mockClient);
     }
 
     @AfterEach
@@ -284,7 +282,6 @@ public class S3FileSystemProviderTest {
     @Test
     public void getPath() {
         assertNotNull(provider.getPath(URI.create(pathUri)));
-
         //
         // Make sure a file system is created if not already done
         //

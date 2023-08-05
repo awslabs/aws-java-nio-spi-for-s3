@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import static org.assertj.core.api.BDDAssertions.then;
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,13 +33,13 @@ public class S3FileSystemTest {
     S3FileSystem s3FileSystem;
 
     @Mock
-    S3AsyncClient mockClient;
+    S3AsyncClient mockClient; //client used to determine bucket location
 
     @BeforeEach
     public void init() {
         provider = new S3FileSystemProvider();
         s3FileSystem = this.provider.newFileSystem(s3Uri, Collections.emptyMap());
-        s3FileSystem.clientProvider = new FakeS3ClientProvider(mockClient);
+        s3FileSystem.clientProvider = new FixedS3ClientProvider(mockClient);
         lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
     }
@@ -74,6 +75,14 @@ public class S3FileSystemTest {
     @Test
     public void isReadOnly() {
         assertFalse(s3FileSystem.isReadOnly());
+    }
+
+    @Test
+    public void getAndSetClientProvider() {
+        final S3ClientProvider P1 = new S3ClientProvider();
+        final S3ClientProvider P2 = new S3ClientProvider();
+        s3FileSystem.clientProvider(P1); then(s3FileSystem.clientProvider()).isSameAs(P1);
+        s3FileSystem.clientProvider(P2); then(s3FileSystem.clientProvider()).isSameAs(P2);
     }
 
     @Test
