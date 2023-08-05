@@ -324,8 +324,24 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     * @deprecate -- TODO how to address the deprecation
      *
+     * @deprecated in favour of using a proper S3ClientProvider in S3FileSystem.
+     *             For instance, instead of the following code:
+     *             <pre>
+     *             S3FileSystemProvider p = ...;
+     *             S3Path dir = ...;
+     *             S3AsyncClient s3 = ...;
+     *             DirectoryStream filter = ...;
+     *
+     *             p.newDirectoryStream(s3, path, filter);
+     *             </pre>
+     *             something equivalent to the below should be used:
+     *             <pre>
+     *             S3FileSystemProvider p = new MyFileSystemProvider(new MyClientProvider());
+     *             S3Path dir = ...;
+     *
+     *             p.newDirectoryStreampath, filter);
+     *             </pre>
      */
     @Deprecated
     protected DirectoryStream<Path> newDirectoryStream(S3AsyncClient s3Client, Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException, ExecutionException, InterruptedException {
@@ -568,8 +584,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public void copy(Path source, Path target, CopyOption... options) throws IOException {
         //
-        // TODO: source and target can belong to any file system, we can not
-        //       assume they points to S3 objects
+        // TODO: check if source and target can belong to any file system; if
+        //       that is the case, we can not assume they points to S3 objects
         //
         try {
             // If both paths point to the same object, this is a no-op
@@ -1066,12 +1082,13 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     private String getFileSystemKey(URI uri) {
-        String host = uri.getHost();
-        int port = uri.getPort();
-
-        return (port<0) && (!host.contains("."))
-               ? host
-               : (host + ((port < 0) ? "" : (":" + port)) + S3Path.PATH_SEPARATOR + uri.getPath().split(S3Path.PATH_SEPARATOR)[1]);
+        //
+        // TODO: this duplicates the logic in S3FileSystem and assumes the key
+        //       is the bucket name; we need to move the source of truth in
+        //       S3FileSystemProvider or a separate class and pass it to the
+        //       file system constructor.
+        //
+        return uri.getAuthority();
     }
 
     private S3Path forceAwsClient(final Path path, final S3AsyncClient client) {
