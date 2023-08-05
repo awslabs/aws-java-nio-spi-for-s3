@@ -37,7 +37,7 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 /**
- * Factory/builder clas that creates sync and async S3 clients. It also provides
+ * Factory/builder class that creates sync and async S3 clients. It also provides
  * default clients that can be used for basic operations (e.g. bucket discovery).
  *
  */
