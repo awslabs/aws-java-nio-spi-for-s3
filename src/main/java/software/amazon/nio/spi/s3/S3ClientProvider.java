@@ -35,7 +35,7 @@ import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 /**
- * Factory/builder clas that creates sync and async S3 clients. It also provides
+ * Factory/builder class that creates sync and async S3 clients. It also provides
  * default clients that can be used for basic operations (e.g. bucket discovery).
  *
  */
