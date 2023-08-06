@@ -402,14 +402,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @param listObjectsV2Publisher the publisher that returns objects and common prefixes that are iterated on.
      * @return an iterator for {@code Path}s constructed from the {@code ListObjectsV2Publisher}s responses.
      */
-    //
-    // TODO: shall this be private?
-    //
-    protected Iterator<Path> pathIteratorForPublisher(
+    private Iterator<Path> pathIteratorForPublisher (
             final DirectoryStream.Filter<? super Path> filter,
             final FileSystem fs, String finalDirName,
             final ListObjectsV2Publisher listObjectsV2Publisher) {
-
         return Flowable.fromPublisher(listObjectsV2Publisher)
                 .flatMapIterable(response -> {
 
