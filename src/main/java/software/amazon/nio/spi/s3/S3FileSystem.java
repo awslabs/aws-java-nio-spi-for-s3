@@ -26,7 +26,7 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 /**
  * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
  *
- * TODO: provide constructrs with configuration settings like endpoint, bucket
+ * TODO: provide constructors with configuration settings like endpoint, bucket
  *       and credentials
  */
 public class S3FileSystem extends FileSystem {
