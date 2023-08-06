@@ -14,7 +14,15 @@ import org.slf4j.LoggerFactory;
 
 /**
  * A Singleton cache of clients for buckets configured for the region of those buckets
+ *
+ * @deprecated This class is not used any more and should not be used in new
+ *             implementations as it will be removed in a later version. It has
+ *             been replaced by {@link S3ClientProvider} which provides the same
+ *             functionality but the singleton instance. Now many instances of
+ *             a {@code S3(Async)Client} can be created, each accessing its own
+ *             bucket with its own connection settings.
  */
+@Deprecated
 public class S3ClientStore {
 
     private static final S3ClientStore instance = new S3ClientStore();
@@ -33,9 +41,10 @@ public class S3ClientStore {
 
     /**
      * Get the ClientStore instance
+     *
      * @return a singleton
+     *
      */
-    @Deprecated
     public static S3ClientStore getInstance() { return instance; }
 
     protected S3ClientProvider provider = new S3ClientProvider();

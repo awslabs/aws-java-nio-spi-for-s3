@@ -16,6 +16,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 
+/**
+ * @deprecated {@link S3ClientStore} is not used any more and should not be used in new
+ *             implementations as it will be removed in a later version. It has
+ *             been replaced by {@link S3ClientProvider} which provides the same
+ *             functionality but the singleton instance. Now many instances of
+ *             a {@code S3(Async)Client} can be created, each accessing its own
+ *             bucket with its own connection settings.
+ */
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("unchecked")
 @Deprecated
