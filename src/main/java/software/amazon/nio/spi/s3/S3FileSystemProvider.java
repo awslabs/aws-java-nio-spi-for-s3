@@ -580,8 +580,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public void copy(Path source, Path target, CopyOption... options) throws IOException {
         //
-        // TODO: check if source and target can belong to any file system; if
-        //       that is the case, we can not assume they points to S3 objects
+        // TODO: source and target can belong to any file system (confirmed, see
+        //       https://github.com/awslabs/aws-java-nio-spi-for-s3/issues/135),
+        //       we can not assume they points to S3 objects
         //
         try {
             // If both paths point to the same object, this is a no-op
