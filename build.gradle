@@ -57,7 +57,7 @@ dependencies {
     implementation 'ch.qos.logback:logback-classic:1.4.8'
     implementation 'ch.qos.logback:logback-core:1.4.8'
     // cannot use caffeine v3 because that requires java 11
-    implementation('com.github.ben-manes.caffeine:caffeine:2.9.3')
+    implementation('com.github.ben-manes.caffeine:caffeine:3.1.8')
 }
 
 publishing {
