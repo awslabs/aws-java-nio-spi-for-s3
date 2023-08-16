@@ -1,13 +1,46 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <actions>
-        <action>
-            <actionName>CUSTOM-quick build</actionName>
-            <displayName>quick build</displayName>
-            <goals>
-                <goal>install</goal>
-            </goals>
-            <properties>
-                <skipTests>true</skipTests>
-            </properties>
-        </action>
-    </actions>
+    <action>
+        <actionName>CUSTOM-quick build</actionName>
+        <displayName>quick build</displayName>
+        <goals>
+            <goal>install</goal>
+        </goals>
+        <properties>
+            <skipTests>true</skipTests>
+        </properties>
+    </action>
+    <action>
+        <actionName>CUSTOM-package</actionName>
+        <displayName>package</displayName>
+        <goals>
+            <goal>package</goal>
+        </goals>
+        <properties>
+            <skipTests>true</skipTests>
+        </properties>
+    </action>
+    <action>
+        <actionName>CUSTOM-release-prepare</actionName>
+        <displayName>prepare release</displayName>
+        <goals>
+            <goal>release:prepare</goal>
+        </goals>
+        <properties>
+            <arguments>-DskipTests</arguments>
+            <goals>install</goals>
+            <preparationGoals>install</preparationGoals>
+        </properties>
+    </action>
+    <action>
+        <actionName>CUSTOM-release</actionName>
+        <displayName>release</displayName>
+        <goals>
+            <goal>release:perform</goal>
+        </goals>
+        <properties>
+            <arguments>-DskipTests -Dmaven.javadoc.skip=true</arguments>
+            <goals>install</goals>
+        </properties>
+    </action>
+</actions>

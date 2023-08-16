@@ -210,5 +210,11 @@
         </plugins>
     </reporting>
 
+    <scm>
+        <connection>scm:git:git@github.com:stefanofornari/aws-java-nio-spi-for-s3.git</connection>
+        <url>https://github.com/stefanofornari/aws-java-nio-spi-for-s3</url>
+        <tag>HEAD</tag>
+    </scm>
+
 </project>
 
