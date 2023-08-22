@@ -45,7 +45,7 @@ public class S3PathTest {
     @BeforeEach
     public void init(){
         fileSystem = provider.newFileSystem(URI.create(uriString));
-        fileSystem.clientProvider = new FixedS3ClientProvider(mockClient);
+        fileSystem.clientProvider(new FixedS3ClientProvider(mockClient));
         lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
         root = S3Path.getPath(fileSystem, S3Path.PATH_SEPARATOR);

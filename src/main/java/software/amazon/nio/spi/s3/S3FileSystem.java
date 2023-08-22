@@ -37,7 +37,7 @@ public class S3FileSystem extends FileSystem {
      */
     public static final String BASIC_FILE_ATTRIBUTE_VIEW = "basic";
 
-    protected S3ClientProvider clientProvider;
+    private S3ClientProvider clientProvider;
 
     private final S3FileSystemProvider provider;
     private boolean open = true;

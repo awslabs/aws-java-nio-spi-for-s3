@@ -623,7 +623,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
                                             .destinationBucket(resolvedS3TargetPath.bucketName())
                                             .destinationKey(resolvedS3TargetPath.getKey())
                                             .build())
-                                    .build()).completionFuture().join();
+                                    .build()).completionFuture().get(timeOut, unit);
                         }
                     }
                 }
@@ -896,7 +896,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     * Returns a file attribute view of a given type.This method works in
+     * Returns a file attribute view of a given type. This method works in
      * exactly the manner specified by the {@link Files#getFileAttributeView}
      * method.
      *
