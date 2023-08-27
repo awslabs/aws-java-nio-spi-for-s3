@@ -423,7 +423,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
                     // convert to S3Path and apply directory stream filter
                     return items.stream()
-                            .filter(p -> !p.equals(finalDirName))  // including the parent will induce loops
+                            .filter(p -> !((S3Path)fs.getPath(p)).getKey().equals(finalDirName))  // including the parent will induce loops
                             .map(fs::getPath)
                             .filter(path -> {
                                 try {

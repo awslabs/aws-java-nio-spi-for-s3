@@ -237,16 +237,12 @@ public class S3FileSystemProviderTest {
         when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2).build()));
 
-        final DirectoryStream<Path> stream = provider.newDirectoryStream(Paths.get(URI.create(pathUri+"/")), entry -> true);
+        final DirectoryStream<Path> stream = provider.newDirectoryStream(fs.getPath(pathUri+"/"), entry -> true);
         assertNotNull(stream);
         assertEquals(2, countDirStreamItems(stream));
     }
 
     @Test
-    @Disabled
-    //
-    // TODO: fix this - why pagination does not take place?
-    //
     public void pathIteratorForPublisher_withPagination() throws IOException {
         final ListObjectsV2Publisher publisher = new ListObjectsV2Publisher(mockClient,
                 ListObjectsV2Request.builder()
@@ -260,10 +256,9 @@ public class S3FileSystemProviderTest {
         when(mockClient.listObjectsV2Paginator(any(Consumer.class))).thenReturn(publisher);
         when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2, object3).build()));
-
-        DirectoryStream.Filter<? super Path> filter = path -> true;
+        
         Iterator<Path> pathIterator =
-            provider.newDirectoryStream(Paths.get(URI.create(pathUri+"/")), filter).iterator();
+            provider.newDirectoryStream(fs.getPath(pathUri + "/"), path -> true).iterator();
 
         assertNotNull(pathIterator);
         assertTrue(pathIterator.hasNext());
