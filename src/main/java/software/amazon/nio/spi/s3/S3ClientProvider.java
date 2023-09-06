@@ -295,93 +295,27 @@ public class S3ClientProvider {
             : asyncClientForRegion(endpoint, bucket, configuration.getRegion(), credentials);
     }
 
-    // --------------------------------------------------------- private methods
+    private S3Client clientForRegion(String regionName) {
+        Region region = regionName.equals("") ? Region.US_EAST_1 : Region.of(regionName);
 
-    private S3Client clientForRegion(String endpoint, String bucket, String region, AwsCredentials credentials) {
-        // It may be useful to further cache clients for regions although at some point clients for buckets may need to be
-        // specialized beyond just region end points.
-        logger.debug("bucket region is: '{}'", region);
+        logger.debug("bucket region is: '{}'", region.id());
 
         S3ClientBuilder clientBuilder =  S3Client.builder()
-            //.region(region)
+            .region(region)
             .overrideConfiguration(conf -> conf.retryPolicy(builder -> builder
-                    .retryCondition(retryCondition)
-                    .backoffStrategy(backoffStrategy)));
-
-        //
-        // If no regionString is provided, the builder will try with the
-        // profile's region setting
-        //
-        if ((region != null) && (!region.trim().equals(""))) {
-            clientBuilder.region(Region.of(region));
-        }
-
-        if ((endpoint != null) && (endpoint.length() > 0)) {
-            asyncClientBuilder.endpointOverride(URI.create(configuration.getEndpointProtocol() + "://" + endpoint));
-            //
-            // if region is not provided but we are going to use an endpoint
-            // (therefore a not S3 bucket), we need to use a default region,
-            // otherwise aws client builder will require one
-            //
-            // TODO: use a default region in configuration or withRegion() in
-            // the FileSystemProvider <- preferred
-            //
-            if (region == null) {
-                clientBuilder.region(Region.US_WEST_1);
-            }
-        }
-
-        if (credentials != null) {
-            asyncClientBuilder.credentialsProvider(() -> credentials);
-        }
+            .retryCondition(retryCondition)
+            .backoffStrategy(backoffStrategy)))
+            ;
 
         return clientBuilder.build();
     }
 
-    private S3Client clientForRegion(String regionString) {
-        return clientForRegion(null, null, regionString, null);
-    }
+    private S3AsyncClient asyncClientForRegion(String regionName){
+        Region region = regionName.equals("") ? Region.US_EAST_1 : Region.of(regionName);
 
-    //
-    // TODO: remove bucket as it is not used
-    //
-    private S3AsyncClient asyncClientForRegion(String endpoint, String bucket, String region, AwsCredentials credentials){
-        // It may be useful to further cache clients for regions although at some point clients for buckets may need to be
-        // specialized beyond just region end points.
-        logger.debug("bucket region is: '{}'", region);
+        logger.debug("bucket region is: '{}'", region.id());
 
-        //
-        // If no regionString is provided, the builder will try with the
-        // profile's region setting
-        //
-        if ((region != null) && (!region.trim().equals(""))) {
-            asyncClientBuilder.region(Region.of(region));
-        }
-
-        if ((endpoint != null) && (endpoint.length() > 0)) {
-            asyncClientBuilder.endpointOverride(URI.create(configuration.getEndpointProtocol() + "://" + endpoint));
-            //
-            // if region is not provided but we are going to use an endpoint
-            // (therefore a not S3 bucket), we need to use a default region,
-            // otherwise aws client builder will require one
-            //
-            // TODO: use a default region in configuration or withRegion() in
-            // the FileSystemProvider <- preferred
-            //
-            if (region == null) {
-                asyncClientBuilder.region(Region.US_WEST_1);
-            }
-        }
-
-        if (credentials != null) {
-            asyncClientBuilder.credentialsProvider(() -> credentials);
-        }
-
-        return asyncClientBuilder.build();
-    }
-
-    private S3AsyncClient asyncClientForRegion(String regionString) {
-        return asyncClientForRegion(null, null, regionString, null);
+        return asyncClientBuilder.region(region).build();
     }
 
 }
