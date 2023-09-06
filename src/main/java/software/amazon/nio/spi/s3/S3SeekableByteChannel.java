@@ -28,6 +28,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+//
+// TODO: simplify: S3Path brings already the client to use with getFileSystem().client()
+//
 public class S3SeekableByteChannel implements SeekableByteChannel {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SeekableByteChannel.class);
@@ -67,11 +70,11 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
      */
     @Deprecated
     protected S3SeekableByteChannel(S3Path s3Path, long startAt) throws IOException {
-        this(s3Path, S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName()), startAt);
+        this(s3Path, s3Path.getFileSystem().client(), startAt);
     }
 
     protected S3SeekableByteChannel(S3Path s3Path) throws IOException {
-        this(s3Path, S3ClientStore.getInstance().getAsyncClientForBucketName(s3Path.bucketName()), Collections.singleton(StandardOpenOption.READ));
+        this(s3Path, s3Path.getFileSystem().client(), Collections.singleton(StandardOpenOption.READ));
     }
 
     protected S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, Set<? extends OpenOption> options) throws IOException {
