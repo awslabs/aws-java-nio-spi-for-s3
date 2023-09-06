@@ -274,7 +274,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      *             S3FileSystemProvider p = ...;
      *             S3Path path = ...;
      *             S3AsyncClient s3 = ...;
-     *             Set<? extends OpenOption> options = ...;
+     *             Set<OpenOption> options = ...;
      *
      *             p.newByteChannel(s3, path, options);
      *             </pre>
