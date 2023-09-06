@@ -209,11 +209,11 @@ public class S3ClientProviderTest {
 
         provider.generateAsyncClient("endpoint1:1010", "bucket1", null);
         then(BUILDER.endpointOverride.toString()).isEqualTo("https://endpoint1:1010");
-        then(BUILDER.region).isEqualTo(Region.US_WEST_1);  // just a default in the case not provide
+        then(BUILDER.region).isEqualTo(Region.US_EAST_1);  // just a default in the case not provide
 
         provider.generateAsyncClient("endpoint2:2020", "bucket2", null);
         then(BUILDER.endpointOverride.toString()).isEqualTo("https://endpoint2:2020");
-        then(BUILDER.region).isEqualTo(Region.US_WEST_1);  // just a default in the case not provide
+        then(BUILDER.region).isEqualTo(Region.US_EAST_1);  // just a default in the case not provide
     }
 
 }

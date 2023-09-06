@@ -5,6 +5,7 @@ import java.net.URI;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.util.Collections;
 
 public class ListPrefix {
     public static void main(String[] args) throws IOException {
@@ -14,7 +15,7 @@ public class ListPrefix {
         }
 
         String prefix = args[0];
-        try (final FileSystem fileSystem = FileSystems.getFileSystem(URI.create(prefix))) {
+        try (final FileSystem fileSystem = FileSystems.newFileSystem(URI.create(prefix), Collections.EMPTY_MAP)) {
             Path s3Path = fileSystem.getPath(prefix);
             fileSystem.provider()
                     .newDirectoryStream(s3Path, item -> true)

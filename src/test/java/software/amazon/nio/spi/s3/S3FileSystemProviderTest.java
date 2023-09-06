@@ -333,7 +333,7 @@ public class S3FileSystemProviderTest {
         when(mockClient.listObjectsV2Paginator(any(Consumer.class))).thenReturn(publisher);
         when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2, object3).build()));
-        
+
         Iterator<Path> pathIterator =
             provider.newDirectoryStream(fs.getPath(pathUri + "/"), path -> true).iterator();
 
