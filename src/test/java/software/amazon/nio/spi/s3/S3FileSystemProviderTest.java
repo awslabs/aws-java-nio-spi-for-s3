@@ -60,6 +60,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Disabled;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
@@ -332,7 +333,7 @@ public class S3FileSystemProviderTest {
         when(mockClient.listObjectsV2Paginator(any(Consumer.class))).thenReturn(publisher);
         when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2, object3).build()));
-
+        
         Iterator<Path> pathIterator =
             provider.newDirectoryStream(fs.getPath(pathUri + "/"), path -> true).iterator();
 
