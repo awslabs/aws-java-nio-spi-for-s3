@@ -8,7 +8,9 @@ package software.amazon.nio.spi.s3;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Iterator;
 
@@ -24,8 +26,10 @@ import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
 import static org.mockito.Mockito.lenient;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 
 @ExtendWith(MockitoExtension.class)
 public class S3FileSystemTest {
@@ -126,5 +130,30 @@ public class S3FileSystemTest {
         // thrown because cannot be modified
         //
         assertThrows(UnsupportedOperationException.class, () -> s3FileSystem.getOpenChannels().add(null));
+    }
+
+    @Test
+    public void plainInitializationWithError() {
+        //
+        // Was want to try a plain initialization (i.e. without any mocks).
+        // We expect standard cluent to throw an exception because the bucket
+        // is not found
+        //
+        final Path path = Paths.get(URI.create("s3://does-not-exists-" + System.currentTimeMillis() + "/dir"));
+        then(path).isInstanceOf(S3Path.class);
+        try {
+            then(Files.exists(path)).isFalse();
+            fail("client should fail...");
+        } catch (NoSuchBucketException x) {
+            //
+            // we get here is we have the network
+            //
+            then(x).hasMessageStartingWith("The specified bucket does not exist");
+        } catch (SdkClientException x) {
+            //
+            // or here if we don't
+            //
+
+        }
     }
 }

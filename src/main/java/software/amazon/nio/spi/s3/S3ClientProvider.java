@@ -257,38 +257,27 @@ public class S3ClientProvider {
         return bucketSpecificClient;
     }
 
-    private S3Client clientForRegion(String region) {
-        logger.debug("bucket region is: '{}'", region);
+    private S3Client clientForRegion(String regionName) {
+        Region region = regionName.equals("") ? Region.US_EAST_1 : Region.of(regionName);
+
+        logger.debug("bucket region is: '{}'", region.id());
 
         S3ClientBuilder clientBuilder =  S3Client.builder()
+            .region(region)
             .overrideConfiguration(conf -> conf.retryPolicy(builder -> builder
-                    .retryCondition(retryCondition)
-                    .backoffStrategy(backoffStrategy)));
+            .retryCondition(retryCondition)
+            .backoffStrategy(backoffStrategy)))
+            ;
 
-        //
-        // If no regionString is provided, the builder will try with the
-        // profile's region setting
-        //
-        if ((region != null) && (!region.trim().equals(""))) {
-            clientBuilder.region(Region.of(region));
-        }
         return clientBuilder.build();
     }
 
-    private S3AsyncClient asyncClientForRegion(String region){
-        // It may be useful to further cache clients for regions although at some point clients for buckets may need to be
-        // specialized beyond just region end points.
-        logger.debug("bucket region is: '{}'", region);
+    private S3AsyncClient asyncClientForRegion(String regionName){
+        Region region = regionName.equals("") ? Region.US_EAST_1 : Region.of(regionName);
 
-        //
-        // If no regionString is provided, the builder will try with the
-        // profile's region setting
-        //
-        if ((region != null) && (!region.trim().equals(""))) {
-            asyncClientBuilder.region(Region.of(region));
-        }
+        logger.debug("bucket region is: '{}'", region.id());
 
-        return asyncClientBuilder.build();
+        return asyncClientBuilder.region(region).build();
     }
 
 }

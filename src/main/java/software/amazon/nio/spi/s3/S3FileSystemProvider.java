@@ -267,6 +267,31 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
+     *
+     * @deprecated in favour of using a proper S3ClientProvider in S3FileSystem.
+     *             For instance, instead of the following code:
+     *             <pre>
+     *             S3FileSystemProvider p = ...;
+     *             S3Path path = ...;
+     *             S3AsyncClient s3 = ...;
+     *             Set<? extends OpenOption> options = ...;
+     *
+     *             p.newByteChannel(s3, path, options);
+     *             </pre>
+     *             something equivalent to the below should be used:
+     *             <pre>
+     *             S3FileSystemProvider p = new MyFileSystemProvider(new MyClientProvider());
+     *             S3Path path = ...;
+     *
+     *             p.newByteChannel(path, filter);
+     *             </pre>
+     */
+    @Deprecated
+    protected SeekableByteChannel newByteChannel(S3AsyncClient client, Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
+        return newByteChannel(path, options, attrs);
+    }
+
+    /**
      * Opens or creates a file, returning a seekable byte channel to access the
      * file. This method works in exactly the manner specified by the {@link
      * Files#newByteChannel(Path, Set, FileAttribute[])} method.
@@ -295,20 +320,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
-        return this.newByteChannel(null, path, options, attrs);
-    }
-
-    /**
-     * Construct a byte channel for the path with the specified client. A more composable and testable (by using a Mock Client)
-     * version of the public method
-     * @param client The client to use for the channel
-     * @param path The path to open
-     * @param options The options to use
-     * @param attrs The attributes to use
-     * @return A new byte channel for the object at {@code path}
-     * @throws IOException If the channel could not be created
-     */
-    protected SeekableByteChannel newByteChannel(S3AsyncClient client, Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
         if (Objects.isNull(options)) {
             options = Collections.emptySet();
         }
@@ -371,10 +382,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
 
         final String bucketName = s3Path.bucketName();
-        final FileSystem fs = s3Path.getFileSystem();
+        final S3FileSystem fs = s3Path.getFileSystem();
         final String finalDirName = dirName;
 
-        final ListObjectsV2Publisher listObjectsV2Publisher = s3Path.getFileSystem().client().listObjectsV2Paginator(req -> req
+        final ListObjectsV2Publisher listObjectsV2Publisher = fs.client().listObjectsV2Paginator(req -> req
                 .bucket(bucketName)
                 .prefix(finalDirName)
                 .delimiter(S3Path.PATH_SEPARATOR));

@@ -66,6 +66,7 @@ public class S3FileSystem extends FileSystem {
         this.bucketName = uri.getAuthority();
         logger.debug("creating FileSystem for 's3://{}'", this.bucketName);
         this.provider = s3FileSystemProvider;
+        this.clientProvider = new S3ClientProvider();
     }
 
     /**

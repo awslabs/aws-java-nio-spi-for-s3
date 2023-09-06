@@ -7,6 +7,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 
 public class WalkFromRoot {
 
@@ -19,7 +20,7 @@ public class WalkFromRoot {
      */
     public static void main(String[] args) throws IOException {
         final String bucketName = args[0];
-        final FileSystem s3 = FileSystems.getFileSystem(URI.create("s3://"+bucketName));
+        final FileSystem s3 = FileSystems.newFileSystem(URI.create("s3://"+bucketName), Collections.EMPTY_MAP);
 
         for (Path rootDir : s3.getRootDirectories()) {
             Files.walk(rootDir).forEach(System.out::println);
