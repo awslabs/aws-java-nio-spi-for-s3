@@ -76,9 +76,7 @@ public class S3FileSystem extends FileSystem {
      * @deprecated the preferred way to create a file system is to use NIO or
      * the provider itself:
      *
-     * {@code
-     *     Path p = Paths.get("s3://mybucket");
-     * }
+     * {@code Path p = Paths.get("s3://mybucket");}
      *
      * This method should be replaced with {@code new S3FileSystem(provider, config)
      *
@@ -97,9 +95,7 @@ public class S3FileSystem extends FileSystem {
      * @deprecated the preferred way to create a file system is to use NIO or
      * the provider itself:
      *
-     * {@code
-     *     Path p = Paths.get("s3://mybucket");
-     * }
+     * {@code Path p = Paths.get("s3://mybucket");}
      *
      * This method should be replaced with {@code new S3FileSystem(provider)
      */
@@ -119,9 +115,7 @@ public class S3FileSystem extends FileSystem {
      * @deprecated the preferred way to create a file system is to use NIO or
      * the provider itself:
      *
-     * {@code
-     *     Path p = Paths.get("s3://mybucket");
-     * }
+     * {@code Path p = Paths.get("s3://mybucket");}
      *
      * This method should be replaced with {@code new S3FileSystem(provider, config)
      */
@@ -146,9 +140,7 @@ public class S3FileSystem extends FileSystem {
      * @deprecated the preferred way to create a file system is to use NIO or
      * the provider itself:
      *
-     * {@code
-     *     Path p = Paths.get("s3://mybucket");
-     * }
+     * {@code Path p = Paths.get("s3://mybucket");}
      *
      * This method should be replaced with {@code new S3FileSystem(provider, config)
      */
