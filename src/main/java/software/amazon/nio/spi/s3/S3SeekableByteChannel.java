@@ -28,9 +28,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-//
-// TODO: simplify: S3Path brings already the client to use with getFileSystem().client()
-//
 public class S3SeekableByteChannel implements SeekableByteChannel {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SeekableByteChannel.class);

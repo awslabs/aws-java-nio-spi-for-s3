@@ -32,7 +32,6 @@ public class S3ClientStoreTest {
     @Mock
     S3Client mockClient; //client used to determine bucket location
 
-
     @BeforeEach
     public void setUp() throws Exception {
         instance = S3ClientStore.getInstance();

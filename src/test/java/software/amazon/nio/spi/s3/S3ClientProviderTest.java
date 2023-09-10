@@ -7,6 +7,7 @@ package software.amazon.nio.spi.s3;
 
 import java.util.NoSuchElementException;
 import java.util.function.Consumer;
+import static org.assertj.core.api.BDDAssertions.then;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,7 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.http.SdkHttpResponse;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationResponse;
@@ -198,5 +200,21 @@ public class S3ClientProviderTest {
         inOrder.verify(mockClient).getBucketLocation(any(Consumer.class));
         inOrder.verify(mockClient).headBucket(any(Consumer.class));
         inOrder.verifyNoMoreInteractions();
+    }
+
+    @Test
+    public void generateAsyncClientByEndpointBucketCredentials() {
+        final FakeAsyncS3ClientBuilder BUILDER = new FakeAsyncS3ClientBuilder();
+        provider.asyncClientBuilder = BUILDER;
+
+        provider.configuration.withEndpoint("endpoint1:1010");
+        provider.generateAsyncClient("bucket1");
+        then(BUILDER.endpointOverride.toString()).isEqualTo("https://endpoint1:1010");
+        then(BUILDER.region).isEqualTo(Region.US_EAST_1);  // just a default in the case not provide
+
+        provider.configuration.withEndpoint("endpoint2:2020");
+        provider.generateAsyncClient("bucket2");
+        then(BUILDER.endpointOverride.toString()).isEqualTo("https://endpoint2:2020");
+        then(BUILDER.region).isEqualTo(Region.US_EAST_1);  // just a default in the case not provide
     }
 }

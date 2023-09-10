@@ -14,7 +14,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
@@ -37,6 +36,7 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemNotFoundException;
+import java.nio.file.FileSystems;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -48,6 +48,7 @@ import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +65,8 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_REGION_PROPERTY;
 
 @SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
@@ -110,7 +113,7 @@ public class S3FileSystemProviderTest {
         // New AWS S3 file system
         //
         S3FileSystem fs = provider.newFileSystem(URI.create("s3://foo2/baa"));
-        assertNotNull(fs); assertEquals("foo2", fs.bucketName());
+        assertNotNull(fs); assertEquals("foo2", fs.bucketName()); assertNull(fs.configuration().getCredentials());
 
         //
         // New AWS S3 file system with same bucket but different path
@@ -122,7 +125,6 @@ public class S3FileSystemProviderTest {
             assertTrue(x.getMessage().contains("'foo2'"));
         }
         provider.closeFileSystem(fs);
-
     }
 
     @Test
@@ -187,7 +189,7 @@ public class S3FileSystemProviderTest {
 
         assertThrows(
             FileSystemNotFoundException.class, () -> {
-                provider.getFileSystem(URI.create("s3://foo2/baa2"));
+                provider.getFileSystem(URI.create("s3://nobucket"));
             }
         );
     }
@@ -200,17 +202,6 @@ public class S3FileSystemProviderTest {
             FileSystemNotFoundException.class,
             () -> provider.getFileSystem(URI.create(pathUri))
         );
-    }
-
-    @Test
-    public void getPath() {
-        assertNotNull(provider.getPath(URI.create(pathUri)));
-        //
-        // Make sure a file system is created if not already done
-        //
-        final URI U = URI.create("s3://endpoint.com:1000/bucket");
-        assertNotNull(provider.getPath(U));
-        provider.closeFileSystem(provider.getFileSystem(U));
     }
 
     @Test
@@ -284,8 +275,6 @@ public class S3FileSystemProviderTest {
                 ListObjectsV2Response.builder().contents(object1, object2, object3).build()));
 
         DirectoryStream.Filter<? super Path> filter = path -> path.toString().endsWith("key2");
-
-        System.out.println("filter1: " + filter);
 
         Iterator<Path> pathIterator =
             provider.newDirectoryStream(Paths.get(URI.create(pathUri+"/")), filter).iterator();

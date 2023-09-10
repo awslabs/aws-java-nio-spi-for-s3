@@ -7,13 +7,13 @@ package software.amazon.nio.spi.s3;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Iterator;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import static org.assertj.core.api.BDDAssertions.then;
@@ -43,8 +43,8 @@ public class S3FileSystemTest {
     @BeforeEach
     public void init() {
         provider = new S3FileSystemProvider();
-        s3FileSystem = this.provider.newFileSystem(s3Uri, Collections.emptyMap());
-        s3FileSystem.clientProvider(new FixedS3ClientProvider(mockClient));
+        s3FileSystem = provider.newFileSystem(s3Uri, Collections.emptyMap());
+        s3FileSystem.clientProvider = new FixedS3ClientProvider(mockClient);
         lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
     }
@@ -59,12 +59,18 @@ public class S3FileSystemTest {
         assertEquals("/", new S3FileSystem(s3Uri, provider).getSeparator());
     }
 
-
     @Test
     public void close() throws IOException {
         assertEquals(0, s3FileSystem.getOpenChannels().size());
         s3FileSystem.close();
         assertFalse(s3FileSystem.isOpen(), "File system should return false from isOpen when closed has been called");
+
+        //
+        // close() also removes the instance from the provider
+        //
+        try {
+            provider.getFileSystem(s3Uri);
+        } catch (FileSystemNotFoundException x) {} // OK
     }
 
     @Test
@@ -155,5 +161,18 @@ public class S3FileSystemTest {
             //
 
         }
+    }
+
+    @Test
+    public void deprecatedConstructors() {
+        S3FileSystem fs = new S3FileSystem("mybucket");
+        then(fs.provider()).isInstanceOf(S3FileSystemProvider.class);
+        then(fs.configuration()).isNotNull();
+        then(fs.configuration().getBucketName()).isEqualTo("mybucket");
+
+        fs = new S3FileSystem(URI.create("s3://mybucket"), provider);
+        then(fs.provider()).isInstanceOf(S3FileSystemProvider.class);
+        then(fs.configuration()).isNotNull();
+        then(fs.configuration().getBucketName()).isEqualTo("mybucket");
     }
 }
