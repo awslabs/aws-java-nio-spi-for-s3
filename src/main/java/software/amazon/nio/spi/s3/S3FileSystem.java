@@ -78,11 +78,9 @@ public class S3FileSystem extends FileSystem {
      * @deprecated the preferred way to create a file system is to use NIO or
      * the provider itself:
      *
-     * {@code
-     *     Path p = Paths.get("s3://mybucket");
-     * }
+     * {@code Path p = Paths.get("s3://mybucket");}
      *
-     * This method should be replaced with {@code new S3FileSystem(provider, config)
+     * This method should be replaced with {@code new S3FileSystem(provider, config)}
      *
      */
     @Deprecated
@@ -99,11 +97,9 @@ public class S3FileSystem extends FileSystem {
      * @deprecated the preferred way to create a file system is to use NIO or
      * the provider itself:
      *
-     * {@code
-     *     Path p = Paths.get("s3://mybucket");
-     * }
+     * {@code Path p = Paths.get("s3://mybucket");}
      *
-     * This method should be replaced with {@code new S3FileSystem(provider)
+     * This method should be replaced with {@code new S3FileSystem(provider)}
      */
     @Deprecated
     protected S3FileSystem(URI uri, S3FileSystemProvider provider) {
@@ -115,17 +111,15 @@ public class S3FileSystem extends FileSystem {
      * Create a filesystem that represents the bucket specified by the URI
      *
      * @param uri a valid S3 URI to a bucket, e.g <code>URI.create("s3://mybucket")</code>
-     * @param s3FileSystemProvider the provider to be used with this fileSystem
+     * @param provider the provider to be used with this fileSystem
      * @param config the configuration to use; can be null to use a default configuration
      *
      * @deprecated the preferred way to create a file system is to use NIO or
      * the provider itself:
      *
-     * {@code
-     *     Path p = Paths.get("s3://mybucket");
-     * }
+     * {@code Path p = Paths.get("s3://mybucket");}
      *
-     * This method should be replaced with {@code new S3FileSystem(provider, config)
+     * This method should be replaced with {@code new S3FileSystem(provider, config)}
      */
     @Deprecated
     protected S3FileSystem(URI uri, S3FileSystemProvider provider, S3NioSpiConfiguration config) {
@@ -148,11 +142,9 @@ public class S3FileSystem extends FileSystem {
      * @deprecated the preferred way to create a file system is to use NIO or
      * the provider itself:
      *
-     * {@code
-     *     Path p = Paths.get("s3://mybucket");
-     * }
+     * {@code Path p = Paths.get("s3://mybucket");}
      *
-     * This method should be replaced with {@code new S3FileSystem(provider, config)
+     * This method should be replaced with {@code new S3FileSystem(provider, config)}
      */
     @Deprecated
     protected S3FileSystem(String bucketName){
