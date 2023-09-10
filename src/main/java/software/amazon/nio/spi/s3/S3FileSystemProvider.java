@@ -137,22 +137,22 @@ public class S3FileSystemProvider extends FileSystemProvider {
         S3FileSystem fs = null;
 
         S3FileSystemInfo info = fileSystemInfo(uri);
-        if (cache.containsKey(info.key)) {
-            throw new FileSystemAlreadyExistsException("a file system already exists for '" + info.key + "', use getFileSystem() instead");
+        if (cache.containsKey(info.key())) {
+            throw new FileSystemAlreadyExistsException("a file system already exists for '" + info.key() + "', use getFileSystem() instead");
         }
 
         S3NioSpiConfiguration config = new S3NioSpiConfiguration(env)
-            .withEndpoint(info.endpoint)
-            .withBucketName(info.bucket)
+            .withEndpoint(info.endpoint())
+            .withBucketName(info.bucket())
             ;
 
-        if (info.accessKey != null) {
-            config.withCredentials(info.accessKey, info.accessSecret);
+        if (info.accessKey() != null) {
+            config.withCredentials(info.accessKey(), info.accessSecret());
         }
 
         cache.put(
-            info.key,
-            fs = new S3FileSystem(uri, this, config)
+            info.key(),
+            fs = new S3FileSystem(this, config)
         );
 
         return fs;
@@ -228,11 +228,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     protected S3FileSystem getFileSystem(URI uri, boolean create) {
         S3FileSystemInfo info = fileSystemInfo(uri);
-        S3FileSystem fs = cache.get(info.key);
+        S3FileSystem fs = cache.get(info.key());
 
         if (fs == null) {
             if (!create) {
-                throw new FileSystemNotFoundException("file system not found for '" + info.key + "'");
+                throw new FileSystemNotFoundException("file system not found for '" + info.key() + "'");
             }
             fs = newFileSystem(uri);
         }
@@ -240,7 +240,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return fs;
     }
 
-    public void closeFileSystem(S3FileSystem fs) {
+    public void closeFileSystem(FileSystem fs) {
         for (String key: cache.keySet()) {
             if (fs == cache.get(key)) {
                 cache.remove(key); return;
@@ -1101,10 +1101,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @return the information estracted from {@code uri}
      */
     protected S3FileSystemInfo fileSystemInfo(URI uri) {
-        //
-        // TODO: sanity check on uri
-        // TODO: implement default behaviour only
-        //
         return new S3FileSystemInfo(uri);
     }
 

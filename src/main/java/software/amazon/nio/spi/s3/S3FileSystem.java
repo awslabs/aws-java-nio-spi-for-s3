@@ -23,9 +23,12 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
+import software.amazon.nio.spi.s3.util.S3FileSystemInfo;
 
 /**
  * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
+ *
+ * TODO:deprecate constructors with uri
  *
  */
 public class S3FileSystem extends FileSystem {
@@ -46,34 +49,15 @@ public class S3FileSystem extends FileSystem {
     private S3AsyncClient client;
     final private S3NioSpiConfiguration configuration;
 
-
     /**
      * Create a filesystem that represents the bucket specified by the URI
-     * @param uriString a valid S3 URI to a bucket, e.g "{@code s3://mybucket}"
-     * @param s3FileSystemProvider the provider to be used with this fileSystem
-     */
-    protected S3FileSystem(String uriString, S3FileSystemProvider s3FileSystemProvider){
-        this(URI.create(uriString), s3FileSystemProvider);
-    }
-
-    /**
-     * Create a filesystem that represents the bucket specified by the URI
-     * @param uri a valid S3 URI to a bucket, e.g {@code URI.create("s3://mybucket")}
-     * @param s3FileSystemProvider the provider to be used with this fileSystem
-     */
-    protected S3FileSystem(URI uri, S3FileSystemProvider s3FileSystemProvider) {
-        this(uri, s3FileSystemProvider, null);
-    }
-
-    /**
-     * Create a filesystem that represents the bucket specified by the URI
-     * @param uri a valid S3 URI to a bucket, e.g <code>URI.create("s3://mybucket")</code>
-     * @param s3FileSystemProvider the provider to be used with this fileSystem
+     *
+     * @param provider the provider to be used with this fileSystem
      * @param config the configuration to use; can be null to use a default configuration
+     *
      */
-    protected S3FileSystem(URI uri, S3FileSystemProvider s3FileSystemProvider, S3NioSpiConfiguration config) {
+    protected S3FileSystem(S3FileSystemProvider provider, S3NioSpiConfiguration config) {
         super();
-        assert uri.getScheme().equals(S3FileSystemProvider.SCHEME);
 
         configuration = (config == null) ? new S3NioSpiConfiguration() : config;
         bucketName = configuration.getBucketName();
@@ -81,7 +65,78 @@ public class S3FileSystem extends FileSystem {
         logger.debug("creating FileSystem for 's3://{}'", bucketName);
 
         clientProvider = new S3ClientProvider(configuration);
-        provider = s3FileSystemProvider;
+        this.provider = provider;
+    }
+
+
+    /**
+     * Create a filesystem that represents the bucket specified by the URI
+     *
+     * @param uriString a valid S3 URI to a bucket, e.g "{@code s3://mybucket}"
+     * @param provider the provider to be used with this fileSystem
+     *
+     * @deprecated the preferred way to create a file system is to use NIO or
+     * the provider itself:
+     *
+     * {@code
+     *     Path p = Paths.get("s3://mybucket");
+     * }
+     *
+     * This method should be replaced with {@code new S3FileSystem(provider, config)
+     *
+     */
+    @Deprecated
+    protected S3FileSystem(String uriString, S3FileSystemProvider provider){
+        this(URI.create(uriString), provider, null );
+    }
+
+    /**
+     * Create a filesystem that represents the bucket specified by the URI
+     *
+     * @param uri a valid S3 URI to a bucket, e.g {@code URI.create("s3://mybucket")}
+     * @param provider the provider to be used with this fileSystem
+     *
+     * @deprecated the preferred way to create a file system is to use NIO or
+     * the provider itself:
+     *
+     * {@code
+     *     Path p = Paths.get("s3://mybucket");
+     * }
+     *
+     * This method should be replaced with {@code new S3FileSystem(provider)
+     */
+    @Deprecated
+    protected S3FileSystem(URI uri, S3FileSystemProvider provider) {
+        this(uri, provider, null);
+
+    }
+
+    /**
+     * Create a filesystem that represents the bucket specified by the URI
+     *
+     * @param uri a valid S3 URI to a bucket, e.g <code>URI.create("s3://mybucket")</code>
+     * @param s3FileSystemProvider the provider to be used with this fileSystem
+     * @param config the configuration to use; can be null to use a default configuration
+     *
+     * @deprecated the preferred way to create a file system is to use NIO or
+     * the provider itself:
+     *
+     * {@code
+     *     Path p = Paths.get("s3://mybucket");
+     * }
+     *
+     * This method should be replaced with {@code new S3FileSystem(provider, config)
+     */
+    @Deprecated
+    protected S3FileSystem(URI uri, S3FileSystemProvider provider, S3NioSpiConfiguration config) {
+        this(provider, config);
+
+        //
+        // note that this is pretty bad: we are picking some loginc from the
+        // provider and we patch it here...
+        //
+        S3FileSystemInfo info = provider.fileSystemInfo(uri);
+        configuration.withBucketName(info.bucket());
     }
 
     /**
@@ -89,10 +144,19 @@ public class S3FileSystem extends FileSystem {
      * configuration. This should be used for testing purposes only.
      *
      * @param bucketName the name of the bucket. Must not be null or empty
+     *
+     * @deprecated the preferred way to create a file system is to use NIO or
+     * the provider itself:
+     *
+     * {@code
+     *     Path p = Paths.get("s3://mybucket");
+     * }
+     *
+     * This method should be replaced with {@code new S3FileSystem(provider, config)
      */
+    @Deprecated
     protected S3FileSystem(String bucketName){
-        this (URI.create(S3FileSystemProvider.SCHEME + "://" + bucketName), new S3FileSystemProvider());
-        configuration.withBucketName(bucketName);
+        this (new S3FileSystemProvider(), new S3NioSpiConfiguration().withBucketName(bucketName));
     }
 
     /**

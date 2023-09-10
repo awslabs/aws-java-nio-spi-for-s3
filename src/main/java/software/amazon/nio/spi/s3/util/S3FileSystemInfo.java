@@ -17,42 +17,52 @@
 package software.amazon.nio.spi.s3.util;
 
 import java.net.URI;
-import software.amazon.nio.spi.s3.S3Path;
+import software.amazon.awssdk.services.s3.internal.BucketUtils;
 
 /**
+ * Populates fields with information extracted by the S3 URI provided. This
+ * implementation is for standard AWS buckets as described in section
+ * "Accessing a bucket using S3://" in https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-bucket-intro.html
+ *
+ * It also computes the file system key that can be used to identify a runtime
+ * instance of a S3FileSystem (for caching purposes for example). In this
+ * implementation the key is the bucket name (which is unique in the AWS S3
+ * namespace).
  *
  */
 public class S3FileSystemInfo {
 
-    public final String key;
-    public final String endpoint;
-    public final String bucket;
-    public final String accessKey;
-    public final String accessSecret;
+    protected String key;
+    protected String endpoint;
+    protected String bucket;
+    protected String accessKey;
+    protected String accessSecret;
 
-    public S3FileSystemInfo(URI uri) {
-        final String host = uri.getHost();
-        final String userInfo = uri.getUserInfo();
-        final int port = uri.getPort();
+    protected S3FileSystemInfo() {}
 
-        key = (port<0) && (!host.contains("."))
-               ? host
-               : (host + ((port < 0) ? "" : (":" + port)) + S3Path.PATH_SEPARATOR + uri.getPath().split(S3Path.PATH_SEPARATOR)[1]);
-
-        if ((port > 0) || (host.indexOf(':') > 0)) {
-            bucket = uri.getPath().split(S3Path.PATH_SEPARATOR)[1];
-            endpoint = host + ((port > 0) ? (":" + port) : "");
-        } else {
-            bucket = host;
-            endpoint = null;
+    /**
+     * Creates a new instance and populates it with key and bucket. The name of
+     * the bucket must follow AWS S3 bucket naming rules (https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html)
+     *
+     * @param uri a S3 URI
+     *
+     * @throws IllegalArgumentException if URI contains invalid components
+     *         (e.g. an invalid bucket name)
+     */
+    public S3FileSystemInfo(URI uri) throws IllegalArgumentException {
+        if (uri == null) {
+            throw new IllegalArgumentException("uri can not be null");
         }
 
-        if (userInfo != null) {
-            int pos = userInfo.indexOf(':');
-            accessKey = (pos < 0) ? userInfo : userInfo.substring(0, pos);
-            accessSecret = (pos < 0) ? null : userInfo.substring(pos+1);
-        } else {
-            accessKey = accessSecret = null;
-        }
+        key = bucket = uri.getAuthority();
+        endpoint = accessKey = accessSecret = null;
+
+        BucketUtils.isValidDnsBucketName(bucket, true);
     }
+
+    public String key() { return key; }
+    public String endpoint() { return endpoint; }
+    public String bucket() { return bucket; }
+    public String accessKey() { return accessKey; }
+    public String accessSecret() { return accessSecret; }
 }

@@ -109,6 +109,14 @@ public class S3ClientProvider {
         this(null);
     }
 
+    public S3CrtAsyncClientBuilder asyncClientBuilder() {
+        return asyncClientBuilder;
+    }
+
+    public void asyncClientBuilder(final S3CrtAsyncClientBuilder builder) {
+        asyncClientBuilder = builder;
+    }
+
 
     /**
      * This method returns a universal client (i.e. not bound to any region)

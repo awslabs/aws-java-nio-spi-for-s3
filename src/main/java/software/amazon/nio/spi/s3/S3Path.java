@@ -92,8 +92,8 @@ public class S3Path implements Path {
         first = first.trim();
 
         if((first.isEmpty()) && !(more == null || more.length == 0)) throw new IllegalArgumentException("The first element of the path may not be empty when more exists");
-        if(first.startsWith(S3FileSystemProvider.SCHEME+":/")) {
-            first = first.substring(4);
+        if(first.startsWith(fsForBucket.provider().getScheme()+":/")) {
+            first = first.substring(fsForBucket.provider().getScheme().length()+2);
 
             String part = null;
             if (configuration.getCredentials() != null) {
