@@ -27,7 +27,6 @@ public class S3ClientStore {
 
     private static final S3ClientStore instance = new S3ClientStore();
 
-
     private final Map<String, S3Client> bucketToClientMap = Collections.synchronizedMap(new HashMap<>());
     private final Map<String, S3AsyncClient> bucketToAsyncClientMap = Collections.synchronizedMap(new HashMap<>());
 
@@ -48,6 +47,7 @@ public class S3ClientStore {
     public static S3ClientStore getInstance() { return instance; }
 
     protected S3ClientProvider provider = new S3ClientProvider();
+
     /**
      * Get an existing client or generate a new client for the named bucket if one doesn't exist
      * @param bucketName the bucket name. If this value is null or empty a default client is returned
@@ -75,6 +75,4 @@ public class S3ClientStore {
 
         return bucketToAsyncClientMap.computeIfAbsent(bucketName, provider::generateAsyncClient);
     }
-
-
 }
