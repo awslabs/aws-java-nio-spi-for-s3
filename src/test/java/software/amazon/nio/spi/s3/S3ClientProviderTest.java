@@ -43,6 +43,8 @@ public class S3ClientProviderTest {
     public void initialization() {
         final S3ClientProvider P = new S3ClientProvider();
 
+        assertNotNull(P.configuration);
+
         assertTrue(P.universalClient() instanceof S3Client);
         assertNotNull(P.universalClient());
 
@@ -50,6 +52,7 @@ public class S3ClientProviderTest {
         assertNotNull(P.universalClient());
 
         S3NioSpiConfiguration config = new S3NioSpiConfiguration();
+        assertSame(config, new S3ClientProvider(config).configuration);
     }
 
     @Test
