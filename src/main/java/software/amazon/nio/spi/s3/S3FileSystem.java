@@ -21,16 +21,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 /**
  * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
  *
- * TODO: provide constructors with configuration settings like endpoint, bucket
- *       and credentials
  */
 public class S3FileSystem extends FileSystem {
     final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -42,14 +38,14 @@ public class S3FileSystem extends FileSystem {
 
     protected S3ClientProvider clientProvider;
 
-    private final String bucketName, endpoint;
+    private final String bucketName;
     private final S3FileSystemProvider provider;
     private boolean open = true;
     private final Set<S3SeekableByteChannel> openChannels = new HashSet<>();
 
-    private AwsCredentials credentials;
-
     private S3AsyncClient client;
+    final private S3NioSpiConfiguration configuration;
+
 
     /**
      * Create a filesystem that represents the bucket specified by the URI
@@ -79,47 +75,25 @@ public class S3FileSystem extends FileSystem {
         super();
         assert uri.getScheme().equals(S3FileSystemProvider.SCHEME);
 
-        clientProvider = new S3ClientProvider(config);
+        configuration = (config == null) ? new S3NioSpiConfiguration() : config;
+        bucketName = configuration.getBucketName();
 
-        //
-        // TODO: move this logic in S3FileSystemProvider and provide constructors
-        // that accept endpoint, bucket and credentials
-        //
-        credentials = getCredentials(uri);
-        if ((credentials == null) && (config != null)) {
-            //
-            // Here, no credentials have been provided in the URI, let's check
-            // if we have them in the configuration map
-            //
-            credentials = config.getCredentials();
-        }
+        logger.debug("creating FileSystem for 's3://{}'", bucketName);
 
-        //
-        // if here credentials are still null, no overrides have been provided,
-        // the defauls environment/system properties will be used
-        //
-
-        String host = uri.getHost(); int port = uri.getPort();
-        if ((port > 0) || (host.indexOf(':') > 0)) {
-            this.bucketName = uri.getPath().split(S3Path.PATH_SEPARATOR)[1];
-            this.endpoint = host + ((port > 0) ? (":" + port) : "");
-        } else {
-            this.bucketName = host;
-            this.endpoint = null;
-        }
-
-        logger.debug("creating FileSystem for 's3://{}'", this.bucketName);
-        this.provider = s3FileSystemProvider;
+        clientProvider = new S3ClientProvider(configuration);
+        provider = s3FileSystemProvider;
     }
 
     /**
-     * Create a filesystem that represents the named bucket.
+     * Create a filesystem that represents the named bucket with minimal
+     * configuration. This should be used for testing purposes only.
+     *
      * @param bucketName the name of the bucket. Must not be null or empty
      */
     protected S3FileSystem(String bucketName){
         this (URI.create(S3FileSystemProvider.SCHEME + "://" + bucketName), new S3FileSystemProvider());
+        configuration.withBucketName(bucketName);
     }
-
 
     /**
      * Returns the provider that created this file system.
@@ -129,6 +103,16 @@ public class S3FileSystem extends FileSystem {
     @Override
     public FileSystemProvider provider() {
         return provider;
+    }
+
+    /**
+     * Returns the configuration object passed in the constructor or created
+     * by default.
+     *
+     * @return the configuration object for this file system
+     */
+    public S3NioSpiConfiguration configuration() {
+        return configuration;
     }
 
     /**
@@ -155,10 +139,8 @@ public class S3FileSystem extends FileSystem {
 
     public S3AsyncClient client() {
         if (client == null) {
-            //
-            // TODO: remove credentials from this call (clientProvider has already the config)
-            //
-            client = clientProvider.generateAsyncClient(endpoint, bucketName, credentials);
+            // TODO: use endpoint in the configuration
+            client = clientProvider.generateAsyncClient(bucketName);
         }
 
         return client;
@@ -170,25 +152,6 @@ public class S3FileSystem extends FileSystem {
      */
     public String bucketName() {
         return bucketName;
-    }
-
-    /**
-     * Obtain the endpoint of the bucket represented by this <code>FileSystem</code> instance
-     * @return the endpoint in the form of hostname[:port]
-     */
-    public String endpoint() {
-        return endpoint;
-    }
-
-    /**
-     * Obtain the provided credentials to access the bucket represented by this
-     * <code>FileSystem</code> instance
-     *
-     * @return the credentials to access the bucket or null if no credentials
-     *             have been provided
-     */
-    public AwsCredentials credentials() {
-        return credentials;
     }
 
     /**
@@ -523,21 +486,4 @@ public class S3FileSystem extends FileSystem {
     public int hashCode() {
         return Objects.hash(bucketName, provider.getClass().getName());
     }
-
-    // --------------------------------------------------------- private methods
-
-    private AwsCredentials getCredentials(URI uri) {
-        String userInfo = uri.getUserInfo();
-
-        if (userInfo == null) {
-            return null;
-        }
-
-        int pos = userInfo.indexOf(':');
-        return AwsBasicCredentials.create(
-            (pos < 0) ? userInfo : userInfo.substring(0, pos),
-            (pos < 0) ? null : userInfo.substring(pos+1)
-        );
-    }
-
 }

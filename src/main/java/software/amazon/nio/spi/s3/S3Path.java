@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Objects;
 
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 @SuppressWarnings("NullableProblems")
 public class S3Path implements Path {
@@ -85,6 +87,8 @@ public class S3Path implements Path {
           throw new IllegalArgumentException("first element of the path may not be null");
         }
 
+        S3NioSpiConfiguration configuration = fsForBucket.configuration();
+
         first = first.trim();
 
         if((first.isEmpty()) && !(more == null || more.length == 0)) throw new IllegalArgumentException("The first element of the path may not be empty when more exists");
@@ -92,17 +96,18 @@ public class S3Path implements Path {
             first = first.substring(4);
 
             String part = null;
-            if (fsForBucket.credentials() != null) {
-                part = fsForBucket.credentials().accessKeyId() + ':' + fsForBucket.credentials().secretAccessKey();
+            if (configuration.getCredentials() != null) {
+                AwsCredentials credentials = configuration.getCredentials();
+                part = credentials.accessKeyId() + ':' + credentials.secretAccessKey();
                 if (first.startsWith('/' + part)) {
                     first = PATH_SEPARATOR + first.substring(part.length()+2);
                 }
             }
-            part = fsForBucket.endpoint();
-            if (first.startsWith(PATH_SEPARATOR + part)) {
+            part = configuration.getEndpoint();
+            if (!part.isEmpty() && first.startsWith(PATH_SEPARATOR + part)) {
                 first = first.substring(part.length()+1);
             }
-            part = fsForBucket.bucketName();
+            part = configuration.getBucketName();
             if (first.startsWith(PATH_SEPARATOR + part)) {
                 first = first.substring(part.length()+1);
             }
@@ -620,19 +625,19 @@ public class S3Path implements Path {
      * provider (s3). Please note that the returned URI is a well formed URI,
      * which means all special characters (e.g. blanks, %, ?, etc.) are encoded.
      * This may result in a different string from the real path (object key),
-     * which instead allows those characters. 
-     * 
+     * which instead allows those characters.
+     *
      * For instance, the S3 URI "s3://mybucket/with space and %" is a valid S3
      * object key, which must be encoded when creating a Path and that will be
      * encoded when creating a URI. E.g.:
-     * 
+     *
      * <pre>
-     * {@code 
+     * {@code
      * S3Path p = (S3Path)Paths.get("s3://mybucket/with+blank+and+%25"); // -> s3://mybucket/with blank and %
      * String s = p.toString; // -> /mybucket/with blank and %
      * URI u = p.toUri(); --> // -> s3://mybucket/with+blank+and+%25
      * ...
-     * String s = p.getFileSystem().get("with space").toString(); // -> /with space 
+     * String s = p.getFileSystem().get("with space").toString(); // -> /with space
      * }
      * </pre>
      *
@@ -645,7 +650,7 @@ public class S3Path implements Path {
      *                           is installed, the {@link #toAbsolutePath toAbsolutePath} method
      *                           throws a security exception.
      */
-    
+
     @Override
     public URI toUri() {
         Path path = toAbsolutePath().toRealPath(NOFOLLOW_LINKS);

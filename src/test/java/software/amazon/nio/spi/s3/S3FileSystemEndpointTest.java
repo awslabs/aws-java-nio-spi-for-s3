@@ -5,7 +5,6 @@
 
 package software.amazon.nio.spi.s3;
 
-import static com.github.stefanbirkner.systemlambda.SystemLambda.restoreSystemProperties;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
@@ -46,7 +45,7 @@ public class S3FileSystemEndpointTest {
         // For non AWS S3 buckets, backet's region is not discovered runtime and
         // it must be provided in the AWS profile
         //
-        S3FileSystem fs = new S3FileSystem(URI.create(URI1), provider, new S3NioSpiConfiguration(CONFIG));
+        S3FileSystem fs = provider.newFileSystem(URI.create(URI1), new S3NioSpiConfiguration(CONFIG));
         fs.clientProvider.asyncClientBuilder = BUILDER;
 
         S3AsyncClient client = fs.client();
@@ -62,7 +61,7 @@ public class S3FileSystemEndpointTest {
         // For non AWS S3 buckets, backet's region is not discovered runtime
         // and it must be provided in the AWS profile
         //
-        S3FileSystem fs = new S3FileSystem(URI.create(URI1), provider, new S3NioSpiConfiguration(CONFIG));
+        S3FileSystem fs = provider.newFileSystem(URI.create(URI1), new S3NioSpiConfiguration(CONFIG));
         fs.clientProvider.asyncClientBuilder = BUILDER;
 
         fs.client();
@@ -70,6 +69,7 @@ public class S3FileSystemEndpointTest {
         assertNotNull(BUILDER.credentialsProvider);
         assertEquals("key2", BUILDER.credentialsProvider.resolveCredentials().accessKeyId());
         assertEquals("secret2", BUILDER.credentialsProvider.resolveCredentials().secretAccessKey());
+        fs.close();
     }
 
 }

@@ -5,7 +5,6 @@
 
 package software.amazon.nio.spi.s3;
 
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.awscore.AwsClient;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -29,13 +28,12 @@ public class FixedS3ClientProvider extends S3ClientProvider {
     }
 
     @Override
-    protected S3AsyncClient generateAsyncClient(String endpoint, String bucketName, AwsCredentials credentials) {
+    protected S3AsyncClient generateAsyncClient(String bucketName) {
         return (S3AsyncClient)client;
     }
 
     @Override
-    protected S3Client generateClient (String endpoint, String bucket, AwsCredentials credentials) {
+    protected S3Client generateClient (String bucket) {
         return (S3Client)client;
     }
-
 }

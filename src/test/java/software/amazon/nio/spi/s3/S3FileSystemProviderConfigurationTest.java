@@ -34,7 +34,7 @@ public class S3FileSystemProviderConfigurationTest {
         fs.client(); fs.close();
 
         then(fs.bucketName()).isEqualTo("bucket");
-        then(fs.endpoint()).isEqualTo("some.where.com:1010");
+        then(fs.configuration().getEndpoint()).isEqualTo("some.where.com:1010");
         then(BUILDER.endpointOverride.toString()).isEqualTo("https://some.where.com:1010");
 
         env.withEndpointProtocol("http");
@@ -44,7 +44,7 @@ public class S3FileSystemProviderConfigurationTest {
         fs.client(); fs.close();
 
         then(fs.bucketName()).isEqualTo("foo");
-        then(fs.endpoint()).isEqualTo("any.where.com:2020");
+        then(fs.configuration().getEndpoint()).isEqualTo("any.where.com:2020");
         then(BUILDER.endpointOverride.toString()).isEqualTo("http://any.where.com:2020");
     }
 
@@ -65,7 +65,7 @@ public class S3FileSystemProviderConfigurationTest {
             fs.client(); fs.close();
 
             assertEquals("bucket", fs.bucketName());
-            assertEquals("some.where.com:1010", fs.endpoint());
+            assertEquals("some.where.com:1010", fs.configuration().getEndpoint());
             assertEquals("https://some.where.com:1010", BUILDER.endpointOverride.toString());
             assertEquals("envkey", BUILDER.credentialsProvider.resolveCredentials().accessKeyId());
             assertEquals("envsecret", BUILDER.credentialsProvider.resolveCredentials().secretAccessKey());
@@ -87,7 +87,7 @@ public class S3FileSystemProviderConfigurationTest {
             fs.client(); fs.close();
 
             assertEquals("bucket", fs.bucketName());
-            assertEquals("some.where.com:1010", fs.endpoint());
+            assertEquals("some.where.com:1010", fs.configuration().getEndpoint());
             assertEquals("https://some.where.com:1010", BUILDER.endpointOverride.toString());
             assertEquals("urikey", BUILDER.credentialsProvider.resolveCredentials().accessKeyId());
             assertEquals("urisecret", BUILDER.credentialsProvider.resolveCredentials().secretAccessKey());

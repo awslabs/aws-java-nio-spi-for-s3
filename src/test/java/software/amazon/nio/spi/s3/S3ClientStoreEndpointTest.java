@@ -36,7 +36,8 @@ public class S3ClientStoreEndpointTest {
 
         restoreSystemProperties(() -> {
             System.setProperty("aws.region", "aws-east-1");
-            cs.provider.generateAsyncClient(ENDPOINT1, BUCKET1, CREDENTIALS1);
+            cs.provider.configuration.withEndpoint(ENDPOINT1).withCredentials(CREDENTIALS1);
+            cs.provider.generateAsyncClient(BUCKET1);
         });
 
         assertEquals(URI.create("https://endpoint1.io:1010"), BUILDER.endpointOverride);
@@ -47,7 +48,8 @@ public class S3ClientStoreEndpointTest {
 
         restoreSystemProperties(() -> {
             System.setProperty("aws.region", "aws-east-1");
-            cs.provider.generateAsyncClient(ENDPOINT2, BUCKET2, CREDENTIALS2);
+            cs.provider.configuration.withEndpoint(ENDPOINT2).withCredentials(CREDENTIALS2);
+            cs.provider.generateAsyncClient(BUCKET2);
         });
 
         assertEquals(URI.create("https://endpoint2.io:2020"), BUILDER.endpointOverride);

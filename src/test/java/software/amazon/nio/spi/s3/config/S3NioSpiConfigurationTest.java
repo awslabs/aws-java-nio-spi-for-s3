@@ -46,6 +46,7 @@ public class S3NioSpiConfigurationTest {
         then(config.getMaxFragmentSize()).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT);
         then(config.getEndpointProtocol()).isEqualTo("https");
         then(config.getEndpoint()).isEmpty();
+        then(config.getBucketName()).isNull();
         then(config.getRegion()).isNull();
         then(config.getCredentials()).isNull();
     }
@@ -217,5 +218,20 @@ public class S3NioSpiConfigurationTest {
         expected = "";
         then(config.convertPropertyNameToEnvVar(null)).isEqualTo(expected);
         then(config.convertPropertyNameToEnvVar("  ")).isEqualTo(expected);
+    }
+
+    @Test
+    public void withAndGetBucketName() {
+        then(config.withBucketName("aname")).isSameAs(config);
+        then(config.getBucketName()).isEqualTo("aname");
+        then(config.withBucketName("anothername").getBucketName()).isEqualTo("anothername");
+        then(config.withBucketName(null).getBucketName()).isNull();
+
+        try {
+            config.withBucketName("Wrong/bucket;name");
+            fail("missing sanity check");
+        } catch (IllegalArgumentException x) {
+            then(x).hasMessage("Bucket name should not contain uppercase characters");
+        }
     }
 }

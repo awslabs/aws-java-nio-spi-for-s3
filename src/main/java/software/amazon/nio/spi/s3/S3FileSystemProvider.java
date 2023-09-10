@@ -57,6 +57,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static software.amazon.awssdk.http.HttpStatusCode.FORBIDDEN;
 import static software.amazon.awssdk.http.HttpStatusCode.NOT_FOUND;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
+import software.amazon.nio.spi.s3.util.S3FileSystemInfo;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExceptionOnTimeOut;
 
@@ -135,11 +136,24 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         S3FileSystem fs = null;
 
-        String key = getFileSystemKey(uri);
-        if (cache.containsKey(key)) {
-            throw new FileSystemAlreadyExistsException("a file system already exists for '" + key + "', use getFileSystem() instead");
+        S3FileSystemInfo info = fileSystemInfo(uri);
+        if (cache.containsKey(info.key)) {
+            throw new FileSystemAlreadyExistsException("a file system already exists for '" + info.key + "', use getFileSystem() instead");
         }
-        cache.put(key, fs = new S3FileSystem(uri, this, new S3NioSpiConfiguration(env)));
+
+        S3NioSpiConfiguration config = new S3NioSpiConfiguration(env)
+            .withEndpoint(info.endpoint)
+            .withBucketName(info.bucket)
+            ;
+
+        if (info.accessKey != null) {
+            config.withCredentials(info.accessKey, info.accessSecret);
+        }
+
+        cache.put(
+            info.key,
+            fs = new S3FileSystem(uri, this, config)
+        );
 
         return fs;
     }
@@ -213,12 +227,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
      *                                     permission.
      */
     protected S3FileSystem getFileSystem(URI uri, boolean create) {
-        String key = getFileSystemKey(uri);
-        S3FileSystem fs = cache.get(key);
+        S3FileSystemInfo info = fileSystemInfo(uri);
+        S3FileSystem fs = cache.get(info.key);
 
         if (fs == null) {
             if (!create) {
-                throw new FileSystemNotFoundException("file system not found for '" + key + "'");
+                throw new FileSystemNotFoundException("file system not found for '" + info.key + "'");
             }
             fs = newFileSystem(uri);
         }
@@ -1064,6 +1078,36 @@ public class S3FileSystemProvider extends FileSystemProvider {
         throw new UnsupportedOperationException("s3 file attributes cannot be modified by this class");
     }
 
+
+    /**
+     * This method parses the provided URI into elements useful to address
+     * and configure the access to a bucket. These are:
+     *
+     * - key: the file system key that can be used to uniquely identify a S3
+     *        file systems instance (for example for caching purposes)
+     * - bucket: the name of the bucked to be addressed
+     * - endpoint: non default endpoint where the bucket is located
+     *
+     * The default implementation in {@code S3FileSystemProvider} treats {@code uri}
+     * strictly a AWS S3 URI (see Accessing a bucket using S3:// section in
+     * https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-bucket-intro.html).
+     * As such, it returns an empty endpoint and the name of the bucket as key.
+     *
+     * Subclasses can override this method to implement alternative parsing of
+     * the provided URI so that they can implement alternative URI schemes.
+     *
+     * @param uri the uri to address the bucket
+     *
+     * @return the information estracted from {@code uri}
+     */
+    protected S3FileSystemInfo fileSystemInfo(URI uri) {
+        //
+        // TODO: sanity check on uri
+        // TODO: implement default behaviour only
+        //
+        return new S3FileSystemInfo(uri);
+    }
+
     private static List<List<ObjectIdentifier>> getContainedObjectBatches(S3AsyncClient s3Client, String bucketName, String prefix, long timeOut, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         String continuationToken = null;
         boolean hasMoreItems = true;
@@ -1088,15 +1132,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
             continuationToken = response.nextContinuationToken();
         }
         return keys;
-    }
-
-    private String getFileSystemKey(URI uri) {
-        String host = uri.getHost();
-        int port = uri.getPort();
-
-        return (port<0) && (!host.contains("."))
-               ? host
-               : (host + ((port < 0) ? "" : (":" + port)) + S3Path.PATH_SEPARATOR + uri.getPath().split(S3Path.PATH_SEPARATOR)[1]);
     }
 
     private S3Path forceAwsClient(final Path path, final S3AsyncClient client) {

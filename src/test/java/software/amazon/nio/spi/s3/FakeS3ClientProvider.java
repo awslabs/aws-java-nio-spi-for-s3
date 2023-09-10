@@ -27,12 +27,12 @@ public class FakeS3ClientProvider extends S3ClientProvider {
     }
 
     @Override
-    protected S3AsyncClient generateAsyncClient(String endpoint, String bucketName, AwsCredentials credentials) {
+    protected S3AsyncClient generateAsyncClient(String bucketName) {
         return (S3AsyncClient)client;
     }
 
     @Override
-    protected S3Client generateClient (String endpoint, String bucket, AwsCredentials credentials) {
+    protected S3Client generateClient (String bucketName) {
         return (S3Client)client;
     }
 

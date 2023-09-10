@@ -114,7 +114,7 @@ public class S3FileSystemProviderTest {
         // New AWS S3 file system
         //
         S3FileSystem fs = provider.newFileSystem(URI.create("s3://foo2/baa"));
-        assertNotNull(fs); assertEquals("foo2", fs.bucketName()); assertNull(fs.credentials());
+        assertNotNull(fs); assertEquals("foo2", fs.bucketName()); assertNull(fs.configuration().getCredentials());
 
         //
         // New AWS S3 file system with same bucket but different path
@@ -131,16 +131,16 @@ public class S3FileSystemProviderTest {
         // New file system with endpoint no credentials
         //
         fs = provider.newFileSystem(URI.create("s3://endpoint.com:1010/foo2/baa2/dir"));
-        assertNotNull(fs); assertNull(fs.credentials());
-        assertEquals("foo2", fs.bucketName()); assertEquals("endpoint.com:1010", fs.endpoint());
+        assertNotNull(fs); assertNull(fs.configuration().getCredentials());
+        assertEquals("foo2", fs.bucketName()); assertEquals("endpoint.com:1010", fs.configuration().getEndpoint());
         provider.closeFileSystem(fs);
 
         //
         // New file system with existing endpoint, different bucket, no credentials
         //
         fs = provider.newFileSystem(URI.create("s3://endpoint.com:1010/foo3/baa2"));
-        assertNotNull(fs); assertNull(fs.credentials());
-        assertEquals("foo3", fs.bucketName()); assertEquals("endpoint.com:1010", fs.endpoint());
+        assertNotNull(fs); assertNull(fs.configuration().getCredentials());
+        assertEquals("foo3", fs.bucketName()); assertEquals("endpoint.com:1010", fs.configuration().getEndpoint());
 
         //
         // New file system with existing endpoint and bucket, no credentials
@@ -158,16 +158,16 @@ public class S3FileSystemProviderTest {
         // New file system with existing endpoint but different port, different bucket, no credentials
         //
         fs = provider.newFileSystem(URI.create("s3://endpoint.com:1234/foo3/baa2"));
-        assertNotNull(fs); assertNull(fs.credentials());
-        assertEquals("foo3", fs.bucketName()); assertEquals("endpoint.com:1234", fs.endpoint());
+        assertNotNull(fs); assertNull(fs.configuration().getCredentials());
+        assertEquals("foo3", fs.bucketName()); assertEquals("endpoint.com:1234", fs.configuration().getEndpoint());
         provider.closeFileSystem(fs);
 
         //
         // New file system with existing endpoint, same bucket, credentials
         //
         fs = provider.newFileSystem(URI.create("s3://akey:asecret@somewhere.com:2020/foo2/baa2"));
-        assertNotNull(fs);assertNotNull(fs.credentials());
-        assertEquals("foo2", fs.bucketName()); assertEquals("somewhere.com:2020", fs.endpoint());
+        assertNotNull(fs); assertNotNull(fs.configuration().getCredentials());
+        assertEquals("foo2", fs.bucketName()); assertEquals("somewhere.com:2020", fs.configuration().getEndpoint());
 
         //
         // New file system with same endpoint, same bucket, different credentials
