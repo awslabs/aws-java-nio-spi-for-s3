@@ -179,7 +179,7 @@ public class S3ClientProvider {
         logger.debug("generating client for bucket: '{}'", bucketName);
         S3Client bucketSpecificClient = null;
 
-        if ((configuration.getEndpoint() == null) || (configuration.getEndpoint().isBlank())) {
+        if ((configuration.getEndpoint() == null) || isBlank(configuration.getEndpoint())) {
             //
             // we try to locate a bucket only if no endpoint is provided, which
             // means we are dealing with AWS S3 buckets
