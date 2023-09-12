@@ -217,5 +217,4 @@ public class S3ClientProviderTest {
         then(BUILDER.endpointOverride.toString()).isEqualTo("https://endpoint2:2020");
         then(BUILDER.region).isEqualTo(Region.US_EAST_1);  // just a default in the case not provide
     }
-
 }

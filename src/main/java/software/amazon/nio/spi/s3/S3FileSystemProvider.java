@@ -125,12 +125,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
         if (uri.getScheme() == null) {
             throw new IllegalArgumentException(
-                String.format("invalid uri '%s', please provide an uri as s3://[key:secret@][host:port]/bucket", uri.toString())
+                String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
             );
         }
         if (uri.getAuthority() == null) {
             throw new IllegalArgumentException(
-                String.format("invalid uri '%s', please provide an uri as s3://[key:secret@][host:port]/bucket", uri.toString())
+                String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
             );
         }
 
@@ -324,7 +324,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return channel;
     }
 
-     /**
+    /**
      *
      * @deprecated in favour of using a proper S3ClientProvider in S3FileSystem.
      *             For instance, instead of the following code:
@@ -397,10 +397,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
 
         final String bucketName = s3Path.bucketName();
-        final FileSystem fs = s3Path.getFileSystem();
+        final S3FileSystem fs = s3Path.getFileSystem();
         final String finalDirName = dirName;
 
-        final ListObjectsV2Publisher listObjectsV2Publisher = s3Path.getFileSystem().client().listObjectsV2Paginator(req -> req
+        final ListObjectsV2Publisher listObjectsV2Publisher = fs.client().listObjectsV2Paginator(req -> req
                 .bucket(bucketName)
                 .prefix(finalDirName)
                 .delimiter(S3Path.PATH_SEPARATOR));
@@ -649,7 +649,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
                                             .destinationBucket(resolvedS3TargetPath.bucketName())
                                             .destinationKey(resolvedS3TargetPath.getKey())
                                             .build())
-                                    .build()).completionFuture().join();
+                                    .build()).completionFuture().get(timeOut, unit);
                         }
                     }
                 }
@@ -922,7 +922,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     * Returns a file attribute view of a given type.This method works in
+     * Returns a file attribute view of a given type. This method works in
      * exactly the manner specified by the {@link Files#getFileAttributeView}
      * method.
      *

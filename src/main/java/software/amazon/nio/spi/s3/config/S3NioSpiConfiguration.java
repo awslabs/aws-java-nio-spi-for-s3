@@ -16,7 +16,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.regex.Pattern;
-import org.checkerframework.checker.units.qual.s;
 import software.amazon.awssdk.utils.Pair;
 
 import software.amazon.nio.spi.s3.util.StringUtils;

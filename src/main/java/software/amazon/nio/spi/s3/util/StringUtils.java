@@ -6,8 +6,6 @@ package software.amazon.nio.spi.s3.util;
 
 import java.util.StringJoiner;
 
-import software.amazon.awssdk.services.s3.internal.BucketUtils;
-
 /**
  *
  */

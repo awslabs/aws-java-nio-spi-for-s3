@@ -28,8 +28,6 @@ import software.amazon.nio.spi.s3.util.S3FileSystemInfo;
 /**
  * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
  *
- * TODO:deprecate constructors with uri
- *
  */
 public class S3FileSystem extends FileSystem {
     final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -192,10 +190,8 @@ public class S3FileSystem extends FileSystem {
     /**
      * @return the S3Client associated with this FileSystem
      */
-
     public S3AsyncClient client() {
         if (client == null) {
-            // TODO: use endpoint in the configuration
             client = clientProvider.generateAsyncClient(bucketName);
         }
 

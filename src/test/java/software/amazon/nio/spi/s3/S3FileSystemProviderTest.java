@@ -60,7 +60,6 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 
 import static org.junit.jupiter.api.Assertions.*;
-import org.junit.jupiter.api.Disabled;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
@@ -85,7 +84,7 @@ public class S3FileSystemProviderTest {
         lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
         fs = provider.newFileSystem(URI.create(pathUri));
-        fs.clientProvider = new FixedS3ClientProvider(mockClient);
+        fs.clientProvider(new FixedS3ClientProvider(mockClient));
     }
 
     @AfterEach
@@ -145,7 +144,7 @@ public class S3FileSystemProviderTest {
             fail("mising argument check!");
         } catch (IllegalArgumentException x) {
             assertEquals(
-                "invalid uri 'noscheme', please provide an uri as s3://[key:secret@][host:port]/bucket",
+                "invalid uri 'noscheme', please provide an uri as s3://bucket",
                 x.getMessage()
             );
         }
@@ -155,7 +154,7 @@ public class S3FileSystemProviderTest {
             fail("mising argument check!");
         } catch (IllegalArgumentException x) {
             assertEquals(
-                "invalid uri 's3:///', please provide an uri as s3://[key:secret@][host:port]/bucket",
+                "invalid uri 's3:///', please provide an uri as s3://bucket",
                 x.getMessage()
             );
         }

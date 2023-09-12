@@ -7,8 +7,8 @@ package implements the service provider interface (SPI) defined for Java NIO.2 i
 access to S3 objects for Java applications using Java NIO.2 for file access. Using this package allows Java applications
 to access S3 without having to modify or recompile the application. You also avoid having to set up any kind of FUSE mount.
 
-For a general overview see the 
-[AWS Blog Post](https://aws.amazon.com/blogs/storage/extending-java-applications-to-directly-access-files-in-amazon-s3-without-recompiling/) 
+For a general overview see the
+[AWS Blog Post](https://aws.amazon.com/blogs/storage/extending-java-applications-to-directly-access-files-in-amazon-s3-without-recompiling/)
 announcing this package.
 
 ## Using this package as a provider
@@ -27,7 +27,7 @@ this library has been exposed by one of the mechanisms above then S3 URIs may be
 
 ```
 java -jar myExecutableJar --input s3://some-bucket/input/file
-java -jar myExecutableJar --input s3://my-s3-service:9000/some-bucket/input/file
+java -jar myExecutableJar --input s3x://my-s3-service:9000/some-bucket/input/file
 ```
 
 If this library is exposed as an extension (see above), then no code changes or recompilation of `myExecutable` are
@@ -68,10 +68,13 @@ For example:
 ## AWS Credentials
 
 This library will perform all actions using credentials according to the AWS SDK for Java [default credential provider
-chain](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html). Therefore, if you (or the service
-/ Principal using this library) have, or be able to assume, a role that will allow access to the S3 buckets and objects you
-want to interact with, you do not have to do anything else - Note, although your IAM role may be sufficient to access the
-desired objects and buckets you may still be blocked by bucket access control lists and/ or bucket policies.
+chain](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html). The library does not allow any
+library specific configuration of credentials. In essence, you (or the service / Principal
+using this library) should have, or be able to assume, a role that will allow access to the S3 buckets and objects you
+want to interact with.
+
+Note, although your IAM role may be sufficient to access the desired objects and buckets you may still be
+blocked by bucket access control lists and/ or bucket policies.
 
 ## S3 Compatible Endpoints and Credentials
 
@@ -79,9 +82,9 @@ This NIO provider supports any S3-like service. To access a 3rd party service,
 follow this URI pattern:
 
 ```
-s3://[[key:secret@]endpoint:port]/bucket/objectkey
+s3x://[key:secret@]endpoint[:port]/bucket/objectkey
 ```
-Note that in this case the TCP port of the target service must be specified.
+
 If no credentials are given the default AWS configuration mechanism will be used as per
 the section above.
 
@@ -99,7 +102,7 @@ The same can also be provided when creating a file system:
 ```
 Map<String, String> env = ...;
 env.put("s3.spi.endpoint-protocol", "http");
-FileSystem fs = FileSystems.newFileSystem("s3://myendpoint.com:1000/mybucket", env);
+FileSystem fs = FileSystems.newFileSystem("s3x://myendpoint.com:1000/mybucket", env);
 ```
 
 ## Reading Files

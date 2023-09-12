@@ -33,7 +33,7 @@ public class FixedS3ClientProvider extends S3ClientProvider {
     }
 
     @Override
-    protected S3Client generateClient (String bucket) {
+    protected S3Client generateClient (String bucketName) {
         return (S3Client)client;
     }
 }
