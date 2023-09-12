@@ -184,40 +184,40 @@ public class S3ClientProvider {
             // we try to locate a bucket only if no endpoint is provided, which
             // means we are dealing with AWS S3 buckets
             //
-        String bucketLocation = null;
-        try {
-            logger.debug("determining bucket location with getBucketLocation");
-            bucketLocation = locationClient.getBucketLocation(builder -> builder.bucket(bucketName)).locationConstraintAsString();
-            bucketSpecificClient = this.clientForRegion(bucketLocation);
-        } catch (S3Exception e) {
-            if(e.statusCode() == 403) {
-                logger.debug("Cannot determine location of '{}' bucket directly. Attempting to obtain bucket location with headBucket operation", bucketName);
-                try {
-                    final HeadBucketResponse headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
-                    bucketSpecificClient = this.clientForRegion(headBucketResponse.
-                            sdkHttpResponse()
-                            .firstMatchingHeader("x-amz-bucket-region")
-                            .orElseThrow(() -> new NoSuchElementException("Head Bucket Response doesn't include the header 'x-amz-bucket-region'")));
-                } catch (S3Exception e2) {
-                    if (e2.statusCode() == 301) {
-                        bucketSpecificClient = this.clientForRegion(e2.awsErrorDetails().
+            String bucketLocation = null;
+            try {
+                logger.debug("determining bucket location with getBucketLocation");
+                bucketLocation = locationClient.getBucketLocation(builder -> builder.bucket(bucketName)).locationConstraintAsString();
+                bucketSpecificClient = this.clientForRegion(bucketLocation);
+            } catch (S3Exception e) {
+                if(e.statusCode() == 403) {
+                    logger.debug("Cannot determine location of '{}' bucket directly. Attempting to obtain bucket location with headBucket operation", bucketName);
+                    try {
+                        final HeadBucketResponse headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
+                        bucketSpecificClient = this.clientForRegion(headBucketResponse.
                                 sdkHttpResponse()
                                 .firstMatchingHeader("x-amz-bucket-region")
                                 .orElseThrow(() -> new NoSuchElementException("Head Bucket Response doesn't include the header 'x-amz-bucket-region'")));
-                    } else {
-                        throw e2;
+                    } catch (S3Exception e2) {
+                        if (e2.statusCode() == 301) {
+                            bucketSpecificClient = this.clientForRegion(e2.awsErrorDetails().
+                                    sdkHttpResponse()
+                                    .firstMatchingHeader("x-amz-bucket-region")
+                                    .orElseThrow(() -> new NoSuchElementException("Head Bucket Response doesn't include the header 'x-amz-bucket-region'")));
+                        } else {
+                            throw e2;
+                        }
                     }
+                } else {
+                    throw e;
                 }
-            } else {
-                throw e;
             }
-        }
 
-        //
-        // if here, no S3 nor other client has been created yet and we do not
-        // have a location; we'll let it figure out from the profile region
-        //
-        logger.warn("Unable to determine the region of bucket: '{}'. Generating a client for the profile region.", bucketName);
+            //
+            // if here, no S3 nor other client has been created yet and we do not
+            // have a location; we'll let it figure out from the profile region
+            //
+            logger.warn("Unable to determine the region of bucket: '{}'. Generating a client for the profile region.", bucketName);
         }
 
         return (bucketSpecificClient != null)
@@ -244,41 +244,41 @@ public class S3ClientProvider {
             // we try to locate a bucket only if no endpoint is provided, which
             // means we are dealing with AWS S3 buckets
             //
-        String bucketLocation = null;
-        try {
-            logger.debug("determining bucket location with getBucketLocation");
-            bucketLocation = locationClient.getBucketLocation(builder -> builder.bucket(bucketName)).locationConstraintAsString();
-            bucketSpecificClient = this.asyncClientForRegion(bucketLocation);
-        } catch (S3Exception e) {
-            if(e.statusCode() == 403) {
-                logger.debug("Cannot determine location of '{}' bucket directly. Attempting to obtain bucket location with headBucket operation", bucketName);
-                try {
-                    final HeadBucketResponse headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
-                    bucketSpecificClient = this.asyncClientForRegion(headBucketResponse.sdkHttpResponse()
-                            .firstMatchingHeader("x-amz-bucket-region")
-                            .orElseThrow(() -> new NoSuchElementException("Head Bucket Response doesn't include the header 'x-amz-bucket-region'")));
-                } catch (S3Exception e2) {
-                    if (e2.statusCode() == 301) {
-                        bucketSpecificClient = this.asyncClientForRegion(e2
-                                .awsErrorDetails()
-                                .sdkHttpResponse()
+            String bucketLocation = null;
+            try {
+                logger.debug("determining bucket location with getBucketLocation");
+                bucketLocation = locationClient.getBucketLocation(builder -> builder.bucket(bucketName)).locationConstraintAsString();
+                bucketSpecificClient = this.asyncClientForRegion(bucketLocation);
+            } catch (S3Exception e) {
+                if(e.statusCode() == 403) {
+                    logger.debug("Cannot determine location of '{}' bucket directly. Attempting to obtain bucket location with headBucket operation", bucketName);
+                    try {
+                        final HeadBucketResponse headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
+                        bucketSpecificClient = this.asyncClientForRegion(headBucketResponse.sdkHttpResponse()
                                 .firstMatchingHeader("x-amz-bucket-region")
-                                .orElseThrow(() -> new NoSuchElementException("Head Bucket Response doesn't include the header 'x-amz-bucket-region'"))
-                        );
-                    } else {
-                        throw e2;
+                                .orElseThrow(() -> new NoSuchElementException("Head Bucket Response doesn't include the header 'x-amz-bucket-region'")));
+                    } catch (S3Exception e2) {
+                        if (e2.statusCode() == 301) {
+                            bucketSpecificClient = this.asyncClientForRegion(e2
+                                    .awsErrorDetails()
+                                    .sdkHttpResponse()
+                                    .firstMatchingHeader("x-amz-bucket-region")
+                                    .orElseThrow(() -> new NoSuchElementException("Head Bucket Response doesn't include the header 'x-amz-bucket-region'"))
+                            );
+                        } else {
+                            throw e2;
+                        }
                     }
+                } else {
+                    throw e;
                 }
-            } else {
-                throw e;
             }
-        }
 
-        //
-        // if here, no S3 nor other client has been created yet and we do not
-        // have a location; we'll let it figure out from the profile region
-        //
-        logger.warn("Unable to determine the region of bucket: '{}'. Generating a client for the profile region.", bucketName);
+            //
+            // if here, no S3 nor other client has been created yet and we do not
+            // have a location; we'll let it figure out from the profile region
+            //
+            logger.warn("Unable to determine the region of bucket: '{}'. Generating a client for the profile region.", bucketName);
         }
 
         return (bucketSpecificClient != null)
