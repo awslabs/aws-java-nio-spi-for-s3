@@ -21,11 +21,13 @@ import software.amazon.awssdk.utils.Pair;
 import software.amazon.nio.spi.s3.util.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.services.s3.internal.BucketUtils;
 
 /**
  * Object to hold configuration of the S3 NIO SPI
  */
 public class S3NioSpiConfiguration extends HashMap<String, Object> {
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public static final String AWS_REGION_PROPERTY = "aws.region";
     public static final String AWS_ACCESS_KEY_PROPERTY = "aws.accessKey";
@@ -70,7 +72,9 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     public static final String S3_SPI_CREDENTIALS_PROPERTY = "s3.spi.credentials";
 
     private final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    private String bucketName;
+
 
     /**
      * Create a new, empty configuration
@@ -212,6 +216,23 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     }
 
     /**
+     * Fluently sets the value of bucketName
+     *
+     * @param bucketName the bucket name
+     *
+     * @throws IllegalArgumentException if bucketName is not compliant with
+     *         https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html
+     *
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withBucketName(String bucketName) {
+        if (bucketName != null) {
+            BucketUtils.isValidDnsBucketName(bucketName, true);
+        }
+        this.bucketName = bucketName; return this;
+    }
+
+     /**
      * Fluently sets the value of accessKey and secretAccessKey
      *
      * @param accessKey the accesskey; if null, credentials are removed
@@ -332,6 +353,15 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      */
     public String getRegion() {
         return (String)get(AWS_REGION_PROPERTY);
+    }
+
+    /**
+     * Get the configured bucket name if configured
+     *
+     * @return the configured value or null if not provided
+     */
+    public String getBucketName() {
+        return bucketName;
     }
 
     /**

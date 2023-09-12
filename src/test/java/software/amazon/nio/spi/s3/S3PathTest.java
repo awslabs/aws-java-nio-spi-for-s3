@@ -48,6 +48,7 @@ public class S3PathTest {
         fileSystem.clientProvider(new FixedS3ClientProvider(mockClient));
         lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
+
         root = S3Path.getPath(fileSystem, S3Path.PATH_SEPARATOR);
         absoluteDirectory = S3Path.getPath(fileSystem, S3Path.PATH_SEPARATOR, "dir1", "dir2/");
         relativeDirectory = S3Path.getPath(fileSystem, "..", "dir3/");

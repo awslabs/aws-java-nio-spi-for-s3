@@ -19,8 +19,11 @@ public class WalkFromRoot {
      * @throws IOException if a communication problem happens with the S3 service.
      */
     public static void main(String[] args) throws IOException {
-        final String bucketName = args[0];
-        final FileSystem s3 = FileSystems.newFileSystem(URI.create("s3://"+bucketName), Collections.EMPTY_MAP);
+        String bucketName = args[0];
+        if (!bucketName.startsWith("s3:") && !bucketName.startsWith("s3x:")) {
+            bucketName = "s3://" + bucketName;
+        }
+        final FileSystem s3 = FileSystems.newFileSystem(URI.create(bucketName), Collections.EMPTY_MAP);
 
         for (Path rootDir : s3.getRootDirectories()) {
             Files.walk(rootDir).forEach(System.out::println);

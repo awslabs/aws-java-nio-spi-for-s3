@@ -36,5 +36,4 @@ public class FixedS3ClientProvider extends S3ClientProvider {
     protected S3Client generateClient (String bucketName) {
         return (S3Client)client;
     }
-
 }

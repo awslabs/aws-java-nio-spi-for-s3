@@ -7,8 +7,8 @@ package implements the service provider interface (SPI) defined for Java NIO.2 i
 access to S3 objects for Java applications using Java NIO.2 for file access. Using this package allows Java applications
 to access S3 without having to modify or recompile the application. You also avoid having to set up any kind of FUSE mount.
 
-For a general overview see the 
-[AWS Blog Post](https://aws.amazon.com/blogs/storage/extending-java-applications-to-directly-access-files-in-amazon-s3-without-recompiling/) 
+For a general overview see the
+[AWS Blog Post](https://aws.amazon.com/blogs/storage/extending-java-applications-to-directly-access-files-in-amazon-s3-without-recompiling/)
 announcing this package.
 
 ## Using this package as a provider
@@ -25,8 +25,9 @@ There are several ways that this package can be used to provide Java NIO operati
 Assuming that `myExecutatbleJar` is a Java application that has been built to read from `java.nio.file.Path`s and
 this library has been exposed by one of the mechanisms above then S3 URIs may be used to identify inputs. For example:
 
-``` 
+```
 java -jar myExecutableJar --input s3://some-bucket/input/file
+java -jar myExecutableJar --input s3x://my-s3-service:9000/some-bucket/input/file
 ```
 
 If this library is exposed as an extension (see above), then no code changes or recompilation of `myExecutable` are
@@ -68,21 +69,50 @@ For example:
 
 This library will perform all actions using credentials according to the AWS SDK for Java [default credential provider
 chain](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html). The library does not allow any
-library specific configuration of credentials. In essence, you (or the service / Principal 
+library specific configuration of credentials. In essence, you (or the service / Principal
 using this library) should have, or be able to assume, a role that will allow access to the S3 buckets and objects you
 want to interact with.
 
-Note, although your IAM role may be sufficient to access the desired objects and buckets you may still be 
+Note, although your IAM role may be sufficient to access the desired objects and buckets you may still be
 blocked by bucket access control lists and/ or bucket policies.
+
+## S3 Compatible Endpoints and Credentials
+
+This NIO provider supports any S3-like service. To access a 3rd party service,
+follow this URI pattern:
+
+```
+s3x://[key:secret@]endpoint[:port]/bucket/objectkey
+```
+Note that in this case the TCP port of the target service must be specified.
+If no credentials are given the default AWS configuration mechanism will be used as per
+the section above.
+
+In the case the target service uses HTTP instead of HTTPS (e.g. a testing environment),
+the protocol to use can be fonfigured through the following environment variable or system
+property:
+
+```
+export S3_SPI_ENDPOINT_PROTOCOL=http
+java -Ds3.spi.endpoint-protocol=http
+```
+
+The same can also be provided when creating a file system:
+
+```
+Map<String, String> env = ...;
+env.put("s3.spi.endpoint-protocol", "http");
+FileSystem fs = FileSystems.newFileSystem("s3://myendpoint.com:1000/mybucket", env);
+```
 
 ## Reading Files
 
 Bytes from S3 objects can be read using an `S3SeekableByteChannel` which is an implementation of `java.nio.channel.SeekableByteChannel`.
 Because S3 is a high-throughput but high-latency (compared to a native filesystem) service the `S3SeekableByteChannel`
-uses an in-memory read-ahead cache of `ByteBuffers` and is optimized for the scenario where bytes will typically be 
+uses an in-memory read-ahead cache of `ByteBuffers` and is optimized for the scenario where bytes will typically be
 read sequentially.
 
-To perform this the `S3SeekableByteChannel` delegates read operations to an `S3ReadAheadByteChannel` which 
+To perform this the `S3SeekableByteChannel` delegates read operations to an `S3ReadAheadByteChannel` which
 implements `java.nio.channels.ReadableByteChannel`. When the first `read` operation is called, the channel will read it's
 first fragment and enter that into the buffer, requests for bytes in that fragment are fulfilled from that buffer. When
 a buffer fragment is more than half read, all empty fragment slots in the cache will be asynchronously filled. Further,
@@ -100,7 +130,7 @@ Each fragment is downloaded concurrently on a unique thread.
 
 #### Environment Variables
 
-You may use `S3_SPI_READ_MAX_FRAGMENT_NUMBER` and `S3_SPI_READ_MAX_FRAGMENT_SIZE` to set the maximum umber of cached 
+You may use `S3_SPI_READ_MAX_FRAGMENT_NUMBER` and `S3_SPI_READ_MAX_FRAGMENT_SIZE` to set the maximum umber of cached
 fragments and maximum fragment sizes respectively. For example:
 
 ```shell
@@ -133,13 +163,13 @@ limits, especially when the application using this SPI reads from multiple files
 each opening its own byte channel. In this situation you should reduce the size of `S3_SPI_READ_MAX_FRAGMENT_NUMBER`.
 
 In some cases it may also help to increase the value of `S3_SPI_READ_MAX_FRAGMENT_SIZE` as fewer, large fragments will
-reduce the number of requests to the S3 service. 
+reduce the number of requests to the S3 service.
 
 Ensure sufficient memory is available to your JVM if you increase the fragment size or fragment number.
 
 ## Writing Files
 
-The mode of the channel is controlled with the `StandardOpenOptions`. To open a channel for write access you need to 
+The mode of the channel is controlled with the `StandardOpenOptions`. To open a channel for write access you need to
 supply the option `StandardOpenOption.WRITE`. All write operations on the channel will be gathered in a temporary file,
 which will be uploaded to S3 upon closing the channel.
 
@@ -148,11 +178,11 @@ consistency issues we may face in some cases. Attempting to open a channel for b
 
 ### Configuration
 
-Because we cannot predict the time it would take to write files, there are currently no timeouts configured per 
+Because we cannot predict the time it would take to write files, there are currently no timeouts configured per
 default. However, you may configure timeouts via the `S3SeekableByteChannel`.
 
 #### Timeouts
-To configure timeouts for writing files or opening files for write access, you may use the `Long timeout` and 
+To configure timeouts for writing files or opening files for write access, you may use the `Long timeout` and
 `TimeUnit timeUnit` parameters of the `S3SeekableByteChannel` constructor.
 
 ```
@@ -166,14 +196,14 @@ were made to map filesystem concepts to S3 concepts.
 
 ### A Bucket is a `FileSystem`
 
-An S3 bucket is represented as a `java.nio.spi.FileSystem` using an `S3FileSystem`. Although buckets are globally 
-namespaced they are owned by individual accounts, have their own permissions, regions, and potentially, endpoints. 
+An S3 bucket is represented as a `java.nio.spi.FileSystem` using an `S3FileSystem`. Although buckets are globally
+namespaced they are owned by individual accounts, have their own permissions, regions, and potentially, endpoints.
 An application that accesses objects from multiple buckets will generate multiple `FileSystem` instances.
 
 ### S3 Objects are `Path`s
 
 Objects in S3 are analogous to files in a filesystem and are identified using `S3Path` instances which can be built
-using S3 uris (e.g `s3://mybucket/some-object`) or, posix patterns `/some-object` from an `S3FileSystem` for `mybucket` 
+using S3 uris (e.g `s3://mybucket/some-object`) or, posix patterns `/some-object` from an `S3FileSystem` for `mybucket`
 
 ### No hidden files
 
@@ -182,7 +212,7 @@ by this library.
 
 ### Creation time and Last modified time
 
-Creation time and Last modified time are always identical. S3 objects do not have a creation time, and modification of 
+Creation time and Last modified time are always identical. S3 objects do not have a creation time, and modification of
 an S3 object is actually a re-write of the object so these
 are both given the same date (represented as a `FileTime`). If for some reason a last modified time cannot be determined
 the Unix Epoch zero-time is used.
@@ -216,7 +246,7 @@ will also be the same file as you may not navigate above the root and no error w
 
 #### Relative path resolution
 
-Although there are no working directories, paths may be resolved relative to one another as long as one is a directory. 
+Although there are no working directories, paths may be resolved relative to one another as long as one is a directory.
 So if `some/path` was resolved relative to `/this/location/` then the resulting path is `/this/location/some/path`.
 
 Because directories are inferred, you may not resolve `some/path` relative to `/this/location` as the latter cannot be
@@ -225,7 +255,7 @@ inferred to be a directory (it lacks a trailing `/`).
 #### Resolution of `..` and `.`
 
 The POSIX path special symbols `.` and `..` are treated as they would be in a normal POSIX path. Note that this could
-cause some S3 objects to be effectively invisible to this implementation. For example `s3://mybucket/foo/./baa` is 
+cause some S3 objects to be effectively invisible to this implementation. For example `s3://mybucket/foo/./baa` is
 an allowed S3 URI that is *not* equivalent to `s3://mybucket/foo/baa` even though this library will resolve the path `/foo/./baa`
 to `/foo/baa`.
 
@@ -259,7 +289,7 @@ To run unit tests and produce code coverage reports, run this command:
 ./gradlew test
 ```
 
-HTML output of the test reports can be found at `build/reports/tests/test/index.html` and test coverage reports are 
+HTML output of the test reports can be found at `build/reports/tests/test/index.html` and test coverage reports are
 found at `build/reports/jacoco/test/html/index.html`
 
 ## Contributing
@@ -267,12 +297,12 @@ found at `build/reports/jacoco/test/html/index.html`
 We encourage community contributions via pull requests. Please refer to our [code of conduct](./CODE_OF_CONDUCT.md) and
 [contributing](./CONTRIBUTING.md) for guidance.
 
-Code must compile to JDK 1.8 compatible bytecode. Matching unit tests are required for new features and fixes. 
+Code must compile to JDK 1.8 compatible bytecode. Matching unit tests are required for new features and fixes.
 
 ### Contributing Unit Tests
 
 We use JUnit 5 and Mockito for unit testing.
 
-When contributing code for bug fixes or feature improvements, matching tests should also be provided. Tests must not 
-rely on specific S3 bucket access or credentials. To this end, S3 clients and other artifacts should be mocked as 
+When contributing code for bug fixes or feature improvements, matching tests should also be provided. Tests must not
+rely on specific S3 bucket access or credentials. To this end, S3 clients and other artifacts should be mocked as
 necessary. Remember, you are testing this library, not the behavior of S3.
