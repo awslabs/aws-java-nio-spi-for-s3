@@ -70,7 +70,7 @@ public class S3ClientProvider {
             .region(Region.US_EAST_1)
             .build();
 
-        private final EqualJitterBackoffStrategy backoffStrategy = EqualJitterBackoffStrategy.builder()
+    private final EqualJitterBackoffStrategy backoffStrategy = EqualJitterBackoffStrategy.builder()
             .baseDelay(Duration.ofMillis(200L))
             .maxBackoffTime(Duration.ofSeconds(5L))
             .build();
@@ -191,9 +191,9 @@ public class S3ClientProvider {
                 bucketSpecificClient = this.clientForRegion(bucketLocation);
             } catch (S3Exception e) {
                 if(e.statusCode() == 403) {
-                logger.debug("Cannot determine location of '{}' bucket directly. Attempting to obtain bucket location with headBucket operation", bucketName);
+                    logger.debug("Cannot determine location of '{}' bucket directly. Attempting to obtain bucket location with headBucket operation", bucketName);
                     try {
-                    final HeadBucketResponse headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
+                        final HeadBucketResponse headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
                         bucketSpecificClient = this.clientForRegion(headBucketResponse.
                                 sdkHttpResponse()
                                 .firstMatchingHeader("x-amz-bucket-region")
