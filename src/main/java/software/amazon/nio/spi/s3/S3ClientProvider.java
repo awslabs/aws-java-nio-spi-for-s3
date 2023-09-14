@@ -294,13 +294,14 @@ public class S3ClientProvider {
         logger.debug("bucket region is: '{}'", region.id());
 
         S3ClientBuilder clientBuilder =  S3Client.builder()
+            .forcePathStyle(configuration.getForcePathStyle())
             .region(region)
             .overrideConfiguration(
                 conf -> conf.retryPolicy(
                     builder -> builder.retryCondition(retryCondition).backoffStrategy(backoffStrategy)
                 )
             );
-
+        
         if (!isBlank(endpoint)) {
             clientBuilder.endpointOverride(URI.create(configuration.getEndpointProtocol() + "://" + endpoint));
         }
@@ -328,6 +329,6 @@ public class S3ClientProvider {
             asyncClientBuilder.credentialsProvider(() -> credentials);
         }
 
-        return asyncClientBuilder.region(region).build();
+        return asyncClientBuilder.forcePathStyle(configuration.getForcePathStyle()).region(region).build();
     }
 }

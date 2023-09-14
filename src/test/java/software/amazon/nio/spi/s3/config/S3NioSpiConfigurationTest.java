@@ -9,6 +9,7 @@ import static com.github.stefanbirkner.systemlambda.SystemLambda.withEnvironment
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import static org.assertj.core.api.BDDAssertions.entry;
 
 import static org.assertj.core.api.BDDAssertions.then;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -49,6 +50,7 @@ public class S3NioSpiConfigurationTest {
         then(config.getBucketName()).isNull();
         then(config.getRegion()).isNull();
         then(config.getCredentials()).isNull();
+        then(config.getForcePathStyle()).isFalse();
     }
 
     @Test
@@ -233,5 +235,23 @@ public class S3NioSpiConfigurationTest {
         } catch (IllegalArgumentException x) {
             then(x).hasMessage("Bucket name should not contain uppercase characters");
         }
+    }
+    
+    @Test
+    public void withAndGetForcePathStyle() {
+        then(config).doesNotContainKey(S3_SPI_FORCE_PATH_STYLE_PROPERTY);
+        then(config.withForcePathStyle(true)).isSameAs(config);
+        then(config).contains(entry(S3_SPI_FORCE_PATH_STYLE_PROPERTY, true));
+        then(config.getForcePathStyle()).isTrue();
+        then(config.withForcePathStyle(false).getForcePathStyle()).isFalse();
+        
+        Map<String, Object> map = new HashMap<>(); config = new S3NioSpiConfiguration(map);
+        then(config.getForcePathStyle()).isFalse();
+        map.put(S3_SPI_FORCE_PATH_STYLE_PROPERTY, true); config = new S3NioSpiConfiguration(map);
+        then(config .getForcePathStyle()).isTrue();
+        map.remove(S3_SPI_FORCE_PATH_STYLE_PROPERTY); // same S3NioSpiConfiguration on purpose
+        then(config.getForcePathStyle()).isTrue();
+        then(config.withForcePathStyle(null).getForcePathStyle()).isFalse();
+        then(config).doesNotContainKey(S3_SPI_FORCE_PATH_STYLE_PROPERTY);
     }
 }

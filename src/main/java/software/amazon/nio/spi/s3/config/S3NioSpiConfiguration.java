@@ -65,16 +65,19 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * The default value of the endpoint protocol property
      */
     public static final String S3_SPI_ENDPOINT_PROTOCOL_DEFAULT = "https";
-
     /**
-     * The default value of the endpoint protocol property
+     * The name of the force path style property
+     */
+    public static final String S3_SPI_FORCE_PATH_STYLE_PROPERTY = "s3.spi.force-path-style";
+    /**
+     * The default value of the credentials property
      */
     public static final String S3_SPI_CREDENTIALS_PROPERTY = "s3.spi.credentials";
 
     private final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
 
     private String bucketName;
-
+    
 
     /**
      * Create a new, empty configuration
@@ -85,6 +88,8 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
 
     /**
      * Create a new, empty configuration
+     * 
+     * @param overrides configuration to override default values
      */
     public S3NioSpiConfiguration(Map<String, ?> overrides) {
         Objects.requireNonNull(overrides);
@@ -92,8 +97,8 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         //
         // setup defaults
         //
-        put(S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY, String .valueOf(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT));
-        put(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, String .valueOf(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT));
+        put(S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY, String.valueOf(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT));
+        put(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, String.valueOf(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT));
         put(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
 
         //
@@ -115,7 +120,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
             key -> Optional.ofNullable(System.getProperty(key)).ifPresent(val -> put(key, val))
         );
 
-        overrides.keySet().forEach(key -> put(key, String.valueOf(overrides.get(key))));
+        overrides.keySet().forEach(key -> put(key, overrides.get(key)));
     }
 
     /**
@@ -272,7 +277,27 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         }
         return this;
     }
-
+    
+    /**
+     * Fluently sets the value of {@code forcePathStyle} and adds 
+     * {@code S3_SPI_FORCE_PATH_STYLE_PROPERTY} to the map unless the given
+     * value is null. If null, {@code S3_SPI_FORCE_PATH_STYLE_PROPERTY} is
+     * removed from the map.
+     *
+     * @param forcePathStyle the new value; can be null
+     *
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withForcePathStyle(Boolean forcePathStyle) {
+        if (forcePathStyle == null) {
+            remove(S3_SPI_FORCE_PATH_STYLE_PROPERTY);
+        } else {
+            put(S3_SPI_FORCE_PATH_STYLE_PROPERTY, forcePathStyle); 
+        }
+        
+        return this;
+    }  
+    
     /**
      * Get the value of the Maximum Fragment Size
      * @return the configured value or the default if not overridden
@@ -362,6 +387,10 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      */
     public String getBucketName() {
         return bucketName;
+    }
+    
+    public boolean getForcePathStyle() {
+        return (boolean)getOrDefault(S3_SPI_FORCE_PATH_STYLE_PROPERTY, false);
     }
 
     /**
