@@ -100,12 +100,12 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
 
         S3NioSpiConfiguration config = new S3NioSpiConfiguration();
         if (options.contains(StandardOpenOption.WRITE)) {
-            LOGGER.info("using S3WritableByteChannel as write delegate for path '{}'", s3Path.toUri());
+            LOGGER.debug("using S3WritableByteChannel as write delegate for path '{}'", s3Path.toUri());
             readDelegate = null;
             writeDelegate = new S3WritableByteChannel(s3Path, s3Client, options, timeout, timeUnit);
             position = 0L;
         } else if (options.contains(StandardOpenOption.READ) || options.size() == 0) {
-            LOGGER.info("using S3ReadAheadByteChannel as read delegate for path '{}'", s3Path.toUri());
+            LOGGER.debug("using S3ReadAheadByteChannel as read delegate for path '{}'", s3Path.toUri());
             readDelegate = new S3ReadAheadByteChannel(s3Path, config.getMaxFragmentSize(), config.getMaxFragmentNumber(), s3Client, this, timeout, timeUnit);
             writeDelegate = null;
         } else {
