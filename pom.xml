@@ -95,6 +95,7 @@
                 <version>3.5.0</version>
                 <configuration>
                     <createDependencyReducedPom>false</createDependencyReducedPom>
+                    <shadedArtifactAttached>true</shadedArtifactAttached>
                 </configuration>
                 <executions>
                     <execution>
