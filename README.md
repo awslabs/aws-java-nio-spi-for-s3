@@ -84,7 +84,7 @@ follow this URI pattern:
 ```
 s3x://[key:secret@]endpoint[:port]/bucket/objectkey
 ```
-Note that in this case the TCP port of the target service must be specified.
+
 If no credentials are given the default AWS configuration mechanism will be used as per
 the section above.
 
@@ -102,7 +102,7 @@ The same can also be provided when creating a file system:
 ```
 Map<String, String> env = ...;
 env.put("s3.spi.endpoint-protocol", "http");
-FileSystem fs = FileSystems.newFileSystem("s3://myendpoint.com:1000/mybucket", env);
+FileSystem fs = FileSystems.newFileSystem("s3x://myendpoint.com:1000/mybucket", env);
 ```
 
 ## Reading Files
