@@ -36,7 +36,6 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemNotFoundException;
-import java.nio.file.FileSystems;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -48,7 +47,6 @@ import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +64,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_REGION_PROPERTY;
 
 @SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
@@ -526,5 +523,16 @@ public class S3FileSystemProviderTest {
     public void setAttribute() {
         S3Path foo = fs.getPath("/foo");
         assertThrows(UnsupportedOperationException.class, () -> provider.setAttribute(foo, "x", "y"));
+    }
+    
+        
+    @Test
+    public void defaultForcePathStyle() throws Exception {
+        final FakeAsyncS3ClientBuilder BUILDER = new FakeAsyncS3ClientBuilder();
+        
+        fs.clientProvider().asyncClientBuilder(BUILDER);
+        fs.client(); fs.close();
+
+        assertNull(BUILDER.forcePathStyle);
     }
 }

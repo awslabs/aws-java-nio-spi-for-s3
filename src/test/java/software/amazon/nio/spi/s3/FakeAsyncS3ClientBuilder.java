@@ -37,62 +37,64 @@ public class FakeAsyncS3ClientBuilder implements S3CrtAsyncClientBuilder {
 
     @Override
     public S3CrtAsyncClientBuilder credentialsProvider(AwsCredentialsProvider acp) {
-        return BUILDER.credentialsProvider(credentialsProvider = acp);
+        BUILDER.credentialsProvider(credentialsProvider = acp); return this;
     }
 
     @Override
     public S3CrtAsyncClientBuilder region(Region r) {
-        return BUILDER.region(region = r);
+        BUILDER.region(region = r); return this;
     }
 
     @Override
     public S3CrtAsyncClientBuilder minimumPartSizeInBytes(Long l) {
-        return BUILDER.minimumPartSizeInBytes(minimumPartSizeInBytes = l);
+        BUILDER.minimumPartSizeInBytes(minimumPartSizeInBytes = l); return this;
     }
 
     @Override
     public S3CrtAsyncClientBuilder targetThroughputInGbps(Double d) {
-        return BUILDER.targetThroughputInGbps(targetThroughputInGbps = d);
+        BUILDER.targetThroughputInGbps(targetThroughputInGbps = d); return this;
     }
 
     @Override
     public S3CrtAsyncClientBuilder maxConcurrency(Integer i) {
-        return BUILDER.maxConcurrency(maxConcurrency = i);
+        BUILDER.maxConcurrency(maxConcurrency = i); return this;
     }
 
     @Override
     public S3CrtAsyncClientBuilder endpointOverride(URI u) {
-       return BUILDER.endpointOverride(endpointOverride = u);
+        BUILDER.endpointOverride(endpointOverride = u); return this;
     }
 
     @Override
     public S3CrtAsyncClientBuilder checksumValidationEnabled(Boolean b) {
-        return BUILDER.checksumValidationEnabled(checksumValidationEnabled = b);
+        BUILDER.checksumValidationEnabled(checksumValidationEnabled = b);
+        return this;
     }
 
     @Override
     public S3CrtAsyncClientBuilder initialReadBufferSizeInBytes(Long l) {
-        return BUILDER.initialReadBufferSizeInBytes(initialReadBufferSizeInBytes = l);
+        BUILDER.initialReadBufferSizeInBytes(initialReadBufferSizeInBytes = l);
+        return this;
     }
 
     @Override
     public S3CrtAsyncClientBuilder httpConfiguration(S3CrtHttpConfiguration c) {
-        return BUILDER.httpConfiguration(httpConfiguration = c);
+        BUILDER.httpConfiguration(httpConfiguration = c); return this;
     }
 
     @Override
     public S3CrtAsyncClientBuilder retryConfiguration(S3CrtRetryConfiguration c) {
-        return BUILDER.retryConfiguration(retryConfiguration = c);
+        BUILDER.retryConfiguration(retryConfiguration = c);  return this;
     }
 
     @Override
     public S3CrtAsyncClientBuilder accelerate(Boolean b) {
-        return BUILDER.accelerate(accelerate = b);
+        BUILDER.accelerate(accelerate = b); return this;
     }
 
     @Override
     public S3CrtAsyncClientBuilder forcePathStyle(Boolean b) {
-        return BUILDER.forcePathStyle(forcePathStyle = b);
+        BUILDER.forcePathStyle(forcePathStyle = b); return this;
     }
 
     @Override
@@ -102,11 +104,11 @@ public class FakeAsyncS3ClientBuilder implements S3CrtAsyncClientBuilder {
 
     @Override
     public S3CrtAsyncClientBuilder crossRegionAccessEnabled(Boolean b) {
-        return BUILDER.crossRegionAccessEnabled(b);
+        BUILDER.crossRegionAccessEnabled(b); return this;
     }
 
     @Override
     public S3CrtAsyncClientBuilder thresholdInBytes(Long l) {
-        return BUILDER.thresholdInBytes(l);
+        BUILDER.thresholdInBytes(l); return this;
     }
 }

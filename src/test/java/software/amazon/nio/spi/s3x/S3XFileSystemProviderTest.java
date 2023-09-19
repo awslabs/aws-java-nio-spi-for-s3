@@ -184,7 +184,6 @@ public class S3XFileSystemProviderTest {
     @Test
     public void setEndpointProtocolThroughConfiguration() throws Exception {
         S3NioSpiConfiguration env = new S3NioSpiConfiguration();
-        env.put(AWS_REGION_PROPERTY, "us-west-1");
 
         S3XFileSystemProvider p = new S3XFileSystemProvider();
 
@@ -205,6 +204,42 @@ public class S3XFileSystemProviderTest {
         then(fs.bucketName()).isEqualTo("foo");
         then(fs.configuration().getEndpoint()).isEqualTo("any.where.com:2020");
         then(BUILDER.endpointOverride.toString()).isEqualTo("http://any.where.com:2020");
+    }
+    
+    @Test
+    public void setForcePathStyleThroughConfiguration() throws Exception {
+        S3NioSpiConfiguration env = new S3NioSpiConfiguration();
+
+        S3XFileSystemProvider p = new S3XFileSystemProvider();
+
+        //
+        // true by default
+        //
+        S3FileSystem fs = p.newFileSystem(URI.create("s3x://some.where.com:1010/bucket"), env);
+        fs.clientProvider().asyncClientBuilder(BUILDER);
+        fs.client(); fs.close();
+
+        then(BUILDER.forcePathStyle).isTrue();
+
+        //
+        // false by withForcePath()
+        //
+        env.withForcePathStyle(false);
+        fs = p.newFileSystem(URI.create("s3x://any.where.com:2020/foo"), env);
+        fs.clientProvider().asyncClientBuilder(BUILDER);
+        fs.client(); fs.close();
+
+        then(BUILDER.forcePathStyle).isFalse();
+        
+        //
+        // false if set directly to false
+        //
+        env.put(S3NioSpiConfiguration.S3_SPI_FORCE_PATH_STYLE_PROPERTY, false);
+        fs = p.newFileSystem(URI.create("s3x://any.where.com:2020/foo"), env);
+        fs.clientProvider().asyncClientBuilder(BUILDER);
+        fs.client(); fs.close();
+
+        then(BUILDER.forcePathStyle).isFalse();
     }
 
     @Test

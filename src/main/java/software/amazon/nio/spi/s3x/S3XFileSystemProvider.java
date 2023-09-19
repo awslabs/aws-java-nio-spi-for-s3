@@ -17,7 +17,11 @@
 package software.amazon.nio.spi.s3x;
 
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
+import software.amazon.nio.spi.s3.S3FileSystem;
 import software.amazon.nio.spi.s3.S3FileSystemProvider;
+import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.S3_SPI_FORCE_PATH_STYLE_PROPERTY;
 import software.amazon.nio.spi.s3.util.S3FileSystemInfo;
 import software.amazon.nio.spi.s3x.util.S3XFileSystemInfo;
 
@@ -27,6 +31,17 @@ import software.amazon.nio.spi.s3x.util.S3XFileSystemInfo;
 public class S3XFileSystemProvider extends S3FileSystemProvider {
 
     public static final String SCHEME = "s3x";
+    
+    @Override
+    public S3FileSystem newFileSystem(final URI uri, Map<String, ?> env) {
+        Map<String, Object> newEnv = new HashMap<>();
+        
+        newEnv.putAll(env);
+        newEnv.putIfAbsent(S3_SPI_FORCE_PATH_STYLE_PROPERTY, true);
+
+        return super.newFileSystem(uri, newEnv);
+    }
+    
 
     /**
      * Returns the URI scheme that identifies this provider.
