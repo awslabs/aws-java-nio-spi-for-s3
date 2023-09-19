@@ -74,7 +74,7 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
         if (maxNumberFragments < 2)
             throw new IllegalArgumentException("maxNumberFragments must be >= 2");
 
-        logger.info("max read ahead fragments '{}' with size '{}' bytes", maxNumberFragments, maxFragmentSize);
+        logger.debug("max read ahead fragments '{}' with size '{}' bytes", maxNumberFragments, maxFragmentSize);
         this.client = client;
         this.path = path;
         this.delegator = delegator;
