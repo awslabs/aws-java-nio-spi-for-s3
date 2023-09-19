@@ -73,7 +73,7 @@ public class S3DirectReadableByteChannel implements ReadableByteChannel {
                     .range(range));
 
             byte[] s3Bytes = responseBytes.asByteArray();
-            logger.info("read {} bytes from {}", s3Bytes.length, key);
+            logger.debug("read {} bytes from {}", s3Bytes.length, key);
 
             delegator.position(delegator.position() + s3Bytes.length);
             logger.debug("new position of {} is: {}", key, delegator.position());
