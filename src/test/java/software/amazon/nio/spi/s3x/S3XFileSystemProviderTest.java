@@ -28,13 +28,14 @@ import java.nio.file.FileSystems;
 import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.BDDAssertions.then;
 import org.junit.jupiter.api.Test;
 import software.amazon.nio.spi.s3.FakeAsyncS3ClientBuilder;
 import software.amazon.nio.spi.s3.S3FileSystem;
 import software.amazon.nio.spi.s3.S3Path;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
+
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_REGION_PROPERTY;
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_ACCESS_KEY_PROPERTY;
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_SECRET_ACCESS_KEY_PROPERTY;
@@ -146,12 +147,11 @@ public class S3XFileSystemProviderTest {
         //
         // With same endpoint, same bucket, different credentials
         //
-        try {
-            fs = provider.newFileSystem(URI10);
-            fail("filesystem created twice!");
-        } catch (FileSystemAlreadyExistsException x) {
-            then(x).hasMessageContaining("'akey@somewhere.com:2020/foo2");
-        }
+        assertThatCode(() -> provider.newFileSystem(URI10))
+                .as("filesystem created twice!")
+                .isInstanceOf(FileSystemAlreadyExistsException.class)
+                .hasMessageContaining("'akey@somewhere.com:2020/foo2");
+
         provider.closeFileSystem(fs);
     }
 
@@ -302,11 +302,10 @@ public class S3XFileSystemProviderTest {
 
         S3FileSystem fs = (S3FileSystem)FileSystems.newFileSystem(URI7, Collections.EMPTY_MAP);
         then(fs).isNotNull();
-        try {
-            FileSystems.newFileSystem(URI7, Collections.EMPTY_MAP);
-        } catch (FileSystemAlreadyExistsException x) {
-            then(x).hasMessage("a file system already exists for 'key@myendpoint.com:1010/foo', use getFileSystem() instead");
-        }
+        assertThatThrownBy(() -> FileSystems.newFileSystem(URI7, Collections.EMPTY_MAP))
+                .isInstanceOf(FileSystemAlreadyExistsException.class)
+                .hasMessage("a file system already exists for 'key@myendpoint.com:1010/foo', use getFileSystem() instead");
+
         then(FileSystems.getFileSystem(URI7)).isSameAs(fs);
         fs.close();
     }
