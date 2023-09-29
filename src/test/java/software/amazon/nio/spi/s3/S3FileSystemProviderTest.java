@@ -80,7 +80,7 @@ public class S3FileSystemProviderTest {
         provider = new S3FileSystemProvider();
         lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
-        fs = provider.newFileSystem(URI.create(pathUri));
+        fs = provider.getFileSystem(URI.create(pathUri), true);
         fs.clientProvider(new FixedS3ClientProvider(mockClient));
     }
 
