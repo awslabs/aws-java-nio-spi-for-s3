@@ -65,12 +65,8 @@ public class S3FileSystemTest {
         s3FileSystem.close();
         assertFalse(s3FileSystem.isOpen(), "File system should return false from isOpen when closed has been called");
 
-        //
-        // close() also removes the instance from the provider
-        //
-        try {
-            provider.getFileSystem(s3Uri);
-        } catch (FileSystemNotFoundException x) {} // OK
+        // close() should also remove the instance from the provider
+        assertThrows(FileSystemNotFoundException.class, () -> provider.getFileSystem(s3Uri));
     }
 
     @Test
