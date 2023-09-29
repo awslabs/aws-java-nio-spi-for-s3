@@ -6,6 +6,7 @@ package software.amazon.nio.spi.s3.config;
 
 import static com.github.stefanbirkner.systemlambda.SystemLambda.restoreSystemProperties;
 import static com.github.stefanbirkner.systemlambda.SystemLambda.withEnvironmentVariable;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -15,7 +16,6 @@ import static org.assertj.core.api.BDDAssertions.entry;
 
 import static org.assertj.core.api.BDDAssertions.then;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -163,13 +163,10 @@ public class S3NioSpiConfigurationTest {
 
         then(config.withCredentials(null, "something").getCredentials()).isNull();
 
-
-        try {
-            config.withCredentials("akey", null);
-            fail("missing sanity check");
-        } catch (IllegalArgumentException x) {
-            then(x).hasMessage("secretAccessKey can not be null");
-        }
+        assertThatCode(() -> config.withCredentials("akey", null))
+                .as("missing sanity check")
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("secretAccessKey can not be null");
     }
 
     @Test
