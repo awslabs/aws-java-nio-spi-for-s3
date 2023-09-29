@@ -26,9 +26,10 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.FileSystems;
 import java.util.Collections;
+
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.fail;
 import static org.assertj.core.api.BDDAssertions.then;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import org.junit.jupiter.api.Test;
 import software.amazon.nio.spi.s3.FakeAsyncS3ClientBuilder;
 import software.amazon.nio.spi.s3.S3FileSystem;
@@ -83,22 +84,18 @@ public class S3XFileSystemProviderTest {
         //
         // the same file system can not be created twice
         //
-        try {
-            provider.newFileSystem(URI1);
-            fail("filesystem created twice!");
-        } catch (FileSystemAlreadyExistsException x) {
-            then(x).hasMessageContaining("'myendpoint/foo'");
-        }
+        assertThatCode(() -> provider.newFileSystem(URI1))
+                .as("filesystem created twice!")
+                .isInstanceOf(FileSystemAlreadyExistsException.class)
+                .hasMessageContaining("'myendpoint/foo'");
 
         //
         // Same bucket but different path, is still the same file system
         //
-        try {
-            provider.newFileSystem(URI2);
-            fail("filesystem created twice!");
-        } catch (FileSystemAlreadyExistsException x) {
-            then(x).hasMessageContaining("'myendpoint/foo'");
-        }
+        assertThatCode(() -> provider.newFileSystem(URI2))
+                .as("filesystem created twice!")
+                .isInstanceOf(FileSystemAlreadyExistsException.class)
+                .hasMessageContaining("'myendpoint/foo'");
         provider.closeFileSystem(fs);
 
         //
@@ -120,13 +117,12 @@ public class S3XFileSystemProviderTest {
 
         //
         // With existing endpoint and bucket, no credentials
+
         //
-        try {
-            provider.newFileSystem(URI5);
-            fail("filesystem created twice!");
-        } catch (FileSystemAlreadyExistsException x) {
-            then(x).hasMessageContaining("'myendpoint.com:1010/foo2'");
-        }
+        assertThatCode(() -> provider.newFileSystem(URI5))
+                .as("filesystem created twice!")
+                .isInstanceOf(FileSystemAlreadyExistsException.class)
+                .hasMessageContaining("'myendpoint.com:1010/foo2'");
         provider.closeFileSystem(fs);
 
         //
@@ -173,12 +169,10 @@ public class S3XFileSystemProviderTest {
         provider.closeFileSystem(fs2);
         provider.closeFileSystem(fs3);
 
-        try {
-            provider.getFileSystem(URI.create("s3://nowhere.com:2000/foo2/baa2"));
-            fail("missing error");
-        } catch (FileSystemNotFoundException x) {
-            then(x).hasMessage("file system not found for 'nowhere.com:2000/foo2'");
-        }
+        assertThatCode(() -> provider.getFileSystem(URI.create("s3://nowhere.com:2000/foo2/baa2")))
+                .as("missing error")
+                .isInstanceOf(FileSystemNotFoundException.class)
+                .hasMessageContaining("file system not found for 'nowhere.com:2000/foo2'");
     }
 
     @Test

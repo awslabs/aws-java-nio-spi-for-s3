@@ -9,6 +9,8 @@ import static com.github.stefanbirkner.systemlambda.SystemLambda.withEnvironment
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.BDDAssertions.entry;
 
 import static org.assertj.core.api.BDDAssertions.then;
@@ -105,12 +107,10 @@ public class S3NioSpiConfigurationTest {
         then(config.withEndpoint(null).getEndpoint()).isEqualTo("");
         then(config.withEndpoint("noport.somewhere.com").getEndpoint()).isEqualTo("noport.somewhere.com");
 
-        try {
-            config.withEndpoint("wrongport.somewhere.com:aabbcc");
-            fail("missing sanity check");
-        } catch (IllegalArgumentException x) {
-            then(x).hasMessage("endpoint 'wrongport.somewhere.com:aabbcc' does not match format host:port where port is a number");
-        }
+        assertThatCode(() -> config.withEndpoint("wrongport.somewhere.com:aabbcc"))
+                .as("missing sanity check")
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("endpoint 'wrongport.somewhere.com:aabbcc' does not match format host:port where port is a number");
     }
 
     @Test
@@ -121,12 +121,10 @@ public class S3NioSpiConfigurationTest {
         then(overriddenConfig.getEndpointProtocol()).isEqualTo("https");
         then(badOverriddenConfig.getEndpointProtocol()).isEqualTo(S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
 
-        try {
-            config.withEndpointProtocol("ftp");
-            fail("missing sanity check");
-        } catch (IllegalArgumentException x) {
-            then(x).hasMessage("endpoint prococol must be one of ('http', 'https')");
-        }
+        assertThatCode(() -> config.withEndpointProtocol("ftp"))
+                .as("missing sanity check")
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("endpoint prococol must be one of ('http', 'https')");
     }
 
     @Test
@@ -134,12 +132,10 @@ public class S3NioSpiConfigurationTest {
         then(config.withMaxFragmentNumber(1000)).isSameAs(config);
         then(config.getMaxFragmentNumber()).isEqualTo(1000);
 
-        try {
-            config.withMaxFragmentNumber(-1);
-            fail("missing sanity check");
-        } catch (IllegalArgumentException x) {
-            then(x).hasMessage("maxFragmentNumber must be positive");
-        }
+        assertThatCode(() -> config.withMaxFragmentNumber(-1))
+                .as("missing sanity check")
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("maxFragmentNumber must be positive");
     }
 
     @Test
@@ -147,12 +143,10 @@ public class S3NioSpiConfigurationTest {
         then(config.withMaxFragmentSize(4000)).isSameAs(config);
         then(config.getMaxFragmentSize()).isEqualTo(4000);
 
-        try {
-            config.withMaxFragmentSize(-1);
-            fail("missing sanity check");
-        } catch (IllegalArgumentException x) {
-            then(x).hasMessage("maxFragmentSize must be positive");
-        }
+        assertThatCode(() -> config.withMaxFragmentSize(-1))
+                .as("missing sanity check")
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("maxFragmentSize must be positive");
     }
 
     @Test
@@ -168,6 +162,7 @@ public class S3NioSpiConfigurationTest {
         then(credentials.secretAccessKey()).isEqualTo("anothersecret");
 
         then(config.withCredentials(null, "something").getCredentials()).isNull();
+
 
         try {
             config.withCredentials("akey", null);
@@ -229,12 +224,10 @@ public class S3NioSpiConfigurationTest {
         then(config.withBucketName("anothername").getBucketName()).isEqualTo("anothername");
         then(config.withBucketName(null).getBucketName()).isNull();
 
-        try {
-            config.withBucketName("Wrong/bucket;name");
-            fail("missing sanity check");
-        } catch (IllegalArgumentException x) {
-            then(x).hasMessage("Bucket name should not contain uppercase characters");
-        }
+        assertThatCode(() -> config.withBucketName("Wrong/bucket;name"))
+                .as("missing sanity check")
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Bucket name should not contain uppercase characters");
     }
     
     @Test

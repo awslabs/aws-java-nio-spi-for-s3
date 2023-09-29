@@ -6,6 +6,7 @@
 package software.amazon.nio.spi.s3;
 
 import java.io.IOException;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,6 +58,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
@@ -99,13 +101,10 @@ public class S3FileSystemProviderTest {
         //
         // A filesystem for pathUri has been created already ;)
         //
-        try {
-            provider.newFileSystem(URI.create(pathUri));
-            fail("filesystem created twice!");
-        } catch (FileSystemAlreadyExistsException x) {
-            assertTrue(x.getMessage().contains("'foo'"));
-        }
-
+        assertThatCode(() -> provider.newFileSystem(URI.create(pathUri)))
+                .as("filesystem created twice!")
+                .isInstanceOf(FileSystemAlreadyExistsException.class)
+                .hasMessageContaining("'foo'");
         //
         // New AWS S3 file system
         //
@@ -115,12 +114,10 @@ public class S3FileSystemProviderTest {
         //
         // New AWS S3 file system with same bucket but different path
         //
-        try {
-            provider.newFileSystem(URI.create("s3://foo2/baa2"));
-            fail("filesystem created twice!");
-        } catch (FileSystemAlreadyExistsException x) {
-            assertTrue(x.getMessage().contains("'foo2'"));
-        }
+        assertThatCode(() -> provider.newFileSystem(URI.create("s3://foo2/baa2")))
+                .as("filesystem created twice!")
+                .isInstanceOf(FileSystemAlreadyExistsException.class)
+                .hasMessageContaining("'foo2'");
         provider.closeFileSystem(fs);
     }
 
@@ -129,32 +126,22 @@ public class S3FileSystemProviderTest {
         //
         // IllegalArgumentException if URI is not good
         //
-        try {
-            provider.newFileSystem((URI)null);
-            fail("mising argument check!");
-        } catch (IllegalArgumentException x) {
-            assertEquals("uri can not be null", x.getMessage());
-        }
 
-        try {
-            provider.newFileSystem(URI.create("noscheme"));
-            fail("mising argument check!");
-        } catch (IllegalArgumentException x) {
-            assertEquals(
-                "invalid uri 'noscheme', please provide an uri as s3://bucket",
-                x.getMessage()
-            );
-        }
+        assertThatCode(() -> provider.newFileSystem(null))
+                .as("missing argument check!")
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("uri can not be null");
 
-        try {
-            provider.newFileSystem(URI.create("s3:///"));
-            fail("mising argument check!");
-        } catch (IllegalArgumentException x) {
-            assertEquals(
-                "invalid uri 's3:///', please provide an uri as s3://bucket",
-                x.getMessage()
-            );
-        }
+        assertThatCode(() -> provider.newFileSystem(URI.create("noscheme")))
+                .as("missing argument check!")
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("invalid uri 'noscheme', please provide an uri as s3://bucket");
+
+        assertThatCode(() -> provider.newFileSystem(URI.create("s3:///")))
+                .as("missing argument check!")
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("invalid uri 's3:///', please provide an uri as s3://bucket");
+        
     }
 
     @Test
