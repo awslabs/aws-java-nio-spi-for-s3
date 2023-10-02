@@ -26,6 +26,8 @@ import software.amazon.awssdk.services.s3.model.S3Response;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.CopyRequest;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
+import software.amazon.nio.spi.s3.util.S3FileSystemInfo;
 import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
 import java.io.IOException;
@@ -40,6 +42,7 @@ import java.nio.file.spi.FileSystemProvider;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -52,12 +55,9 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
-import java.util.HashMap;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static software.amazon.awssdk.http.HttpStatusCode.FORBIDDEN;
 import static software.amazon.awssdk.http.HttpStatusCode.NOT_FOUND;
-import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
-import software.amazon.nio.spi.s3.util.S3FileSystemInfo;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExceptionOnTimeOut;
 
@@ -245,6 +245,13 @@ public class S3FileSystemProvider extends FileSystemProvider {
             if (fs == cache.get(key)) {
                 cache.remove(key); return;
             }
+        }
+        try {
+            if(fs.isOpen()) {
+                fs.close();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
