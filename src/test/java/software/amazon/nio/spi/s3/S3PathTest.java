@@ -459,7 +459,13 @@ public class S3PathTest {
         // the working directory, which is always "/" for a bucket.
         assertEquals(S3Path.getPath(fileSystem, "dir1/"), S3Path.getPath(fileSystem, "/dir1/"));
 
-        assertNotEquals(S3Path.getPath(fileSystem, "dir1/"), S3Path.getPath(provider.newFileSystem(URI.create("s3://foo")), "/dir1/"));
+        S3FileSystem fooFS = null;
+        try{
+            fooFS = provider.newFileSystem(URI.create("s3://foo"));;
+            assertNotEquals(S3Path.getPath(fileSystem, "dir1/"), S3Path.getPath(fooFS, "/dir1/"));
+        } finally {
+            if ( fooFS != null ) provider.closeFileSystem(fooFS);
+        }
 
         // not equal because in s3 dir1 cannot be implied to be a directory unless it ends with "/"
         assertNotEquals(S3Path.getPath(fileSystem, "dir1/"), S3Path.getPath(fileSystem, "dir1"));
