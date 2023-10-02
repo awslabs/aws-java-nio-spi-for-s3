@@ -316,6 +316,8 @@ public class S3FileSystem extends FileSystem {
         return Collections.EMPTY_SET;
     }
 
+    private static final Set<String> supportedFileAttributeViews =
+            Collections.singleton(BASIC_FILE_ATTRIBUTE_VIEW);
     /**
      * Returns the set of the file attribute views supported by this {@code FileSystem}.
      * <br>
@@ -326,9 +328,7 @@ public class S3FileSystem extends FileSystem {
      */
     @Override
     public Set<String> supportedFileAttributeViews() {
-        HashSet<String> views = new HashSet<>(2);
-        views.add(BASIC_FILE_ATTRIBUTE_VIEW);
-        return Collections.unmodifiableSet(views);
+        return supportedFileAttributeViews;
     }
 
     /**
