@@ -159,11 +159,7 @@ public class S3ClientProviderTest {
         );
 
         // then you should get a NoSuchElement exception when you try to get the header
-        try {
-            provider.generateClient("test-bucket", mockClient);
-        } catch (Exception e) {
-            assertEquals(NoSuchElementException.class, e.getClass());
-        }
+        assertThrows(NoSuchElementException.class, () -> provider.generateClient("test-bucket", mockClient));
 
         final InOrder inOrder = inOrder(mockClient);
         inOrder.verify(mockClient).getBucketLocation(any(Consumer.class));
@@ -190,11 +186,7 @@ public class S3ClientProviderTest {
         );
 
         // then you should get a NoSuchElement exception when you try to get the header
-        try {
-            provider.generateAsyncClient("test-bucket", mockClient);
-        } catch (Exception e) {
-            assertEquals(NoSuchElementException.class, e.getClass());
-        }
+        assertThrows(NoSuchElementException.class, () -> provider.generateAsyncClient("test-bucket", mockClient));
 
         final InOrder inOrder = inOrder(mockClient);
         inOrder.verify(mockClient).getBucketLocation(any(Consumer.class));

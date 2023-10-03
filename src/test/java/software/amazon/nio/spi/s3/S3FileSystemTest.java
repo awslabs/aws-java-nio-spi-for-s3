@@ -16,6 +16,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.BDDAssertions.then;
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.*;
@@ -29,7 +31,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 
 @ExtendWith(MockitoExtension.class)
 public class S3FileSystemTest {
@@ -65,12 +66,8 @@ public class S3FileSystemTest {
         s3FileSystem.close();
         assertFalse(s3FileSystem.isOpen(), "File system should return false from isOpen when closed has been called");
 
-        //
-        // close() also removes the instance from the provider
-        //
-        try {
-            provider.getFileSystem(s3Uri);
-        } catch (FileSystemNotFoundException x) {} // OK
+        // close() should also remove the instance from the provider
+        assertThrows(FileSystemNotFoundException.class, () -> provider.getFileSystem(s3Uri));
     }
 
     @Test
@@ -142,25 +139,12 @@ public class S3FileSystemTest {
     public void plainInitializationWithError() {
         //
         // Was want to try a plain initialization (i.e. without any mocks).
-        // We expect standard cluent to throw an exception because the bucket
-        // is not found
-        //
+        // We expect standard client to throw an exception due to missing credentials
         final Path path = Paths.get(URI.create("s3://does-not-exists-" + System.currentTimeMillis() + "/dir"));
         then(path).isInstanceOf(S3Path.class);
-        try {
-            then(Files.exists(path)).isFalse();
-            fail("client should fail...");
-        } catch (NoSuchBucketException x) {
-            //
-            // we get here is we have the network
-            //
-            then(x).hasMessageStartingWith("The specified bucket does not exist");
-        } catch (SdkClientException x) {
-            //
-            // or here if we don't
-            //
-
-        }
+        assertThatThrownBy(() -> Files.exists(path))
+                .isInstanceOf(SdkClientException.class)
+                .hasMessageStartingWith("Unable to load credentials");
     }
 
     @Test
