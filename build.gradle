@@ -39,6 +39,13 @@ compileJava {
     options.release = 8
 }
 
+sourceSets {
+    examples {
+        java {
+        }
+    }
+}
+
 dependencies {
     implementation 'io.reactivex.rxjava3:rxjava:3.1.8'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'

@@ -1,4 +1,4 @@
-package examples;
+package software.amazon.nio.spi.examples;
 
 import java.io.IOException;
 import java.net.URI;
