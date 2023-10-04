@@ -14,7 +14,7 @@ public class S3FileSystemTest {
     @Test
     public void fileExistsShouldReturnFalseWhenBucketNotFound() {
         // We expect standard client to fail to locate the bucket
-        final Path path = Paths.get(URI.create("s3://does-not-exists-" + System.currentTimeMillis() + "/dir"));
+        final Path path = Paths.get(URI.create("s3x://" + Containers.localStackHost() + "/does-not-exists-" + System.currentTimeMillis() + "/dir"));
         then(path).isInstanceOf(S3Path.class);
         then(Files.exists(path)).isFalse();
     }

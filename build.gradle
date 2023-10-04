@@ -123,6 +123,9 @@ testing {
         integrationTest(JvmTestSuite) {
             dependencies {
                 implementation project
+                implementation 'org.testcontainers:junit-jupiter:1.19.1'
+                implementation 'org.testcontainers:localstack:1.19.1'
+                implementation 'org.testcontainers:testcontainers:1.19.1'
             }
         }
         withType(JvmTestSuite).configureEach {
