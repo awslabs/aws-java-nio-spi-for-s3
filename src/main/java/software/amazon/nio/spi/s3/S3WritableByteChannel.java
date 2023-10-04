@@ -108,6 +108,7 @@ public class S3WritableByteChannel implements WritableByteChannel {
                             .putObjectRequest(PutObjectRequest.builder()
                                     .bucket(path.bucketName())
                                     .key(path.getKey())
+                                    .contentType(Files.probeContentType(tempFile))
                                     .build())
                             .source(tempFile)
                             .build()
