@@ -38,3 +38,6 @@ jobs:
     
     - name: Execute Gradle build
       run: ./gradlew build
+    
+    - name: Run Integration tests
+      run: ./gradlew integrationTest
