@@ -41,3 +41,5 @@ jobs:
     
     - name: Run Integration tests
       run: ./gradlew integrationTest
+      env:
+        TESTCONTAINERS_CHECKS_DISABLE: true
