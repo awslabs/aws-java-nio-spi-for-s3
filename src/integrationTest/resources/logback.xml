@@ -14,4 +14,11 @@
         <appender-ref ref="STDOUT" />
     </root>
     <logger name="software.amazon.awssdk.profiles.internal.ProfileFileReader" level="error"/>
+
+    <!-- https://java.testcontainers.org/supported_docker_environment/logging_config/ -->
+    <logger name="org.testcontainers" level="INFO"/>
+    <logger name="tc" level="INFO"/>
+    <logger name="com.github.dockerjava" level="WARN"/>
+    <logger name="com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.wire" level="OFF"/>
+
 </configuration>
