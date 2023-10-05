@@ -18,7 +18,7 @@ abstract class Containers {
     static {
         LOCAL_STACK_CONTAINER = new LocalStackContainer(
             DockerImageName.parse("localstack/localstack:2.3.2")
-        ).withServices(S3);
+        ).withServices(S3).withEnv("PROVIDER_OVERRIDE_S3", "v3");
         LOCAL_STACK_CONTAINER.start();
         System.setProperty(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, "http");
     }
@@ -27,7 +27,8 @@ abstract class Containers {
         AtomicReference<Container.ExecResult> execResult = new AtomicReference<>();
         assertThatCode(() ->
             execResult.set(LOCAL_STACK_CONTAINER.execInContainer(("awslocal s3api create-bucket --bucket " + name).split(" ")))
-        ).doesNotThrowAnyException();
+        ).as("Failed to create bucket '%s'", name)
+         .doesNotThrowAnyException();
         assertThat(execResult.get().getExitCode()).isZero();
     }
 
@@ -35,7 +36,8 @@ abstract class Containers {
         AtomicReference<Container.ExecResult> execResult = new AtomicReference<>();
         assertThatCode(() ->
             execResult.set(LOCAL_STACK_CONTAINER.execInContainer(("awslocal s3api put-object --bucket "+bucket+" --key "+key).split(" ")))
-        ).doesNotThrowAnyException();
+        ).as("Failed to put object '%s' in bucket '%s'", key, bucket)
+         .doesNotThrowAnyException();
         assertThat(execResult.get().getExitCode()).isZero();
     }
 
