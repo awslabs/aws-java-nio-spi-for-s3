@@ -4,8 +4,6 @@ import org.testcontainers.containers.Container;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
-import java.util.concurrent.atomic.AtomicReference;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.S3;
@@ -24,21 +22,19 @@ abstract class Containers {
     }
 
     public static void createBucket(String name) {
-        AtomicReference<Container.ExecResult> execResult = new AtomicReference<>();
-        assertThatCode(() ->
-            execResult.set(LOCAL_STACK_CONTAINER.execInContainer(("awslocal s3api create-bucket --bucket " + name).split(" ")))
-        ).as("Failed to create bucket '%s'", name)
+        assertThatCode(() -> {
+            Container.ExecResult execResult = LOCAL_STACK_CONTAINER.execInContainer(("awslocal s3api create-bucket --bucket " + name).split(" "));
+            assertThat(execResult.getExitCode()).isZero();
+        }).as("Failed to create bucket '%s'", name)
          .doesNotThrowAnyException();
-        assertThat(execResult.get().getExitCode()).isZero();
     }
 
     public static void putObject(String bucket, String key) {
-        AtomicReference<Container.ExecResult> execResult = new AtomicReference<>();
-        assertThatCode(() ->
-            execResult.set(LOCAL_STACK_CONTAINER.execInContainer(("awslocal s3api put-object --bucket "+bucket+" --key "+key).split(" ")))
-        ).as("Failed to put object '%s' in bucket '%s'", key, bucket)
+        assertThatCode(() -> {
+            Container.ExecResult execResult = LOCAL_STACK_CONTAINER.execInContainer(("awslocal s3api put-object --bucket " + bucket + " --key " + key).split(" "));
+            assertThat(execResult.getExitCode()).isZero();
+        }).as("Failed to put object '%s' in bucket '%s'", key, bucket)
          .doesNotThrowAnyException();
-        assertThat(execResult.get().getExitCode()).isZero();
     }
 
     public static String localStackConnectionEndpoint() {
