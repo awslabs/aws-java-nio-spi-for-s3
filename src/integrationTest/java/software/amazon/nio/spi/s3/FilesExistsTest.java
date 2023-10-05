@@ -19,12 +19,11 @@ public class FilesExistsTest {
 
     @Nested
     @DisplayName("should be false")
-    class FilesDoesNotExist {
+    class FileDoesNotExist {
 
         @Test
         @DisplayName("when bucket does not exist")
         public void fileExistsShouldReturnFalseWhenBucketNotFound() {
-            // We expect standard client to fail to locate the bucket
             final Path path = Paths.get(URI.create(localStackConnectionEndpoint() + "/does-not-exist"));
             then(Files.exists(path)).isFalse();
         }
@@ -40,7 +39,7 @@ public class FilesExistsTest {
 
     @Nested
     @DisplayName("should be true")
-    class FilesExists {
+    class FileExists {
 
         @BeforeEach
         public void createBucket() {
