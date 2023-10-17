@@ -133,23 +133,24 @@ If no configuration is supplied the values in `resources/s3-nio-spi.properties` 
 Each fragment is downloaded concurrently on a unique thread.
 
 #### Local parameters
-**aws.region** specifies the default region for API calls
-**aws.accessKey** specifies the key id to use for authentication
-**aws.secretAccessKey** specifies the secret to use for authentication
-
-**s3.spi.read.fragment-number** buffer asynchronously prefetches `n` sequential fragments from S3 (currently 50)
-**s3.spi.read.fragment-size** size of each fragment (currently 5MB)
-**s3.spi.endpoint** the endpoint to use to access the bucket; this is extracted from the uri by the S3X provider
-**s3.spi.force-path-style** (true|false) to set if path-style shall be used instead of host style; unless otherwise
-specified, this is undefined for the S3 provider and set to true when using the S3X provider.
+|parameter|description|
+|---------|-----------|
+|**aws.region**|specifies the default region for API calls|
+|**aws.accessKey**|specifies the key id to use for authentication|
+|**aws.secretAccessKey**|specifies the secret to use for authentication|
+|**s3.spi.read.fragment-number**|buffer asynchronously prefetches `n` sequential fragments from S3 (currently 50)|
+|**s3.spi.read.fragment-size**|size of each fragment (currently 5MB)|
+|**s3.spi.endpoint**|the endpoint to use to access the bucket; this is extracted from the uri by the S3X provider|
+|**s3.spi.force-path-style**|(true\|false) to set if path-style shall be used instead of host style; unless otherwise specified, this is undefined for the S3 provider and set to true when using the S3X provider.|
 
 #### System parameter ####
-**aws.region** specifies the default region for API calls
-**aws.accessKey** specifies the key id to use for authentication
-**aws.secretAccessKey** specifies the secret to use for authentication
-
-**s3.spi.read.fragment-number** buffer asynchronously prefetches `n` sequential fragments from S3 (currently 50)
-**s3.spi.read.fragment-size** size of each fragment (currently 5MB)
+|parameter|description|
+|---------|-----------|
+|**aws.region**|specifies the default region for API calls|
+|**aws.accessKey**|specifies the key id to use for authentication|
+|**aws.secretAccessKey**|specifies the secret to use for authentication|
+|**s3.spi.read.fragment-number**|buffer asynchronously prefetches `n` sequential fragments from S3 (currently 50)|
+|**s3.spi.read.fragment-size**|size of each fragment (currently 5MB)|
 
 #### Environment Variables
 
