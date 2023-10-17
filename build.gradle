@@ -12,6 +12,7 @@ plugins {
     id 'signing'
     id 'maven-publish'
     id 'jacoco'
+    id 'jvm-test-suite'
     id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
@@ -48,11 +49,6 @@ sourceSets {
 
 dependencies {
     implementation 'io.reactivex.rxjava3:rxjava:3.1.8'
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
-    testImplementation 'org.mockito:mockito-core:5.5.0'
-    testImplementation 'org.assertj:assertj-core:3.24.2'
-    testImplementation 'org.mockito:mockito-junit-jupiter:5.5.0'
-    testImplementation 'com.github.stefanbirkner:system-lambda:1.2.1'
 
     implementation platform('software.amazon.awssdk:bom:2.20.158')
 
@@ -121,9 +117,28 @@ javadoc {
     }
 }
 
-test {
-    useJUnitPlatform()
-    finalizedBy jacocoTestReport
+// JVM test suite plugin https://docs.gradle.org/7.3.3/userguide/jvm_test_suite_plugin.html
+testing {
+    suites {
+        integrationTest(JvmTestSuite) {
+            dependencies {
+                implementation project
+                implementation 'org.testcontainers:junit-jupiter:1.19.1'
+                implementation 'org.testcontainers:localstack:1.19.1'
+                implementation 'org.testcontainers:testcontainers:1.19.1'
+            }
+        }
+        withType(JvmTestSuite).configureEach {
+            useJUnitJupiter('5.10.0')
+            dependencies {
+                implementation 'org.assertj:assertj-core:3.24.2'
+                implementation 'org.mockito:mockito-core:5.5.0'
+                implementation 'org.assertj:assertj-core:3.24.2'
+                implementation 'org.mockito:mockito-junit-jupiter:5.5.0'
+                implementation 'com.github.stefanbirkner:system-lambda:1.2.1'
+            }
+        }
+    }
 }
 
 jacocoTestReport {
