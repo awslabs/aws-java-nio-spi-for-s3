@@ -57,7 +57,7 @@ public class S3FileSystemTest {
 
     @Test
     public void getSeparator() {
-        assertEquals("/", new S3FileSystem(s3Uri, provider).getSeparator());
+        assertEquals("/", provider.getFileSystem(s3Uri).getSeparator());
     }
 
     @Test
@@ -145,18 +145,5 @@ public class S3FileSystemTest {
         assertThatThrownBy(() -> Files.exists(path))
                 .isInstanceOf(SdkClientException.class)
                 .hasMessageStartingWith("Unable to load credentials");
-    }
-
-    @Test
-    public void deprecatedConstructors() {
-        S3FileSystem fs = new S3FileSystem("mybucket");
-        then(fs.provider()).isInstanceOf(S3FileSystemProvider.class);
-        then(fs.configuration()).isNotNull();
-        then(fs.configuration().getBucketName()).isEqualTo("mybucket");
-
-        fs = new S3FileSystem(URI.create("s3://mybucket"), provider);
-        then(fs.provider()).isInstanceOf(S3FileSystemProvider.class);
-        then(fs.configuration()).isNotNull();
-        then(fs.configuration().getBucketName()).isEqualTo("mybucket");
     }
 }
