@@ -908,12 +908,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return keys;
     }
 
-    private S3Path forceAwsClient(final Path path, final S3AsyncClient client) {
-        S3Path p = (S3Path)path;
-        p.getFileSystem().clientProvider(new FixedS3ClientProvider(client));
-        return p;
-    }
-
     protected static S3Path checkPath(Path obj) {
         Objects.requireNonNull(obj);
         if (!(obj instanceof S3Path))
