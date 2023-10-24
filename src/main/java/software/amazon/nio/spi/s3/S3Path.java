@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Objects;
 
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
+import static software.amazon.nio.spi.s3.S3FileSystemProvider.checkPath;
+
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
@@ -448,8 +450,7 @@ public class S3Path implements Path {
      */
     @Override
     public S3Path resolve(Path other) {
-        if(!(other instanceof S3Path)) throw new ProviderMismatchException("a non s3 path cannot be resolved against and S3Path");
-        S3Path s3Other = (S3Path) other;
+        S3Path s3Other = checkPath(other);
 
         if(!this.bucketName().equals(s3Other.bucketName())) throw new IllegalArgumentException("S3Paths cannot be resolved when they are from different buckets");
 
@@ -541,21 +542,20 @@ public class S3Path implements Path {
      */
     @Override
     public S3Path relativize(Path other) {
-        if(!(other instanceof S3Path)) throw new IllegalArgumentException("path is not an S3Path");
+        S3Path otherPath = checkPath(other);
 
-        if(this.equals(other)) return from("");
+        if(this.equals(otherPath)) return from("");
 
-        if(this.isAbsolute() != other.isAbsolute()) throw new IllegalArgumentException("to obtain a relative path both must be absolute or both must be relative");
-        if(!Objects.equals(this.bucketName(), ((S3Path) other).bucketName())) throw new IllegalArgumentException("cannot relativize S3Paths from different buckets");
+        if(this.isAbsolute() != otherPath.isAbsolute()) throw new IllegalArgumentException("to obtain a relative path both must be absolute or both must be relative");
+        if(!Objects.equals(this.bucketName(), otherPath.bucketName())) throw new IllegalArgumentException("cannot relativize S3Paths from different buckets");
 
-        S3Path otherPath = (S3Path) other;
         if(this.isEmpty()) return otherPath;
 
         int nameCount = this.getNameCount();
-        int otherNameCount = other.getNameCount();
+        int otherNameCount = otherPath.getNameCount();
 
         int limit = Math.min(nameCount, otherNameCount);
-        int differenceCount = getDifferenceCount(other, limit);
+        int differenceCount = getDifferenceCount(otherPath, limit);
 
         int parentDirCount = nameCount - differenceCount;
         if (differenceCount < otherNameCount) {
@@ -781,9 +781,7 @@ public class S3Path implements Path {
      */
     @Override
     public int compareTo(Path other) {
-        if(!(other instanceof S3Path)) throw new ClassCastException("compared paths must be from the same provider");
-
-        S3Path o = (S3Path) other;
+        S3Path o = checkPath(other);
         if(o.fileSystem != this.fileSystem) throw new ClassCastException("compared S3 paths must be from the same bucket");
         return this.toRealPath(NOFOLLOW_LINKS).toString().compareTo(
                 o.toRealPath(NOFOLLOW_LINKS).toString());
