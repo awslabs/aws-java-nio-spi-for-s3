@@ -48,7 +48,7 @@ class S3ReadAheadByteChannel implements ReadableByteChannel {
     private boolean open;
     private final Cache<Integer, CompletableFuture<ByteBuffer>> readAheadBuffersCache;
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger logger = LoggerFactory.getLogger(S3ReadAheadByteChannel.class);
 
 
     /**
