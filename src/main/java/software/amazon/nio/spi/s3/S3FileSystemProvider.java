@@ -764,7 +764,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @param <V>     type of FileAttributeView, see type
      * @param path    the path to the file
      * @param type    the {@code Class} object corresponding to the file attribute view.
-     *                Must be {@code BasicFileAttributeView.class} or {@code S3FileAttributeView.class}
+     *                Must be {@code BasicFileAttributeView.class}
      * @param options ignored as there are no links in S3
      * @return a file attribute view of the specified type, or {@code null} if
      * the attribute view type is not available
@@ -774,11 +774,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
         Objects.requireNonNull(type, "the type of attribute view required cannot be null");
         S3Path s3Path = checkPath(path);
 
-        if (type.equals(BasicFileAttributeView.class) || type.equals(S3BasicFileAttributeView.class)) {
+        if (type.equals(BasicFileAttributeView.class)) {
             @SuppressWarnings("unchecked") final V v = (V) new S3BasicFileAttributeView(s3Path);
             return v;
         } else {
-            throw new IllegalArgumentException("type must be BasicFileAttributeView.class or S3FileAttributeView.class");
+            throw new IllegalArgumentException("type must be BasicFileAttributeView.class");
         }
     }
 

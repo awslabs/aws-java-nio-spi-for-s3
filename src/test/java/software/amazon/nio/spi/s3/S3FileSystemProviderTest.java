@@ -461,9 +461,6 @@ public class S3FileSystemProviderTest {
         final BasicFileAttributeView fileAttributeView = provider.getFileAttributeView(foo, BasicFileAttributeView.class);
         assertNotNull(fileAttributeView);
         assertTrue(fileAttributeView instanceof S3BasicFileAttributeView);
-
-        final S3BasicFileAttributeView fileAttributeView1 = provider.getFileAttributeView(foo, S3BasicFileAttributeView.class);
-        assertNotNull(fileAttributeView1);
     }
 
     @Test
