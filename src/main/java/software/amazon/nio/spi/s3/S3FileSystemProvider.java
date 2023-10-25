@@ -321,7 +321,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
             options = Collections.emptySet();
         }
 
-        final S3Path s3Path = (S3Path)path;
+        final S3Path s3Path = checkPath(path);
         final S3SeekableByteChannel channel;
         final S3FileSystem fs = s3Path.getFileSystem();
 
@@ -395,7 +395,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
-        S3Path s3Path = (S3Path) dir;
+        S3Path s3Path = checkPath(dir);
 
         String dirName = s3Path.toAbsolutePath().getKey();
 
@@ -482,9 +482,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
-        S3FileSystem fs = ((S3Path)dir).getFileSystem();
+        S3Path s3Directory = checkPath(dir);
+        S3FileSystem fs = s3Directory.getFileSystem();
         try {
-            String directoryKey = ((S3Path)dir).toRealPath(NOFOLLOW_LINKS).getKey();
+            String directoryKey = s3Directory.toRealPath(NOFOLLOW_LINKS).getKey();
             if (!directoryKey.endsWith(S3Path.PATH_SEPARATOR) && !directoryKey.isEmpty()) {
                 directoryKey = directoryKey + S3Path.PATH_SEPARATOR;
             }
@@ -541,9 +542,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public void delete(Path path) throws IOException {
-        S3FileSystem fs = ((S3Path)path).getFileSystem();
+        final S3Path s3Path = checkPath(path);
         try {
-            final S3Path s3Path = (S3Path) path;
+            final S3FileSystem fs = s3Path.getFileSystem();
             final S3AsyncClient s3Client = fs.client();
             final String bucketName = fs.bucketName();
 
@@ -625,10 +626,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
             List<CopyOption> copyOptions = Arrays.asList(options);
 
-            S3Path s3SourcePath = (S3Path) source;
-            S3Path s3TargetPath = (S3Path) target;
+            S3Path s3SourcePath = checkPath(source);
+            S3Path s3TargetPath = checkPath(target);
 
-            final S3FileSystem fs = ((S3Path)source).getFileSystem();
+            final S3FileSystem fs = s3SourcePath.getFileSystem();
             final S3AsyncClient s3Client = fs.client();
             final String bucketName = fs.bucketName();
 
@@ -692,7 +693,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Deprecated
     protected void copy(S3AsyncClient s3Client, Path source, Path target, CopyOption... options) throws IOException, ExecutionException, InterruptedException {
-        copy(forceAwsClient((S3Path)source, s3Client), target, options);
+        copy(forceAwsClient(source, s3Client), target, options);
     }
 
     protected boolean exists(S3AsyncClient s3Client, S3Path path) throws InterruptedException, TimeoutException {
@@ -857,9 +858,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public void checkAccess(Path path, AccessMode... modes) throws IOException {
         try {
-            assert path instanceof S3Path;
-
-            final S3Path s3Path = (S3Path) path.toRealPath(NOFOLLOW_LINKS);
+            final S3Path s3Path = checkPath(path.toRealPath(NOFOLLOW_LINKS));
             final S3FileSystem fs = s3Path.getFileSystem();
             final String bucketName = fs.bucketName();
             final S3AsyncClient s3Client = fs.client();
@@ -943,12 +942,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
-        Objects.requireNonNull(path, "cannot obtain attributes for a null path");
         Objects.requireNonNull(type, "the type of attribute view required cannot be null");
-
-        if (!(path instanceof S3Path))
-            throw new IllegalArgumentException("path must be an S3 Path");
-        S3Path s3Path = (S3Path) path;
+        S3Path s3Path = checkPath(path);
 
         if (type.equals(BasicFileAttributeView.class) || type.equals(S3FileAttributeView.class)) {
             @SuppressWarnings("unchecked") final V v = (V) new S3FileAttributeView(s3Path);
@@ -971,11 +966,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) {
-        Objects.requireNonNull(path);
         Objects.requireNonNull(type);
-        if (!(path instanceof S3Path))
-            throw new IllegalArgumentException("path must be an S3Path instance");
-        S3Path s3Path = (S3Path) path;
+        S3Path s3Path = checkPath(path);
         S3AsyncClient s3Client = s3Path.getFileSystem().client();
 
         if (type.equals(BasicFileAttributes.class) || type.equals(S3BasicFileAttributes.class)) {
@@ -1032,9 +1024,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) {
-        Objects.requireNonNull(path);
         Objects.requireNonNull(attributes);
-        S3Path s3Path = (S3Path) path;
+        S3Path s3Path = checkPath(path);
 
         S3AsyncClient s3Client = s3Path.getFileSystem().client();
 
@@ -1141,5 +1132,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
         S3Path p = (S3Path)path;
         p.getFileSystem().clientProvider(new FixedS3ClientProvider(client));
         return p;
+    }
+
+    protected static S3Path checkPath(Path obj) {
+        Objects.requireNonNull(obj);
+        if (!(obj instanceof S3Path))
+            throw new ProviderMismatchException();
+        return (S3Path)obj;
     }
 }
