@@ -16,6 +16,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -31,35 +32,25 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 /**
  * Representation of {@link BasicFileAttributes} for an S3 object
  */
-public class S3BasicFileAttributes implements BasicFileAttributes {
+class S3BasicFileAttributes implements BasicFileAttributes {
 
     private final S3Path path;
     private final S3AsyncClient client;
     private final String bucketName;
 
-    private final Set<String> methodNamesToFilterOut =
-            Stream.of("wait","toString","hashCode","getClass","notify","notifyAll").collect(Collectors.toSet());
+    private static final Set<String> methodNamesToFilterOut =
+            Collections.unmodifiableSet(Stream.of("wait","toString","hashCode","getClass","notify","notifyAll").collect(Collectors.toSet()));
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
+    private static final Logger logger = LoggerFactory.getLogger(S3BasicFileAttributes.class.getName());
 
     /**
      * Constructor for the attributes of a path
      * @param path the path to represent the attributes of
      */
     protected S3BasicFileAttributes(S3Path path){
-         this(path, path.getFileSystem().client());
-    }
-
-    /**
-     * Constructor for the attributes of a path. A client is provided to perform any necessary S3 operations. This
-     * method is suitable for Mocking by providing a Mocked client.
-     * @param path the path to represent the attributes of
-     * @param client the client to use for any S3 operations
-     */
-    protected S3BasicFileAttributes(S3Path path, S3AsyncClient client){
         this.path = path;
-        this.client = client;
-        bucketName = path.bucketName();
+        this.client = path.getFileSystem().client();
+        this.bucketName = path.bucketName();
     }
 
     /**

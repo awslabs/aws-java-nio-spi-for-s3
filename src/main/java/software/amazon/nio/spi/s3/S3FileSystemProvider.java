@@ -797,11 +797,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
     public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) {
         Objects.requireNonNull(type);
         S3Path s3Path = checkPath(path);
-        S3AsyncClient s3Client = s3Path.getFileSystem().client();
 
         if (type.equals(BasicFileAttributes.class) || type.equals(S3BasicFileAttributes.class)) {
             @SuppressWarnings("unchecked")
-            A a = (A) new S3BasicFileAttributes(s3Path, s3Client);
+            A a = (A) new S3BasicFileAttributes(s3Path);
             return a;
         } else {
             throw new UnsupportedOperationException("cannot read attributes of type: " + type);
@@ -832,13 +831,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
         Objects.requireNonNull(attributes);
         S3Path s3Path = checkPath(path);
 
-        S3AsyncClient s3Client = s3Path.getFileSystem().client();
-
         if (s3Path.isDirectory() || attributes.trim().isEmpty())
             return Collections.emptyMap();
 
         if (attributes.equals("*") || attributes.equals("s3"))
-            return new S3BasicFileAttributes(s3Path, s3Client).asMap();
+            return new S3BasicFileAttributes(s3Path).asMap();
 
         final Set<String> attrSet = Arrays.stream(attributes.split(","))
                 .map(attr -> attr.replaceAll("^s3:", ""))
