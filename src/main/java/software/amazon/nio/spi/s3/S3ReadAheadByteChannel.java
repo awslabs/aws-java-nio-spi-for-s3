@@ -159,6 +159,18 @@ class S3ReadAheadByteChannel implements ReadableByteChannel {
         }
     }
 
+    @Override
+    public boolean isOpen() {
+        return open;
+    }
+
+    @Override
+    public void close() {
+        open = false;
+        readAheadBuffersCache.invalidateAll();
+        readAheadBuffersCache.cleanUp();
+    }
+
     private void clearPriorFragments(int currentFragIndx) {
         final Set<@NonNull Integer> priorIndexes = readAheadBuffersCache
                 .asMap()
@@ -172,18 +184,6 @@ class S3ReadAheadByteChannel implements ReadableByteChannel {
 
             readAheadBuffersCache.invalidateAll(priorIndexes);
         }
-    }
-
-    @Override
-    public boolean isOpen() {
-        return open;
-    }
-
-    @Override
-    public void close() {
-        open = false;
-        readAheadBuffersCache.invalidateAll();
-        readAheadBuffersCache.cleanUp();
     }
 
     /**
