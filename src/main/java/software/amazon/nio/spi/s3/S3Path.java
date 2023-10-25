@@ -115,14 +115,6 @@ class S3Path implements Path {
     }
 
     /**
-     * The name of the S3 bucket that represents the root ("/") of this Path
-     * @return the bucketName, equivalent to <code>getFileSystem().bucketName()</code>
-     */
-    String bucketName() {
-        return fileSystem.bucketName();
-    }
-
-    /**
      * Tells whether this path is absolute.
      *
      * <p> An absolute path is complete in that it doesn't need to be combined
@@ -133,14 +125,6 @@ class S3Path implements Path {
     @Override
     public boolean isAbsolute() {
         return pathRepresentation.isAbsolute();
-    }
-
-    /**
-     * Is the path inferred to be an S3 directory?
-     * @return true if the path can be inferred to be a directory
-     */
-    boolean isDirectory() {
-        return pathRepresentation.isDirectory();
     }
 
     /**
@@ -814,6 +798,22 @@ class S3Path implements Path {
     @Override
     public String toString() {
         return pathRepresentation.toString();
+    }
+
+    /**
+     * The name of the S3 bucket that represents the root ("/") of this Path
+     * @return the bucketName, equivalent to <code>getFileSystem().bucketName()</code>
+     */
+    String bucketName() {
+        return fileSystem.bucketName();
+    }
+
+    /**
+     * Is the path inferred to be an S3 directory?
+     * @return true if the path can be inferred to be a directory
+     */
+    boolean isDirectory() {
+        return pathRepresentation.isDirectory();
     }
 
     /**
