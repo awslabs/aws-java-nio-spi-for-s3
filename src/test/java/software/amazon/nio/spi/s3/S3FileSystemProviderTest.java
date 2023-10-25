@@ -472,12 +472,9 @@ public class S3FileSystemProviderTest {
     @Test
     public void readAttributes() {
         S3Path foo = fs.getPath("/foo");
-        final BasicFileAttributes BasicFileAttributes = provider.readAttributes(foo, BasicFileAttributes.class);
-        assertNotNull(BasicFileAttributes);
-        assertTrue(BasicFileAttributes instanceof S3BasicFileAttributes);
-
-        final S3BasicFileAttributes s3BasicFileAttributes = provider.readAttributes(foo, S3BasicFileAttributes.class);
-        assertNotNull(s3BasicFileAttributes);
+        final BasicFileAttributes basicFileAttributes = provider.readAttributes(foo, BasicFileAttributes.class);
+        assertNotNull(basicFileAttributes);
+        assertTrue(basicFileAttributes instanceof S3BasicFileAttributes);
     }
 
     @Test

@@ -47,7 +47,7 @@ class S3BasicFileAttributes implements BasicFileAttributes {
      * Constructor for the attributes of a path
      * @param path the path to represent the attributes of
      */
-    protected S3BasicFileAttributes(S3Path path){
+    S3BasicFileAttributes(S3Path path){
         this.path = path;
         this.client = path.getFileSystem().client();
         this.bucketName = path.bucketName();

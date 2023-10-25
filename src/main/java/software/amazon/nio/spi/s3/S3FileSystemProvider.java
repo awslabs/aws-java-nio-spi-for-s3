@@ -789,7 +789,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      *
      * @param path    the path to the file
      * @param type    the {@code Class} of the file attributes required
-     *                to read. Supported types are {@code BasicFileAttributes} and {@code S3FileAttributes}
+     *                to read. Supported types are {@code BasicFileAttributes}
      * @param options options indicating how symbolic links are handled
      * @return the file attributes or {@code null} if {@code path} is inferred to be a directory.
      */
@@ -798,7 +798,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         Objects.requireNonNull(type);
         S3Path s3Path = checkPath(path);
 
-        if (type.equals(BasicFileAttributes.class) || type.equals(S3BasicFileAttributes.class)) {
+        if (type.equals(BasicFileAttributes.class)) {
             @SuppressWarnings("unchecked")
             A a = (A) new S3BasicFileAttributes(s3Path);
             return a;
@@ -840,7 +840,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final Set<String> attrSet = Arrays.stream(attributes.split(","))
                 .map(attr -> attr.replaceAll("^s3:", ""))
                 .collect(Collectors.toSet());
-        return readAttributes(path, S3BasicFileAttributes.class, options)
+        return ((S3BasicFileAttributes)readAttributes(path, BasicFileAttributes.class, options))
                 .asMap(attrSet::contains);
     }
 
