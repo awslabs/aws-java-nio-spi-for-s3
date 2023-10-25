@@ -774,8 +774,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
         Objects.requireNonNull(type, "the type of attribute view required cannot be null");
         S3Path s3Path = checkPath(path);
 
-        if (type.equals(BasicFileAttributeView.class) || type.equals(S3FileAttributeView.class)) {
-            @SuppressWarnings("unchecked") final V v = (V) new S3FileAttributeView(s3Path);
+        if (type.equals(BasicFileAttributeView.class) || type.equals(S3BasicFileAttributeView.class)) {
+            @SuppressWarnings("unchecked") final V v = (V) new S3BasicFileAttributeView(s3Path);
             return v;
         } else {
             throw new IllegalArgumentException("type must be BasicFileAttributeView.class or S3FileAttributeView.class");

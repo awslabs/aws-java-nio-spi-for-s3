@@ -9,11 +9,11 @@ import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 
-public class S3FileAttributeView implements BasicFileAttributeView {
+public class S3BasicFileAttributeView implements BasicFileAttributeView {
 
     private final S3Path path;
 
-    protected S3FileAttributeView(S3Path path){
+    protected S3BasicFileAttributeView(S3Path path){
         this.path = path;
     }
 

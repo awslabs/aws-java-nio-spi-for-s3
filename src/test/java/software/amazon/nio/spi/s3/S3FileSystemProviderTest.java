@@ -460,9 +460,9 @@ public class S3FileSystemProviderTest {
         S3Path foo = fs.getPath("/foo");
         final BasicFileAttributeView fileAttributeView = provider.getFileAttributeView(foo, BasicFileAttributeView.class);
         assertNotNull(fileAttributeView);
-        assertTrue(fileAttributeView instanceof S3FileAttributeView);
+        assertTrue(fileAttributeView instanceof S3BasicFileAttributeView);
 
-        final S3FileAttributeView fileAttributeView1 = provider.getFileAttributeView(foo, S3FileAttributeView.class);
+        final S3BasicFileAttributeView fileAttributeView1 = provider.getFileAttributeView(foo, S3BasicFileAttributeView.class);
         assertNotNull(fileAttributeView1);
     }
 
