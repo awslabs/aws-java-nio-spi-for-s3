@@ -485,7 +485,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         S3Path s3Directory = checkPath(dir);
         S3FileSystem fs = s3Directory.getFileSystem();
         try {
-            String directoryKey = (s3Directory).toRealPath(NOFOLLOW_LINKS).getKey();
+            String directoryKey = s3Directory.toRealPath(NOFOLLOW_LINKS).getKey();
             if (!directoryKey.endsWith(S3Path.PATH_SEPARATOR) && !directoryKey.isEmpty()) {
                 directoryKey = directoryKey + S3Path.PATH_SEPARATOR;
             }
@@ -1135,8 +1135,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     protected static S3Path checkPath(Path obj) {
-        if (obj == null)
-            throw new NullPointerException();
+        Objects.requireNonNull(obj);
         if (!(obj instanceof S3Path))
             throw new ProviderMismatchException();
         return (S3Path)obj;
