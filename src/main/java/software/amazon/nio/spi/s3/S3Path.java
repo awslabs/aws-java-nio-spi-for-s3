@@ -5,8 +5,6 @@
 
 package software.amazon.nio.spi.s3;
 
-import software.amazon.awssdk.services.s3.model.S3Object;
-
 import java.io.File;
 import java.io.IOError;
 import java.io.UnsupportedEncodingException;
@@ -51,17 +49,6 @@ class S3Path implements Path {
     }
 
     /**
-     * Construct a path from an S3 object in the bucket represented by the filesystem
-     * @param fs the filesystem that holds (or will hold) the object represented by {@code s3Object}
-     * @param s3Object the object
-     * @return a new {@code S3Path}
-     */
-    public static S3Path getPath(S3FileSystem fs, S3Object s3Object){
-        return getPath(fs, s3Object.key());
-    }
-
-
-    /**
      * Construct a Path in the parent FileSystem using the POSIX style.
      * The path string is assumed to follow the POSIX form
      * with the "root" of the bucket being represented by "/". The supplied path should not
@@ -82,7 +69,7 @@ class S3Path implements Path {
      * @throws InvalidPathException if the Path cannot be constructed
      * @return a new S3Path
      */
-    public static S3Path getPath(S3FileSystem fsForBucket, String first, String... more) {
+    static S3Path getPath(S3FileSystem fsForBucket, String first, String... more) {
         if(fsForBucket == null)  throw new IllegalArgumentException("The S3FileSystem may not be null");
         if(first == null ){
           throw new IllegalArgumentException("first element of the path may not be null");
@@ -131,7 +118,7 @@ class S3Path implements Path {
      * The name of the S3 bucket that represents the root ("/") of this Path
      * @return the bucketName, equivalent to <code>getFileSystem().bucketName()</code>
      */
-    public String bucketName() {
+    String bucketName() {
         return fileSystem.bucketName();
     }
 
@@ -150,9 +137,9 @@ class S3Path implements Path {
 
     /**
      * Is the path inferred to be an S3 directory?
-     * @return true if the path can be inferrred to be a directory
+     * @return true if the path can be inferred to be a directory
      */
-    public boolean isDirectory() {
+    boolean isDirectory() {
         return pathRepresentation.isDirectory();
     }
 
@@ -833,7 +820,7 @@ class S3Path implements Path {
      * The key of the object for S3. Essentially the "real path" with the "/" prefix and bucket name removed.
      * @return the key
      */
-    public String getKey(){
+    String getKey(){
         if(isEmpty()) return "";
         String s = toRealPath(NOFOLLOW_LINKS).toString();
         if(s.startsWith(PATH_SEPARATOR+bucketName())) {
