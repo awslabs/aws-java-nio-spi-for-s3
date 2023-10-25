@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package software.amazon.nio.spi.s3x;
+package software.amazon.nio.spi.s3;
 
 import java.net.URI;
 import java.nio.file.FileSystemAlreadyExistsException;
@@ -31,10 +31,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.BDDAssertions.then;
 import org.junit.jupiter.api.Test;
-import software.amazon.nio.spi.s3.FakeAsyncS3ClientBuilder;
-import software.amazon.nio.spi.s3.S3FileSystem;
-import software.amazon.nio.spi.s3.S3Path;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
+import software.amazon.nio.spi.s3x.S3XFileSystemProvider;
 
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_REGION_PROPERTY;
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_ACCESS_KEY_PROPERTY;

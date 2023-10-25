@@ -26,15 +26,14 @@ import java.util.List;
 import java.util.Objects;
 
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
+import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
 import static software.amazon.nio.spi.s3.S3FileSystemProvider.checkPath;
 
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 @SuppressWarnings("NullableProblems")
-public class S3Path implements Path {
-
-    public static final String PATH_SEPARATOR = "/";
+class S3Path implements Path {
 
     private final S3FileSystem fileSystem;
     private final PosixLikePathRepresentation pathRepresentation;
@@ -837,10 +836,10 @@ public class S3Path implements Path {
     public String getKey(){
         if(isEmpty()) return "";
         String s = toRealPath(NOFOLLOW_LINKS).toString();
-        if(s.startsWith(S3Path.PATH_SEPARATOR+bucketName())) {
-                s = s.replaceFirst(S3Path.PATH_SEPARATOR+bucketName(), "");
+        if(s.startsWith(PATH_SEPARATOR+bucketName())) {
+                s = s.replaceFirst(PATH_SEPARATOR+bucketName(), "");
         }
-        while(s.startsWith(S3Path.PATH_SEPARATOR)){
+        while(s.startsWith(PATH_SEPARATOR)){
             s = s.substring(1);
         }
         return s;

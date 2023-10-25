@@ -25,6 +25,8 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 import software.amazon.nio.spi.s3.util.S3FileSystemInfo;
 
+import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
+
 /**
  * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
  *
@@ -192,7 +194,7 @@ public class S3FileSystem extends FileSystem {
      */
     @Override
     public String getSeparator() {
-        return S3Path.PATH_SEPARATOR;
+        return PATH_SEPARATOR;
     }
 
     /**

@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
+
 /**
  * A class to hold a string representation of a Posix like path pointing to an S3 object or "directory". Provide methods
  * to obtain views of the representation according to Posix conventions and the directories implicit in S3 paths.
@@ -21,9 +23,9 @@ import java.util.stream.Collectors;
  */
 class PosixLikePathRepresentation {
 
-    public static final PosixLikePathRepresentation ROOT = new PosixLikePathRepresentation("/");
+    public static final PosixLikePathRepresentation ROOT = new PosixLikePathRepresentation(PATH_SEPARATOR);
     public static final PosixLikePathRepresentation EMPTY_PATH = new PosixLikePathRepresentation("");
-    public static final char PATH_SEPARATOR_CHAR = S3Path.PATH_SEPARATOR.charAt(0);
+    public static final char PATH_SEPARATOR_CHAR = PATH_SEPARATOR.charAt(0);
 
     private String path;
 
@@ -77,10 +79,10 @@ class PosixLikePathRepresentation {
         String path = allParts.stream()
                 .flatMap(part -> Arrays.stream(part.split("/+")))
                 .filter(p -> !p.isEmpty())
-                .collect(Collectors.joining(S3Path.PATH_SEPARATOR));
+                .collect(Collectors.joining(PATH_SEPARATOR));
 
-        if (endsWithSeparator && !hasTrailingSeparatorString(path)) path = path + S3Path.PATH_SEPARATOR;
-        if (startsWithSeparator && !isAbsoluteString(path)) path = S3Path.PATH_SEPARATOR + path;
+        if (endsWithSeparator && !hasTrailingSeparatorString(path)) path = path + PATH_SEPARATOR;
+        if (startsWithSeparator && !isAbsoluteString(path)) path = PATH_SEPARATOR + path;
         return path;
     }
 
@@ -104,7 +106,7 @@ class PosixLikePathRepresentation {
     }
 
     private static boolean isRootString(String path) {
-        return path.equals(S3Path.PATH_SEPARATOR);
+        return path.equals(PATH_SEPARATOR);
     }
 
     /**
@@ -171,7 +173,7 @@ class PosixLikePathRepresentation {
     public List<String> elements() {
         if (this.isRoot()) {return Collections.emptyList();}
 
-        return Arrays.stream(path.split(S3Path.PATH_SEPARATOR))
+        return Arrays.stream(path.split(PATH_SEPARATOR))
                 .filter(s -> !s.trim().isEmpty())
                 .collect(Collectors.toList());
     }

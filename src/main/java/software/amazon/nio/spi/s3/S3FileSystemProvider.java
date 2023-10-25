@@ -58,6 +58,7 @@ import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static software.amazon.awssdk.http.HttpStatusCode.FORBIDDEN;
 import static software.amazon.awssdk.http.HttpStatusCode.NOT_FOUND;
+import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExceptionOnTimeOut;
 
@@ -350,7 +351,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         String dirName = s3Path.toAbsolutePath().getKey();
 
         if (!s3Path.isDirectory()) {
-            dirName = dirName + S3Path.PATH_SEPARATOR;
+            dirName = dirName + PATH_SEPARATOR;
         }
 
         final String bucketName = s3Path.bucketName();
@@ -360,7 +361,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final ListObjectsV2Publisher listObjectsV2Publisher = fs.client().listObjectsV2Paginator(req -> req
                 .bucket(bucketName)
                 .prefix(finalDirName)
-                .delimiter(S3Path.PATH_SEPARATOR));
+                .delimiter(PATH_SEPARATOR));
 
         final Iterator<Path> iterator = pathIteratorForPublisher(filter, fs, finalDirName, listObjectsV2Publisher);
 
@@ -436,8 +437,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
         S3FileSystem fs = s3Directory.getFileSystem();
         try {
             String directoryKey = s3Directory.toRealPath(NOFOLLOW_LINKS).getKey();
-            if (!directoryKey.endsWith(S3Path.PATH_SEPARATOR) && !directoryKey.isEmpty()) {
-                directoryKey = directoryKey + S3Path.PATH_SEPARATOR;
+            if (!directoryKey.endsWith(PATH_SEPARATOR) && !directoryKey.isEmpty()) {
+                directoryKey = directoryKey + PATH_SEPARATOR;
             }
 
             long timeOut = TIMEOUT_TIME_LENGTH_1;
@@ -542,7 +543,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
                 for (List<ObjectIdentifier> keyList : keys) {
                     for (ObjectIdentifier objectIdentifier : keyList) {
-                        S3Path resolvedS3TargetPath = s3TargetPath.resolve(objectIdentifier.key().replaceFirst(prefix + S3Path.PATH_SEPARATOR, ""));
+                        S3Path resolvedS3TargetPath = s3TargetPath.resolve(objectIdentifier.key().replaceFirst(prefix + PATH_SEPARATOR, ""));
 
                         if (!copyOptions.contains(StandardCopyOption.REPLACE_EXISTING) && exists(s3Client, resolvedS3TargetPath)) {
                             throw new FileAlreadyExistsException("File already exists at the target key");
@@ -896,7 +897,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
                     .get(timeOut, unit);
             List<ObjectIdentifier> objects = response.contents()
                     .stream()
-                    .filter(s3Object -> s3Object.key().equals(prefix) || s3Object.key().startsWith(prefix + S3Path.PATH_SEPARATOR))
+                    .filter(s3Object -> s3Object.key().equals(prefix) || s3Object.key().startsWith(prefix + PATH_SEPARATOR))
                     .map(s3Object -> ObjectIdentifier.builder().key(s3Object.key()).build())
                     .collect(Collectors.toList());
             if (!objects.isEmpty()) {
