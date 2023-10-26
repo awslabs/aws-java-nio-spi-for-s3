@@ -905,7 +905,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
         return keys;
     }
-
+    
     protected static S3Path checkPath(Path obj) {
         Objects.requireNonNull(obj);
         if (!(obj instanceof S3Path))
