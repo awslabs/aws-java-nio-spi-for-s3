@@ -22,7 +22,6 @@ import java.nio.channels.SeekableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
-import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -40,10 +39,6 @@ class S3SeekableByteChannel implements SeekableByteChannel {
 
     private boolean closed;
     private long size = -1L;
-
-    S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client) throws IOException {
-        this(s3Path, s3Client, Collections.singleton(StandardOpenOption.READ));
-    }
 
     S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, Set<? extends OpenOption> options) throws IOException {
         this(s3Path, s3Client, 0L, options, null, null);
