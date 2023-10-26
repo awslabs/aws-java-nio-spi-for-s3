@@ -45,41 +45,8 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
         this(s3Path, s3Client, Collections.singleton(StandardOpenOption.READ));
     }
 
-    /**
-     * @deprecated startAt is only a valid parameter for the read mode and is
-     * therefore discouraged to be used during creation of the channel
-     * @param s3Client the s3 client to use to obtain bytes for the byte channel
-     * @param s3Path the path to the file
-     * @param startAt the position to start at
-     * @throws IOException if there is an error creating the channel
-     */
-    @Deprecated
-    protected S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, long startAt) throws IOException {
-        this(s3Path, s3Client, startAt, Collections.singleton(StandardOpenOption.READ), null, null);
-    }
-
-    /**
-     * @deprecated startAt is only a valid parameter for the read mode and is
-     * therefore discouraged to be used during creation of the channel
-     * @param s3Path the path to the file
-     * @param startAt the position to start at
-     * @throws IOException if there is an error creating the channel
-     */
-    @Deprecated
-    protected S3SeekableByteChannel(S3Path s3Path, long startAt) throws IOException {
-        this(s3Path, s3Path.getFileSystem().client(), startAt);
-    }
-
-    protected S3SeekableByteChannel(S3Path s3Path) throws IOException {
-        this(s3Path, s3Path.getFileSystem().client(), Collections.singleton(StandardOpenOption.READ));
-    }
-
     protected S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, Set<? extends OpenOption> options) throws IOException {
         this(s3Path, s3Client, 0L, options, null, null);
-    }
-
-    protected S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, Set<? extends OpenOption> options, long timeout, TimeUnit timeUnit) throws IOException {
-        this(s3Path, s3Client, 0L, options, timeout, timeUnit);
     }
 
     private S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, long startAt, Set<? extends OpenOption> options, Long timeout, TimeUnit timeUnit) throws IOException {

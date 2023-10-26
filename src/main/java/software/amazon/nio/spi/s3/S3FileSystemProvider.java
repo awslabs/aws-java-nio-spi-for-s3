@@ -332,56 +332,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     *
-     * @deprecated in favour of using a proper S3ClientProvider in S3FileSystem.
-     *             For instance, instead of the following code:
-     *             <pre>
-     *             S3FileSystemProvider p = ...;
-     *             S3Path path = ...;
-     *             S3AsyncClient s3 = ...;
-     *             Set&lt;OpenOption&gt; options = ...;
-     *
-     *             p.newByteChannel(s3, path, options);
-     *             </pre>
-     *             something equivalent to the below should be used:
-     *             <pre>
-     *             S3FileSystemProvider p = new MyFileSystemProvider(new MyClientProvider());
-     *             S3Path path = ...;
-     *
-     *             p.newByteChannel(path, filter);
-     *             </pre>
-     */
-    @Deprecated
-    protected SeekableByteChannel newByteChannel(S3AsyncClient client, Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
-        return this.newByteChannel(null, path, options, attrs);
-    }
-
-    /**
-     *
-     * @deprecated in favour of using a proper S3ClientProvider in S3FileSystem.
-     *             For instance, instead of the following code:
-     *             <pre>
-     *             S3FileSystemProvider p = ...;
-     *             S3Path dir = ...;
-     *             S3AsyncClient s3 = ...;
-     *             DirectoryStream filter = ...;
-     *
-     *             p.newDirectoryStream(s3, path, filter);
-     *             </pre>
-     *             something equivalent to the below should be used:
-     *             <pre>
-     *             S3FileSystemProvider p = new MyFileSystemProvider(new MyClientProvider());
-     *             S3Path dir = ...;
-     *
-     *             p.newDirectoryStreampath, filter);
-     *             </pre>
-     */
-    @Deprecated
-    protected DirectoryStream<Path> newDirectoryStream(S3AsyncClient s3Client, Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException, ExecutionException, InterruptedException {
-        return newDirectoryStream(dir, filter);
-    }
-
-    /**
      * Opens a directory, returning a {@code DirectoryStream} to iterate over
      * the entries in the directory. This method works in exactly the manner
      * specified by the {@link
@@ -511,30 +461,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     *
-     * @deprecated in favour of using a proper S3ClientProvider in S3FileSystem.
-     *             For instance, instead of the following code:
-     *             <pre>
-     *             S3FileSystemProvider p = ...;
-     *             S3Path dir = ...;
-     *             S3AsyncClient s3 = ...;
-     *
-     *             p.createDirectory(s3, dir);
-     *             </pre>
-     *             something equivalent to the below should be used:
-     *             <pre>
-     *             S3FileSystemProvider p = new MyFileSystemProvider(new MyClientProvider());
-     *             S3Path dir = ...;
-     *
-     *             p.createDirectory(source, target);
-     *             </pre>
-     */
-     @Deprecated
-     protected void createDirectory(S3AsyncClient s3Client, Path dir, FileAttribute<?>... attrs) throws IOException, ExecutionException, InterruptedException {
-         createDirectory(forceAwsClient(dir, s3Client), attrs);
-     }
-
-    /**
      * Deletes a file. This method works in exactly the  manner specified by the
      * {@link Files#delete} method.
      *
@@ -574,32 +500,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
             throw new RuntimeException(e);
         }
     }
-
-    /**
-     *
-     * @deprecated in favour of using a proper S3ClientProvider in S3FileSystem.
-     *             For instance, instead of the following code:
-     *             <pre>
-     *             S3FileSystemProvider p = ...;
-     *             S3Path path = ...;
-     *             S3AsyncClient s3 = ...;
-     *
-     *             p.delete(s3, path);
-     *             </pre>
-     *             something equivalent to the below should be used:
-     *             <pre>
-     *             S3FileSystemProvider p = new MyFileSystemProvider(new MyClientProvider());
-     *             S3Path path = ...;
-     *
-     *             p.delete(path);
-     *             </pre>
-     */
-    @Deprecated
-    protected void delete(S3AsyncClient s3Client, Path path) throws IOException, ExecutionException, InterruptedException {
-        delete(forceAwsClient(path, s3Client));
-    }
-
-
 
     /**
      * Copy a file to a target file. This method works in exactly the manner
@@ -672,30 +572,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
     }
 
-    /**
-     *
-     * @deprecated in favour of using a proper S3ClientProvider in S3FileSystem.
-     *             For instance, instead of the following code:
-     *             <pre>
-     *             S3FileSystemProvider p = ...;
-     *             S3Path source = ..., target = ,,,;
-     *             S3AsyncClient s3 = ...;
-     *
-     *             p.copy(s3, source, target);
-     *             </pre>
-     *             something equivalent to the below should be used:
-     *             <pre>
-     *             S3FileSystemProvider p = new MyFileSystemProvider(new MyClientProvider());
-     *             S3Path source = ..., target = ,,,;
-     *
-     *             p.copy(source, target);
-     *             </pre>
-     */
-    @Deprecated
-    protected void copy(S3AsyncClient s3Client, Path source, Path target, CopyOption... options) throws IOException, ExecutionException, InterruptedException {
-        copy(forceAwsClient(source, s3Client), target, options);
-    }
-
     protected boolean exists(S3AsyncClient s3Client, S3Path path) throws InterruptedException, TimeoutException {
         try {
             s3Client.headObject(HeadObjectRequest.builder().bucket(path.bucketName()).key(path.getKey()).build())
@@ -720,30 +596,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
     public void move(Path source, Path target, CopyOption... options) throws IOException {
         this.copy(source, target, options);
         this.delete(source);
-    }
-
-    /**
-     *
-     * @deprecated in favour of using a proper S3ClientProvider in S3FileSystem.
-     *             For instance, instead of the following code:
-     *             <pre>
-     *             S3FileSystemProvider p = ...;
-     *             S3Path source = ..., target = ,,,;
-     *             S3AsyncClient s3 = ...;
-     *
-     *             p.move(s3, source, target);
-     *             </pre>
-     *             something equivalent to the below should be used:
-     *             <pre>
-     *             S3FileSystemProvider p = new MyFileSystemProvider(new MyClientProvider());
-     *             S3Path source = ..., target = ,,,;
-     *
-     *             p.move(source, target);
-     *             </pre>
-     */
-    @Deprecated
-    protected void move(S3AsyncClient s3Client, Path source, Path target, CopyOption... options) throws IOException, ExecutionException, InterruptedException {
-        move(forceAwsClient(source, s3Client), target, options);
     }
 
     /**
@@ -904,30 +756,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     *
-     * @deprecated in favour of using a proper S3ClientProvider in S3FileSystem.
-     *             For instance, instead of the following code:
-     *             <pre>
-     *             S3FileSystemProvider p = ...;
-     *             S3Path path = ...;
-     *             S3AsyncClient s3 = ...;
-     *
-     *             p.checkAccess(s3, dir);
-     *             </pre>
-     *             something equivalent to the below should be used:
-     *             <pre>
-     *             S3FileSystemProvider p = new MyFileSystemProvider(new MyClientProvider());
-     *             S3Path path = ...;
-     *
-     *             p.checkAccess(path);
-     *             </pre>
-     */
-    @Deprecated
-    protected void checkAccess(S3AsyncClient s3Client, Path path, AccessMode... modes) throws IOException, ExecutionException, InterruptedException {
-        checkAccess(forceAwsClient(path, s3Client), modes);
-    }
-
-    /**
      * Returns a file attribute view of a given type. This method works in
      * exactly the manner specified by the {@link Files#getFileAttributeView}
      * method.
@@ -980,30 +808,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     *
-     * @deprecated in favour of using a proper S3ClientProvider in S3FileSystem.
-     *             For instance, instead of the following code:
-     *             <pre>
-     *             S3FileSystemProvider p = ...;
-     *             S3Path path = ...;
-     *             S3AsyncClient s3 = ...;
-     *
-     *             p.readAttributes(s3, dir, type);
-     *             </pre>
-     *             something equivalent to the below should be used:
-     *             <pre>
-     *             S3FileSystemProvider p = new MyFileSystemProvider(new MyClientProvider());
-     *             S3Path path = ...;
-     *
-     *             p.readAttributes(path, type);
-     *             </pre>
-     */
-    @Deprecated
-    protected <A extends BasicFileAttributes> A readAttributes(S3AsyncClient s3AsyncClient, Path path, Class<A> type, LinkOption... options) {
-        return readAttributes(forceAwsClient(path, s3AsyncClient), type, options);
-    }
-
-    /**
      * Reads a set of file attributes as a bulk operation. Largely equivalent to {@code readAttributes(Path path, Class<A> type, LinkOption... options)}
      * where the returned object is a map of method names (attributes) to values, filtered on the comma separated {@code attributes}.
      *
@@ -1040,30 +844,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
                 .collect(Collectors.toSet());
         return readAttributes(path, S3BasicFileAttributes.class, options)
                 .asMap(attrSet::contains);
-    }
-
-    /**
-     *
-     * @deprecated in favour of using a proper S3ClientProvider in S3FileSystem.
-     *             For instance, instead of the following code:
-     *             <pre>
-     *             S3FileSystemProvider p = ...;
-     *             S3Path path = ...;
-     *             S3AsyncClient s3 = ...;
-     *
-     *             p.readAttributes(s3, dir, attributes);
-     *             </pre>
-     *             something equivalent to the below should be used:
-     *             <pre>
-     *             S3FileSystemProvider p = new MyFileSystemProvider(new MyClientProvider());
-     *             S3Path path = ...;
-     *
-     *             p.readAttributes(path, attributes);
-     *             </pre>
-     */
-    @Deprecated
-    protected void readAttributes(S3AsyncClient client, Path path, String attributes, LinkOption... options) {
-        readAttributes(forceAwsClient(path, client), attributes, options);
     }
 
     /**
@@ -1126,12 +906,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
             continuationToken = response.nextContinuationToken();
         }
         return keys;
-    }
-
-    private S3Path forceAwsClient(final Path path, final S3AsyncClient client) {
-        S3Path p = (S3Path)path;
-        p.getFileSystem().clientProvider(new FixedS3ClientProvider(client));
-        return p;
     }
 
     protected static S3Path checkPath(Path obj) {
