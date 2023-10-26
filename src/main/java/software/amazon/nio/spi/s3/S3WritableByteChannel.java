@@ -31,10 +31,6 @@ class S3WritableByteChannel implements WritableByteChannel {
 
     private boolean open;
 
-    S3WritableByteChannel(S3Path path, S3AsyncClient client, Set<? extends OpenOption> options) throws IOException {
-        this(path, client, options, null, null);
-    }
-
     S3WritableByteChannel(S3Path path, S3AsyncClient client, Set<? extends OpenOption> options, Long timeout, TimeUnit timeUnit) throws IOException {
         Objects.requireNonNull(path);
         Objects.requireNonNull(client);
