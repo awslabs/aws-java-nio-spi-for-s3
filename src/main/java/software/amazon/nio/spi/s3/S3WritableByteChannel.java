@@ -21,7 +21,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class S3WritableByteChannel implements WritableByteChannel {
+class S3WritableByteChannel implements WritableByteChannel {
     private final S3AsyncClient client;
     private final S3Path path;
     private final Path tempFile;
@@ -31,12 +31,11 @@ public class S3WritableByteChannel implements WritableByteChannel {
 
     private boolean open;
 
-
-    public S3WritableByteChannel(S3Path path, S3AsyncClient client, Set<? extends OpenOption> options) throws IOException {
+    S3WritableByteChannel(S3Path path, S3AsyncClient client, Set<? extends OpenOption> options) throws IOException {
         this(path, client, options, null, null);
     }
 
-    public S3WritableByteChannel(S3Path path, S3AsyncClient client, Set<? extends OpenOption> options, Long timeout, TimeUnit timeUnit) throws IOException {
+    S3WritableByteChannel(S3Path path, S3AsyncClient client, Set<? extends OpenOption> options, Long timeout, TimeUnit timeUnit) throws IOException {
         Objects.requireNonNull(path);
         Objects.requireNonNull(client);
         this.timeout = timeout;
