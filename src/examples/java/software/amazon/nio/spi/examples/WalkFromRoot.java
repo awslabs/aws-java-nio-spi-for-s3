@@ -8,6 +8,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.stream.Stream;
 
 public class WalkFromRoot {
 
@@ -19,14 +20,25 @@ public class WalkFromRoot {
      * @throws IOException if a communication problem happens with the S3 service.
      */
     public static void main(String[] args) throws IOException {
+
+        if (args.length < 1){
+            System.err.println("Provide a bucket name to walk");
+            System.exit(1);
+        }
+
         String bucketName = args[0];
         if (!bucketName.startsWith("s3:") && !bucketName.startsWith("s3x:")) {
             bucketName = "s3://" + bucketName;
         }
-        final FileSystem s3 = FileSystems.newFileSystem(URI.create(bucketName), Collections.EMPTY_MAP);
+        try (FileSystem s3 = FileSystems.newFileSystem(URI.create(bucketName), Collections.emptyMap())) {
 
-        for (Path rootDir : s3.getRootDirectories()) {
-            Files.walk(rootDir).forEach(System.out::println);
+            assert s3.getClass().getName().contains("S3FileSystem");
+
+            for (Path rootDir : s3.getRootDirectories()) {
+                try (Stream<Path> pathStream = Files.walk(rootDir)) {
+                    pathStream.forEach(System.out::println);
+                }
+            }
         }
     }
 }
