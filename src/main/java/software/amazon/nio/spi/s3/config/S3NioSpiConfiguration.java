@@ -18,7 +18,6 @@ import java.util.Properties;
 import java.util.regex.Pattern;
 import software.amazon.awssdk.utils.Pair;
 
-import software.amazon.nio.spi.s3.util.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.services.s3.internal.BucketUtils;
