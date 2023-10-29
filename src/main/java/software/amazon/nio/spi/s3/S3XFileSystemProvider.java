@@ -16,17 +16,14 @@
 
 package software.amazon.nio.spi.s3;
 
-import java.net.URI;
-import software.amazon.nio.spi.s3.S3FileSystemProvider;
 import software.amazon.nio.spi.s3.util.S3FileSystemInfo;
 import software.amazon.nio.spi.s3x.util.S3XFileSystemInfo;
 
-/**
- *
- */
+import java.net.URI;
+
 public class S3XFileSystemProvider extends S3FileSystemProvider {
 
-    public static final String SCHEME = "s3x";
+    static final String SCHEME = "s3x";
 
     /**
      * Returns the URI scheme that identifies this provider.
@@ -42,11 +39,8 @@ public class S3XFileSystemProvider extends S3FileSystemProvider {
      * This overrides the default AWS implementation to be able to address 3rd
      * party S3 services. To do so, we relax the default S3 URI format to the
      * following:
-     *
      * {@code
-     *
      * s3x://[accessKey:accessSecret@]endpoint/bucket/key
-     *
      * }
      *
      * Please note that the authority part of the URI (endpoint above) is always
@@ -59,7 +53,7 @@ public class S3XFileSystemProvider extends S3FileSystemProvider {
      * @return the information extracted from {@code uri}
      */
     @Override
-    protected S3FileSystemInfo fileSystemInfo(URI uri) {
+    S3FileSystemInfo fileSystemInfo(URI uri) {
         return new S3XFileSystemInfo(uri);
     }
 
