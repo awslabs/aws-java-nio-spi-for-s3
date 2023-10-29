@@ -164,7 +164,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @SuppressWarnings("NullableProblems")
     @Override
-    public S3Path getPath(URI uri)
+    public Path getPath(URI uri)
     throws IllegalArgumentException, FileSystemNotFoundException, SecurityException {
         Objects.requireNonNull(uri);
         return getFileSystem(uri, true).getPath(uri.getScheme() + ":/" + uri.getPath());
