@@ -838,7 +838,7 @@ class S3Path implements Path {
         final boolean isAbsolute;
         final boolean hasTrailingSeparator;
 
-        public S3PathIterator(Iterator<String> delegate, boolean isAbsolute, boolean hasTrailingSeparator){
+        private S3PathIterator(Iterator<String> delegate, boolean isAbsolute, boolean hasTrailingSeparator){
             this.delegate = delegate;
             this.isAbsolute = isAbsolute;
             this.hasTrailingSeparator = hasTrailingSeparator;
