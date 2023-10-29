@@ -30,14 +30,14 @@ import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
  *
  */
 class S3FileSystem extends FileSystem {
-    final Logger logger = LoggerFactory.getLogger(this.getClass());
+    static final Logger logger = LoggerFactory.getLogger(S3FileSystem.class);
 
     /**
      * View required by Java NIO
      */
-    public static final String BASIC_FILE_ATTRIBUTE_VIEW = "basic";
+    static final String BASIC_FILE_ATTRIBUTE_VIEW = "basic";
 
-    protected S3ClientProvider clientProvider;
+    S3ClientProvider clientProvider;
 
     private final String bucketName;
     private final S3FileSystemProvider provider;
@@ -54,9 +54,7 @@ class S3FileSystem extends FileSystem {
      * @param config the configuration to use; can be null to use a default configuration
      *
      */
-    protected S3FileSystem(S3FileSystemProvider provider, S3NioSpiConfiguration config) {
-        super();
-
+    S3FileSystem(S3FileSystemProvider provider, S3NioSpiConfiguration config) {
         configuration = (config == null) ? new S3NioSpiConfiguration() : config;
         bucketName = configuration.getBucketName();
 
@@ -82,7 +80,7 @@ class S3FileSystem extends FileSystem {
      *
      * @return the configuration object for this file system
      */
-    public S3NioSpiConfiguration configuration() {
+    S3NioSpiConfiguration configuration() {
         return configuration;
     }
 
@@ -107,7 +105,7 @@ class S3FileSystem extends FileSystem {
     /**
      * @return the S3Client associated with this FileSystem
      */
-    public S3AsyncClient client() {
+    S3AsyncClient client() {
         if (client == null) {
             client = clientProvider.generateAsyncClient(bucketName);
         }
@@ -119,7 +117,7 @@ class S3FileSystem extends FileSystem {
      * Obtain the name of the bucket represented by this <code>FileSystem</code> instance
      * @return the bucket name
      */
-    public String bucketName() {
+    String bucketName() {
         return bucketName;
     }
 
@@ -424,15 +422,15 @@ class S3FileSystem extends FileSystem {
      * The list of currently open channels. Exposed mainly for testing
      * @return a read only view wrapping the set of currently open channels.
      */
-    protected Set<Channel> getOpenChannels(){
+    Set<Channel> getOpenChannels(){
         return Collections.unmodifiableSet(openChannels);
     }
 
-    protected void registerOpenChannel(S3SeekableByteChannel channel){
+    void registerOpenChannel(S3SeekableByteChannel channel){
         openChannels.add(channel);
     }
 
-    protected boolean deregisterClosedChannel(S3SeekableByteChannel closedChannel){
+    boolean deregisterClosedChannel(S3SeekableByteChannel closedChannel){
         assert !closedChannel.isOpen();
 
         return openChannels.remove(closedChannel);
