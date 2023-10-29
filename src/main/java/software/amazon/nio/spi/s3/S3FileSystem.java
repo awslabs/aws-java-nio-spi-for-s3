@@ -75,53 +75,6 @@ class S3FileSystem extends FileSystem {
     }
 
     /**
-     * Returns the configuration object passed in the constructor or created
-     * by default.
-     *
-     * @return the configuration object for this file system
-     */
-    S3NioSpiConfiguration configuration() {
-        return configuration;
-    }
-
-    /**
-     * Returns the client provider used to build aws clients
-     *
-     * @return the client provider
-     */
-    public S3ClientProvider clientProvider() {
-        return clientProvider;
-    }
-
-    /**
-     * Sets the client provider to use to build aws clients
-     *
-     * @param clientProvider the client provider
-     */
-    public void clientProvider(S3ClientProvider clientProvider) {
-        this.clientProvider = clientProvider;
-    }
-
-    /**
-     * @return the S3Client associated with this FileSystem
-     */
-    S3AsyncClient client() {
-        if (client == null) {
-            client = clientProvider.generateAsyncClient(bucketName);
-        }
-
-        return client;
-    }
-
-    /**
-     * Obtain the name of the bucket represented by this <code>FileSystem</code> instance
-     * @return the bucket name
-     */
-    String bucketName() {
-        return bucketName;
-    }
-
-    /**
      * Closes this file system.
      *
      * <p> After a file system is closed then all subsequent access to the file
@@ -416,6 +369,53 @@ class S3FileSystem extends FileSystem {
     @Override
     public WatchService newWatchService() {
         throw new UnsupportedOperationException("This method is not yet supported. Please raise a feature request describing your use case");
+    }
+
+    /**
+     * Returns the configuration object passed in the constructor or created
+     * by default.
+     *
+     * @return the configuration object for this file system
+     */
+    S3NioSpiConfiguration configuration() {
+        return configuration;
+    }
+
+    /**
+     * Returns the client provider used to build aws clients
+     *
+     * @return the client provider
+     */
+    public S3ClientProvider clientProvider() {
+        return clientProvider;
+    }
+
+    /**
+     * Sets the client provider to use to build aws clients
+     *
+     * @param clientProvider the client provider
+     */
+    public void clientProvider(S3ClientProvider clientProvider) {
+        this.clientProvider = clientProvider;
+    }
+
+    /**
+     * @return the S3Client associated with this FileSystem
+     */
+    S3AsyncClient client() {
+        if (client == null) {
+            client = clientProvider.generateAsyncClient(bucketName);
+        }
+
+        return client;
+    }
+
+    /**
+     * Obtain the name of the bucket represented by this <code>FileSystem</code> instance
+     * @return the bucket name
+     */
+    String bucketName() {
+        return bucketName;
     }
 
     /**
