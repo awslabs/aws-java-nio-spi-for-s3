@@ -91,88 +91,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return SCHEME;
     }
 
-    /**
-     * Constructs a new {@code FileSystem} object identified by a URI. This
-     * method is invoked by the {@link FileSystems#newFileSystem(URI, Map)}
-     * method to open a new file system identified by a URI.
-     *
-     * <p> The {@code uri} parameter is an absolute, hierarchical URI, with a
-     * scheme equal (without regard to case) to the scheme supported by this
-     * provider. The exact form of the URI is highly provider dependent. The
-     * {@code env} parameter is a map of provider specific properties to configure
-     * the file system.
-     *
-     * <p> This method throws {@link FileSystemAlreadyExistsException} if the
-     * file system already exists because it was previously created by an
-     * invocation of this method. Once a file system is {@link
-     * FileSystem#close closed} it is provider-dependent if the
-     * provider allows a new file system to be created with the same URI as a
-     * file system it previously created.
-     *
-     * @param uri URI reference
-     * @param env A map of provider specific properties to configure the file system;
-     *            may be empty
-     * @return A new file system
-     *
-     * @throws FileSystemAlreadyExistsException if the file system has already been created
-     * @throws IllegalArgumentException if the pre-conditions for the uri parameter are not met, or the env parameter does not contain properties required by the provider, or a property value is invalid
-     */
     @Override
-    public S3FileSystem newFileSystem(URI uri, Map<String, ?> env)
-    throws FileSystemAlreadyExistsException {
-
-        if (uri == null) {
-            throw new IllegalArgumentException("uri can not be null");
-        }
-        if (uri.getScheme() == null) {
-            throw new IllegalArgumentException(
-                String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
-            );
-        }
-        if (uri.getAuthority() == null) {
-            throw new IllegalArgumentException(
-                String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
-            );
-        }
-
-        S3FileSystem fs = null;
-
-        S3FileSystemInfo info = fileSystemInfo(uri);
-        if (cache.containsKey(info.key())) {
-            throw new FileSystemAlreadyExistsException("a file system already exists for '" + info.key() + "', use getFileSystem() instead");
-        }
-
-        S3NioSpiConfiguration config = new S3NioSpiConfiguration(env)
-            .withEndpoint(info.endpoint())
-            .withBucketName(info.bucket())
-            ;
-
-        if (info.accessKey() != null) {
-            config.withCredentials(info.accessKey(), info.accessSecret());
-        }
-
-        cache.put(
-            info.key(),
-            fs = new S3FileSystem(this, config)
-        );
-
-        return fs;
-    }
-
-    /**
-     * Same as newFileSystem(uri, Collections.EMPTY_MAP);
-     *
-     * @param uri URI reference
-     *
-     * @return newFileSystem(uri, Collections.EMPTY_MAP)
-     *
-     * @throws FileSystemAlreadyExistsException if the file system has already been created
-     * @throws IllegalArgumentException if the pre-conditions for the uri parameter
-     *         are not met, or the env parameter does not contain properties
-     *         required by the provider, or a property value is invalid
-     */
-    public S3FileSystem newFileSystem(URI uri) {
-        return newFileSystem(uri, Collections.EMPTY_MAP);
+    public S3FileSystem newFileSystem(URI uri, Map<String, ?> env) {
+        throw new UnsupportedOperationException("This method is not yet supported in v2.x. It might be implemented for bucket creation");
     }
 
     /**
@@ -235,9 +156,43 @@ public class S3FileSystemProvider extends FileSystemProvider {
             if (!create) {
                 throw new FileSystemNotFoundException("file system not found for '" + info.key() + "'");
             }
-            fs = newFileSystem(uri);
+            fs = forUri(uri);
         }
 
+        return fs;
+    }
+
+    S3FileSystem forUri(URI uri){
+        if (uri == null) {
+            throw new IllegalArgumentException("uri can not be null");
+        }
+        if (uri.getScheme() == null) {
+            throw new IllegalArgumentException(
+                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
+            );
+        }
+        if (uri.getAuthority() == null) {
+            throw new IllegalArgumentException(
+                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
+            );
+        }
+
+        S3FileSystemInfo info = fileSystemInfo(uri);
+        if (cache.containsKey(info.key())) {
+            throw new FileSystemAlreadyExistsException("a file system already exists for '" + info.key() + "', use getFileSystem() instead");
+        }
+
+        S3NioSpiConfiguration config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
+
+        if (info.accessKey() != null) {
+            config.withCredentials(info.accessKey(), info.accessSecret());
+        }
+
+        S3FileSystem fs = null;
+        cache.put(
+                info.key(),
+                fs = new S3FileSystem(this, config)
+        );
         return fs;
     }
 
@@ -905,7 +860,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
         return keys;
     }
-    
+
     protected static S3Path checkPath(Path obj) {
         Objects.requireNonNull(obj);
         if (!(obj instanceof S3Path))

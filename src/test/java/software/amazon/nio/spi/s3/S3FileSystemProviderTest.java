@@ -8,6 +8,7 @@ package software.amazon.nio.spi.s3;
 import java.io.IOException;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -59,6 +60,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
@@ -66,6 +68,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.nio.spi.s3x.S3XFileSystemProvider;
 
 @SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
@@ -95,57 +98,18 @@ public class S3FileSystemProviderTest {
     public void getScheme() {
         assertEquals("s3", provider.getScheme());
     }
-
+    
     @Test
-    public void newFileSystem() {
-        //
-        // A filesystem for pathUri has been created already ;)
-        //
-        assertThatCode(() -> provider.newFileSystem(URI.create(pathUri)))
-                .as("filesystem created twice!")
-                .isInstanceOf(FileSystemAlreadyExistsException.class)
-                .hasMessageContaining("'foo'");
-        //
-        // New AWS S3 file system
-        //
-        S3FileSystem fs = provider.newFileSystem(URI.create("s3://foo2/baa"));
-        assertNotNull(fs); assertEquals("foo2", fs.bucketName()); assertNull(fs.configuration().getCredentials());
-
-        //
-        // New AWS S3 file system with same bucket but different path
-        //
-        assertThatCode(() -> provider.newFileSystem(URI.create("s3://foo2/baa2")))
-                .as("filesystem created twice!")
-                .isInstanceOf(FileSystemAlreadyExistsException.class)
-                .hasMessageContaining("'foo2'");
-        provider.closeFileSystem(fs);
-    }
-
-    @Test
-    public void newFileSystemWrongArguments() {
-        //
-        // IllegalArgumentException if URI is not good
-        //
-
-        assertThatCode(() -> provider.newFileSystem(null))
+    public void getFileSystem() {
+        assertThatCode(() -> provider.getFileSystem(null))
                 .as("missing argument check!")
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("uri can not be null");
 
-        assertThatCode(() -> provider.newFileSystem(URI.create("noscheme")))
+        assertThatCode(() -> provider.getFileSystem(URI.create("s3:///")))
                 .as("missing argument check!")
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("invalid uri 'noscheme', please provide an uri as s3://bucket");
-
-        assertThatCode(() -> provider.newFileSystem(URI.create("s3:///")))
-                .as("missing argument check!")
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("invalid uri 's3:///', please provide an uri as s3://bucket");
-        
-    }
-
-    @Test
-    public void getFileSystem() {
+                .hasMessage("Bucket name cannot be null");
         //
         // A filesystem for pathUri has been created already ;)
         //
@@ -154,7 +118,7 @@ public class S3FileSystemProviderTest {
         //
         // New AWS S3 file system
         //
-        S3FileSystem cfs = provider.newFileSystem(URI.create("s3://foo2/baa"));
+        S3FileSystem cfs = provider.getFileSystem(URI.create("s3://foo2/baa"), true);
         FileSystem gfs = provider.getFileSystem(URI.create("s3://foo2"));
         assertNotSame(fs, gfs); assertSame(cfs, gfs);
         gfs = provider.getFileSystem(URI.create("s3://foo2"));
@@ -164,7 +128,7 @@ public class S3FileSystemProviderTest {
         //
         // New AWS S3 file system with same bucket but different path
         //
-        cfs = provider.newFileSystem(URI.create("s3://foo3"));
+        cfs = provider.getFileSystem(URI.create("s3://foo3"), true);
         gfs = provider.getFileSystem(URI.create("s3://foo3/dir"));
         assertNotSame(fs, gfs); assertSame(cfs, gfs);
         gfs = provider.getFileSystem(URI.create("s3://foo3/dir"));
@@ -516,4 +480,5 @@ public class S3FileSystemProviderTest {
 
         assertNull(BUILDER.forcePathStyle);
     }
+
 }

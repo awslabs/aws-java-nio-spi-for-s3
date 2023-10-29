@@ -47,7 +47,7 @@ public class S3PathTest {
 
     @BeforeEach
     public void init(){
-        fileSystem = provider.newFileSystem(URI.create(uriString));
+        fileSystem = provider.getFileSystem(URI.create(uriString), true);
         fileSystem.clientProvider(new FixedS3ClientProvider(mockClient));
         lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
@@ -207,7 +207,7 @@ public class S3PathTest {
 
         assertFalse(relativeObject.startsWith(S3Path.getPath(fileSystem, "dir1/dir2")));
         assertFalse(absoluteObject.startsWith(relativeBeginning));
-        assertFalse(absoluteObject.startsWith(S3Path.getPath(provider.newFileSystem(URI.create("s3://different-bucket")), "/dir1/")));
+        assertFalse(absoluteObject.startsWith(S3Path.getPath(provider.getFileSystem(URI.create("s3://different-bucket"), true), "/dir1/")));
     }
 
     @Test
@@ -464,7 +464,7 @@ public class S3PathTest {
 
         S3FileSystem fooFS = null;
         try{
-            fooFS = provider.newFileSystem(URI.create("s3://foo"));
+            fooFS = provider.getFileSystem(URI.create("s3://foo"), true);
             assertNotEquals(S3Path.getPath(fileSystem, "dir1/"), S3Path.getPath(fooFS, "/dir1/"));
         } finally {
             if ( fooFS != null ) provider.closeFileSystem(fooFS);
