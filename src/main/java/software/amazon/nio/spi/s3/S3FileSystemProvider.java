@@ -138,83 +138,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     * Similar to getFileSystem(uri), but it allows to create the file system if
-     * not yet created.
-     *
-     * @param uri URI reference
-     * @param create if true, the file system is created if not already done
-     *
-     * @return The file system
-     *
-     * @throws IllegalArgumentException    If the pre-conditions for the {@code uri} parameter aren't met
-     * @throws FileSystemNotFoundException If the file system does not exist
-     * @throws SecurityException           If a security manager is installed, and it denies an unspecified
-     *                                     permission.
-     */
-    S3FileSystem getFileSystem(URI uri, boolean create) {
-        S3FileSystemInfo info = fileSystemInfo(uri);
-        S3FileSystem fs = cache.get(info.key());
-
-        if (fs == null) {
-            if (!create) {
-                throw new FileSystemNotFoundException("file system not found for '" + info.key() + "'");
-            }
-            fs = forUri(uri);
-        }
-
-        return fs;
-    }
-
-    S3FileSystem forUri(URI uri){
-        if (uri == null) {
-            throw new IllegalArgumentException("uri can not be null");
-        }
-        if (uri.getScheme() == null) {
-            throw new IllegalArgumentException(
-                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
-            );
-        }
-        if (uri.getAuthority() == null) {
-            throw new IllegalArgumentException(
-                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
-            );
-        }
-
-        S3FileSystemInfo info = fileSystemInfo(uri);
-        if (cache.containsKey(info.key())) {
-            throw new FileSystemAlreadyExistsException("a file system already exists for '" + info.key() + "', use getFileSystem() instead");
-        }
-
-        S3NioSpiConfiguration config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
-
-        if (info.accessKey() != null) {
-            config.withCredentials(info.accessKey(), info.accessSecret());
-        }
-
-        S3FileSystem fs = null;
-        cache.put(
-                info.key(),
-                fs = new S3FileSystem(this, config)
-        );
-        return fs;
-    }
-
-    void closeFileSystem(FileSystem fs) {
-        for (String key: cache.keySet()) {
-            if (fs == cache.get(key)) {
-                cache.remove(key); return;
-            }
-        }
-        try {
-            if(fs.isOpen()) {
-                fs.close();
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
      * Return a {@code Path} object by converting the given {@link URI}. The
      * resulting {@code Path} is associated with a {@link FileSystem} that
      * already exists or is constructed automatically.
@@ -333,52 +256,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
                 return iterator;
             }
         };
-    }
-
-    /**
-     * Get an iterator for a {@code ListObjectsV2Publisher}. This method is protected level access only for testing
-     * purposes. It is not intended to be used by any other code outside of this class.
-     * @param filter a filter to apply to returned Paths. Only accepted paths will be included.
-     * @param fs the Filesystem.
-     * @param finalDirName the directory name that will be streamed.
-     * @param listObjectsV2Publisher the publisher that returns objects and common prefixes that are iterated on.
-     * @return an iterator for {@code Path}s constructed from the {@code ListObjectsV2Publisher}s responses.
-     */
-    private Iterator<Path> pathIteratorForPublisher (
-            final DirectoryStream.Filter<? super Path> filter,
-            final FileSystem fs, String finalDirName,
-            final ListObjectsV2Publisher listObjectsV2Publisher) {
-        return Flowable.fromPublisher(listObjectsV2Publisher)
-                .flatMapIterable(response -> {
-
-                    //add common prefixes from this page
-                    List<String> items = response
-                            .commonPrefixes().stream()
-                            .map(CommonPrefix::prefix)
-                            .collect(Collectors.toList());
-
-                    //add s3 objects from this page
-                    items.addAll(response
-                            .contents().stream()
-                            .map(S3Object::key)
-                            .collect(Collectors.toList()));
-
-                    // convert to S3Path and apply directory stream filter
-                    return items.stream()
-                            .filter(p -> !((S3Path)fs.getPath(p)).getKey().equals(finalDirName))  // including the parent will induce loops
-                            .map(fs::getPath)
-                            .filter(path -> {
-                                try {
-                                    return filter.accept(path);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                    return false;
-                                }
-                            }).collect(Collectors.toList());
-                })
-                .blockingStream()
-                .map(Path.class::cast) // upcast to Path from S3Path
-                .iterator();
     }
 
     /**
@@ -528,17 +405,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
-        }
-    }
-
-    boolean exists(S3AsyncClient s3Client, S3Path path) throws InterruptedException, TimeoutException {
-        try {
-            s3Client.headObject(HeadObjectRequest.builder().bucket(path.bucketName()).key(path.getKey()).build())
-                    .get(TIMEOUT_TIME_LENGTH_1, MINUTES);
-            return true;
-        } catch (ExecutionException | NoSuchKeyException e) {
-            logger.debug("Could not retrieve object head information", e);
-            return false;
         }
     }
 
@@ -812,6 +678,140 @@ public class S3FileSystemProvider extends FileSystemProvider {
         throw new UnsupportedOperationException("s3 file attributes cannot be modified by this class");
     }
 
+    /**
+     * Similar to getFileSystem(uri), but it allows to create the file system if
+     * not yet created.
+     *
+     * @param uri URI reference
+     * @param create if true, the file system is created if not already done
+     *
+     * @return The file system
+     *
+     * @throws IllegalArgumentException    If the pre-conditions for the {@code uri} parameter aren't met
+     * @throws FileSystemNotFoundException If the file system does not exist
+     * @throws SecurityException           If a security manager is installed, and it denies an unspecified
+     *                                     permission.
+     */
+    S3FileSystem getFileSystem(URI uri, boolean create) {
+        S3FileSystemInfo info = fileSystemInfo(uri);
+        S3FileSystem fs = cache.get(info.key());
+
+        if (fs == null) {
+            if (!create) {
+                throw new FileSystemNotFoundException("file system not found for '" + info.key() + "'");
+            }
+            fs = forUri(uri);
+        }
+
+        return fs;
+    }
+
+    S3FileSystem forUri(URI uri){
+        if (uri == null) {
+            throw new IllegalArgumentException("uri can not be null");
+        }
+        if (uri.getScheme() == null) {
+            throw new IllegalArgumentException(
+                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
+            );
+        }
+        if (uri.getAuthority() == null) {
+            throw new IllegalArgumentException(
+                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
+            );
+        }
+
+        S3FileSystemInfo info = fileSystemInfo(uri);
+        if (cache.containsKey(info.key())) {
+            throw new FileSystemAlreadyExistsException("a file system already exists for '" + info.key() + "', use getFileSystem() instead");
+        }
+
+        S3NioSpiConfiguration config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
+
+        if (info.accessKey() != null) {
+            config.withCredentials(info.accessKey(), info.accessSecret());
+        }
+
+        S3FileSystem fs = null;
+        cache.put(
+                info.key(),
+                fs = new S3FileSystem(this, config)
+        );
+        return fs;
+    }
+
+    void closeFileSystem(FileSystem fs) {
+        for (String key: cache.keySet()) {
+            if (fs == cache.get(key)) {
+                cache.remove(key); return;
+            }
+        }
+        try {
+            if(fs.isOpen()) {
+                fs.close();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    boolean exists(S3AsyncClient s3Client, S3Path path) throws InterruptedException, TimeoutException {
+        try {
+            s3Client.headObject(HeadObjectRequest.builder().bucket(path.bucketName()).key(path.getKey()).build())
+                    .get(TIMEOUT_TIME_LENGTH_1, MINUTES);
+            return true;
+        } catch (ExecutionException | NoSuchKeyException e) {
+            logger.debug("Could not retrieve object head information", e);
+            return false;
+        }
+    }
+
+    /**
+     * Get an iterator for a {@code ListObjectsV2Publisher}. This method is protected level access only for testing
+     * purposes. It is not intended to be used by any other code outside of this class.
+     * @param filter a filter to apply to returned Paths. Only accepted paths will be included.
+     * @param fs the Filesystem.
+     * @param finalDirName the directory name that will be streamed.
+     * @param listObjectsV2Publisher the publisher that returns objects and common prefixes that are iterated on.
+     * @return an iterator for {@code Path}s constructed from the {@code ListObjectsV2Publisher}s responses.
+     */
+    private Iterator<Path> pathIteratorForPublisher (
+            final DirectoryStream.Filter<? super Path> filter,
+            final FileSystem fs, String finalDirName,
+            final ListObjectsV2Publisher listObjectsV2Publisher) {
+        return Flowable.fromPublisher(listObjectsV2Publisher)
+                .flatMapIterable(response -> {
+
+                    //add common prefixes from this page
+                    List<String> items = response
+                            .commonPrefixes().stream()
+                            .map(CommonPrefix::prefix)
+                            .collect(Collectors.toList());
+
+                    //add s3 objects from this page
+                    items.addAll(response
+                            .contents().stream()
+                            .map(S3Object::key)
+                            .collect(Collectors.toList()));
+
+                    // convert to S3Path and apply directory stream filter
+                    return items.stream()
+                            .filter(p -> !((S3Path)fs.getPath(p)).getKey().equals(finalDirName))  // including the parent will induce loops
+                            .map(fs::getPath)
+                            .filter(path -> {
+                                try {
+                                    return filter.accept(path);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                    return false;
+                                }
+                            }).collect(Collectors.toList());
+                })
+                .blockingStream()
+                .map(Path.class::cast) // upcast to Path from S3Path
+                .iterator();
+    }
 
     /**
      * This method parses the provided URI into elements useful to address
