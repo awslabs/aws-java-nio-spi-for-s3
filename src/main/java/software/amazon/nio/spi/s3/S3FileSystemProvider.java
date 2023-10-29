@@ -91,9 +91,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return SCHEME;
     }
 
+    /*
+     * @throws NotYetImplementedException
+     */
     @Override
     public S3FileSystem newFileSystem(URI uri, Map<String, ?> env) {
-        throw new UnsupportedOperationException("This method is not yet supported in v2.x. It might be implemented for bucket creation");
+        throw new NotYetImplementedException("This method is not yet supported in v2.x. It might be implemented for bucket creation");
     }
 
     /**

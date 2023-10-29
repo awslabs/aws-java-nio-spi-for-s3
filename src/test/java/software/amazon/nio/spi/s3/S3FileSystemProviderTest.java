@@ -5,8 +5,7 @@
 
 package software.amazon.nio.spi.s3;
 
-import java.io.IOException;
-
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,6 +28,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 
+import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.AccessDeniedException;
@@ -36,7 +36,6 @@ import java.nio.file.AccessMode;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystem;
-import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -57,7 +56,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import org.junit.jupiter.api.AfterEach;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -68,7 +66,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.nio.spi.s3x.S3XFileSystemProvider;
 
 @SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
@@ -100,15 +97,15 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    @DisplayName("newFileSystem(URI, env) should throw UnsupportedOperationException")
+    @DisplayName("newFileSystem(URI, env) should throw")
     public void newFileSystemURI() {
         assertThatThrownBy(
             () -> new S3FileSystemProvider().newFileSystem(URI.create(pathUri), Collections.emptyMap())
-        ).isInstanceOf(UnsupportedOperationException.class);
+        ).isInstanceOf(NotYetImplementedException.class);
     }
 
     @Test
-    @DisplayName("newFileSystem(Path, env) should throw UnsupportedOperationException")
+    @DisplayName("newFileSystem(Path, env) should throw")
     public void newFileSystemPath() {
         assertThatThrownBy(
             () -> new S3FileSystemProvider().newFileSystem(Paths.get(pathUri), Collections.emptyMap())
