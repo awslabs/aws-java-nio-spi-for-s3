@@ -1,6 +1,5 @@
 package software.amazon.nio.spi.s3;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -8,9 +7,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.URI;
 import java.nio.file.FileSystems;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.ProviderNotFoundException;
 import java.util.Collections;
 import java.util.stream.Stream;
 

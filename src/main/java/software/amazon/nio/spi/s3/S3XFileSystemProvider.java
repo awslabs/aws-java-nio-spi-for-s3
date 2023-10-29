@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package software.amazon.nio.spi.s3x;
+package software.amazon.nio.spi.s3;
 
 import java.net.URI;
 import software.amazon.nio.spi.s3.S3FileSystemProvider;

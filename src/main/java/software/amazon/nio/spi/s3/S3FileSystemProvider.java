@@ -75,7 +75,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     /**
      * Constant for the S3 scheme "s3"
      */
-    public static final String SCHEME = "s3";
+    static final String SCHEME = "s3";
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
@@ -151,7 +151,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @throws SecurityException           If a security manager is installed, and it denies an unspecified
      *                                     permission.
      */
-    protected S3FileSystem getFileSystem(URI uri, boolean create) {
+    S3FileSystem getFileSystem(URI uri, boolean create) {
         S3FileSystemInfo info = fileSystemInfo(uri);
         S3FileSystem fs = cache.get(info.key());
 
@@ -199,7 +199,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return fs;
     }
 
-    public void closeFileSystem(FileSystem fs) {
+    void closeFileSystem(FileSystem fs) {
         for (String key: cache.keySet()) {
             if (fs == cache.get(key)) {
                 cache.remove(key); return;
@@ -531,7 +531,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
     }
 
-    protected boolean exists(S3AsyncClient s3Client, S3Path path) throws InterruptedException, TimeoutException {
+    boolean exists(S3AsyncClient s3Client, S3Path path) throws InterruptedException, TimeoutException {
         try {
             s3Client.headObject(HeadObjectRequest.builder().bucket(path.bucketName()).key(path.getKey()).build())
                     .get(TIMEOUT_TIME_LENGTH_1, MINUTES);
@@ -834,7 +834,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      *
      * @return the information estracted from {@code uri}
      */
-    protected S3FileSystemInfo fileSystemInfo(URI uri) {
+    S3FileSystemInfo fileSystemInfo(URI uri) {
         return new S3FileSystemInfo(uri);
     }
 
@@ -864,7 +864,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return keys;
     }
 
-    protected static S3Path checkPath(Path obj) {
+    static S3Path checkPath(Path obj) {
         Objects.requireNonNull(obj);
         if (!(obj instanceof S3Path))
             throw new ProviderMismatchException();

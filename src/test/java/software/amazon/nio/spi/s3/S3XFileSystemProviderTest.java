@@ -18,7 +18,6 @@ package software.amazon.nio.spi.s3;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import software.amazon.nio.spi.s3x.S3XFileSystemProvider;
 
 import java.net.URI;
 import java.nio.file.FileSystem;
