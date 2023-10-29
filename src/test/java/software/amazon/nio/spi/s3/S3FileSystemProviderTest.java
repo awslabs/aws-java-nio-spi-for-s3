@@ -98,7 +98,23 @@ public class S3FileSystemProviderTest {
     public void getScheme() {
         assertEquals("s3", provider.getScheme());
     }
-    
+
+    @Test
+    @DisplayName("newFileSystem(URI, env) should throw UnsupportedOperationException")
+    public void newFileSystemURI() {
+        assertThatThrownBy(
+            () -> new S3FileSystemProvider().newFileSystem(URI.create(pathUri), Collections.emptyMap())
+        ).isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    @DisplayName("newFileSystem(Path, env) should throw UnsupportedOperationException")
+    public void newFileSystemPath() {
+        assertThatThrownBy(
+            () -> new S3FileSystemProvider().newFileSystem(Paths.get(pathUri), Collections.emptyMap())
+        ).isInstanceOf(UnsupportedOperationException.class);
+    }
+
     @Test
     public void getFileSystem() {
         assertThatCode(() -> provider.getFileSystem(null))

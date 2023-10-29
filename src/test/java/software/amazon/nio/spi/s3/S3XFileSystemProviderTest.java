@@ -53,6 +53,22 @@ public class S3XFileSystemProviderTest {
     }
 
     @Test
+    @DisplayName("newFileSystem(URI, env) should throw UnsupportedOperationException")
+    public void newFileSystemURI() {
+        assertThatThrownBy(
+            () -> new S3XFileSystemProvider().newFileSystem(URI1, Collections.emptyMap())
+        ).isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    @DisplayName("newFileSystem(Path, env) should throw UnsupportedOperationException")
+    public void newFileSystemPath() {
+        assertThatThrownBy(
+            () -> new S3XFileSystemProvider().newFileSystem(Paths.get(URI1), Collections.emptyMap())
+        ).isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
     public void getFileSystem() {
         S3XFileSystemProvider provider = new S3XFileSystemProvider();
 
