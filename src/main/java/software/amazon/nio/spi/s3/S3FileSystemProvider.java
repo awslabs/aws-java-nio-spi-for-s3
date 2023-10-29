@@ -223,10 +223,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @param dir    the path to the directory
      * @param filter the directory stream filter
      * @return a new and open {@code DirectoryStream} object
-     * @throws IOException if the stream cannot be created or has a streaming problem.
      */
     @Override
-    public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
+    public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) {
         S3Path s3Path = checkPath(dir);
 
         String dirName = s3Path.toAbsolutePath().getKey();
