@@ -134,6 +134,7 @@ public class S3ClientProvider {
      * that can be used by certain S3 operations for discovery
      *
      * @param async true to return an asynchronous client, false otherwise
+     * @param <T> type of AwsClient
      * @return a S3Client not bound to a region
      */
     public <T extends AwsClient> T universalClient(boolean async) {
