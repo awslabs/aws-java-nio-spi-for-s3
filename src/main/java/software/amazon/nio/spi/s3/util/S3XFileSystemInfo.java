@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package software.amazon.nio.spi.s3x.util;
+package software.amazon.nio.spi.s3.util;
 
 import java.net.URI;
 import software.amazon.awssdk.services.s3.internal.BucketUtils;

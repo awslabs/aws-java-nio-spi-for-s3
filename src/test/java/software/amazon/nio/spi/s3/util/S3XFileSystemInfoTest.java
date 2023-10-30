@@ -13,13 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package software.amazon.nio.spi.s3x.util;
+package software.amazon.nio.spi.s3.util;
 
 import java.net.URI;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.BDDAssertions.then;
 import org.junit.jupiter.api.Test;
+import software.amazon.nio.spi.s3.util.S3XFileSystemInfo;
 
 /**
  *

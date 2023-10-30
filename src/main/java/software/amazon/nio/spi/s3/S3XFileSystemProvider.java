@@ -17,7 +17,7 @@
 package software.amazon.nio.spi.s3;
 
 import software.amazon.nio.spi.s3.util.S3FileSystemInfo;
-import software.amazon.nio.spi.s3x.util.S3XFileSystemInfo;
+import software.amazon.nio.spi.s3.util.S3XFileSystemInfo;
 
 import java.net.URI;
 
