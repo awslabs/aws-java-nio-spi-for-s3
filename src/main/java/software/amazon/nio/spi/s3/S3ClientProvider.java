@@ -139,18 +139,6 @@ public class S3ClientProvider {
     }
 
     /**
-     * Generate a client for the named bucket using a default client to determine the location of the named bucket
-     * @param bucketName the named of the bucket to make the client for
-     * @return an S3 client appropriate for the region of the named bucket
-     */
-    protected S3Client generateClient(String bucketName){
-        //
-        // TODO: use generics like in universalClient()
-        //
-        return this.generateClient(bucketName, universalClient());
-    }
-
-    /**
      * Generates a sync client for the named bucket using the provided location
      * discovery client.
      *
