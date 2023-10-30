@@ -60,7 +60,7 @@ public class S3SeekableByteChannelTest {
         S3FileSystemProvider provider = new S3FileSystemProvider();
         fs = provider.getFileSystem(URI.create("s3://test-bucket"), true);
         fs.clientProvider(new FixedS3ClientProvider(mockClient));
-        path = fs.getPath("/object");
+        path = (S3Path) fs.getPath("/object");
     }
 
     @AfterEach

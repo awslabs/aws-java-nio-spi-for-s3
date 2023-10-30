@@ -29,7 +29,7 @@ import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
  * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
  *
  */
-class S3FileSystem extends FileSystem {
+public class S3FileSystem extends FileSystem {
     static final Logger logger = LoggerFactory.getLogger(S3FileSystem.class);
 
     /**
@@ -248,7 +248,7 @@ class S3FileSystem extends FileSystem {
      */
     @SuppressWarnings("NullableProblems")
     @Override
-    public S3Path getPath(String first, String... more) {
+    public Path getPath(String first, String... more) {
         return S3Path.getPath(this, first, more);
     }
 

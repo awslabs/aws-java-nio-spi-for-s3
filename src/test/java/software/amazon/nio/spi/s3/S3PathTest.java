@@ -8,6 +8,7 @@ package software.amazon.nio.spi.s3;
 
 import java.net.URI;
 import java.nio.file.LinkOption;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -284,7 +285,7 @@ public class S3PathTest {
         assertEquals(absoluteObject, root.resolve(absoluteObject));
         assertEquals(absoluteDirectory, root.resolve(absoluteDirectory));
 
-        final S3Path empty = fileSystem.getPath("");
+        final Path empty = fileSystem.getPath("");
         assertEquals(root, root.resolve(empty));
 
         assertEquals(fileSystem.getPath(absoluteDirectory.toString(), "foo") , absoluteDirectory.resolve(fileSystem.getPath("foo")));
@@ -305,9 +306,9 @@ public class S3PathTest {
 
     @Test
     public void resolveSibling() {
-        S3Path other = fileSystem.getPath("other");
-        final S3Path absoluteOther = fileSystem.getPath("/dir1/dir2/other");
-        final S3Path empty = fileSystem.getPath("");
+        Path other = fileSystem.getPath("other");
+        final Path absoluteOther = fileSystem.getPath("/dir1/dir2/other");
+        final Path empty = fileSystem.getPath("");
 
         assertEquals(absoluteOther, absoluteObject.resolveSibling(other));
         assertEquals(absoluteObject, absoluteOther.resolveSibling(absoluteObject));
@@ -319,7 +320,7 @@ public class S3PathTest {
 
     @Test
     public void testResolveSiblingString() {
-        final S3Path absoluteOther = fileSystem.getPath("/dir1/dir2/other");
+        final Path absoluteOther = fileSystem.getPath("/dir1/dir2/other");
 
         assertEquals(absoluteOther, absoluteObject.resolveSibling("other"));
         assertEquals(absoluteObject, absoluteOther.resolveSibling("object"));
@@ -328,14 +329,14 @@ public class S3PathTest {
 
     @Test
     public void relativize() {
-        S3Path abcd = fileSystem.getPath("/a/b/c/d/");
-        S3Path abcdObject = fileSystem.getPath("/a/b/c/d/object");
-        S3Path ab = fileSystem.getPath("/a/b/");
-        S3Path abcde = fileSystem.getPath("/a/b/c/d/e/");
+        Path abcd = fileSystem.getPath("/a/b/c/d/");
+        Path abcdObject = fileSystem.getPath("/a/b/c/d/object");
+        Path ab = fileSystem.getPath("/a/b/");
+        Path abcde = fileSystem.getPath("/a/b/c/d/e/");
 
-        S3Path bc = fileSystem.getPath("b/c/");
-        S3Path bcd = fileSystem.getPath("b/c/d/");
-        S3Path bcdObject = fileSystem.getPath("b/c/d/object");
+        Path bc = fileSystem.getPath("b/c/");
+        Path bcd = fileSystem.getPath("b/c/d/");
+        Path bcdObject = fileSystem.getPath("b/c/d/object");
 
         assertEquals(fileSystem.getPath(""), absoluteObject.relativize(absoluteObject));
         assertEquals(fileSystem.getPath("../.."), abcd.relativize(ab));
@@ -447,9 +448,9 @@ public class S3PathTest {
         assertEquals(0, root.compareTo(root));
         assertEquals(0, relativeDirectory.compareTo(relativeDirectory));
 
-        final S3Path rootAbc = fileSystem.getPath("/a/b/c");
-        final S3Path abc = fileSystem.getPath("a/b/c");
-        final S3Path bbc = fileSystem.getPath("b/b/c");
+        final Path rootAbc = fileSystem.getPath("/a/b/c");
+        final Path abc = fileSystem.getPath("a/b/c");
+        final Path bbc = fileSystem.getPath("b/b/c");
         assertEquals(0, rootAbc.compareTo(abc));
         assertEquals(0, abc.compareTo(rootAbc));
         assertTrue(abc.compareTo(bbc) < 0);
@@ -477,8 +478,8 @@ public class S3PathTest {
 
     @Test
     public void testHashCode() {
-        final S3Path rootAbc = fileSystem.getPath("/a/b/c");
-        final S3Path abc = fileSystem.getPath("a/b/c");
+        final Path rootAbc = fileSystem.getPath("/a/b/c");
+        final Path abc = fileSystem.getPath("a/b/c");
         assertEquals(rootAbc.hashCode(), abc.hashCode());
     }
 
