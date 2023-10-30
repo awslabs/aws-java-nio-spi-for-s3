@@ -16,15 +16,12 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -39,7 +36,7 @@ class S3BasicFileAttributes implements BasicFileAttributes {
     private final String bucketName;
 
     private static final Set<String> methodNamesToFilterOut =
-            Collections.unmodifiableSet(Stream.of("wait","toString","hashCode","getClass","notify","notifyAll").collect(Collectors.toSet()));
+            Set.of("wait", "toString", "hashCode", "getClass", "notify", "notifyAll");
 
     private static final Logger logger = LoggerFactory.getLogger(S3BasicFileAttributes.class.getName());
 
