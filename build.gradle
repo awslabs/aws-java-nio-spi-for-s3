@@ -35,9 +35,8 @@ java {
     withJavadocJar()
 }
 
-compileJava {
-    // see https://docs.gradle.org/6.6/userguide/building_java_projects.html#sec:java_cross_compilation
-    options.release = 8
+tasks.withType(JavaCompile).configureEach {
+    options.release.set(11)
 }
 
 sourceSets {
