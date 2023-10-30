@@ -61,8 +61,29 @@ For example:
 <dependency>
     <groupId>software.amazon.nio.s3</groupId>
     <artifactId>aws-java-nio-spi-for-s3</artifactId>
-    <version>1.2.4</version>
+    <version>2.0.0-dev</version>
 </dependency>
+```
+
+```groovy
+    implementation("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.0.0-dev")
+```
+
+### Java compatibility
+| Library version | Java   |
+|-----------------|--------|
+| <= 1.2.1        | \>=  8 |
+| \>= 2.x.x       | \>= 11 |
+
+Versions 1.2.2 until 2.x.x are compatible with java 8 and above,
+but will need to exclude logback dependency if using with java 8:
+```groovy
+implementation("software.amazon.nio.s3:aws-java-nio-spi-for-s3:1.2.2") {
+    exclude group: 'ch.qos.logback', module: 'logback-core'
+    exclude group: 'ch.qos.logback', module: 'logback-classic'
+}
+implementation("ch.qos.logback:logback-classic:1.3.11") // 1.3.x is still compatible with java 8
+implementation("ch.qos.logback:logback-core:1.3.11")
 ```
 
 ## AWS Credentials
@@ -286,14 +307,14 @@ to `/foo/baa`.
 
 ## Building this library
 
-The library uses the gradle build system and targets Java 1.8 to allow it to be used in many contexts. To build you can simply run:
+The library uses the gradle build system and targets Java 11 to allow it to be used in many contexts. To build you can simply run:
 
 ```shell
 ./gradlew build
 ```
 
 This will run all unit tests and then generate a jar file in `libs` with the name `s3fs-spi-<version>.jar`. Note that
-although the compiled JAR targets Java 1.8 a later version of the JDK may be needed to run Gradle itself.
+although the compiled JAR targets Java 11 a later version of the JDK may be needed to run Gradle itself.
 
 ### Shadowed Jar with dependencies
 
@@ -322,7 +343,7 @@ found at `build/reports/jacoco/test/html/index.html`
 We encourage community contributions via pull requests. Please refer to our [code of conduct](./CODE_OF_CONDUCT.md) and
 [contributing](./CONTRIBUTING.md) for guidance.
 
-Code must compile to JDK 1.8 compatible bytecode. Matching unit tests are required for new features and fixes.
+Code must compile to JDK 11 compatible bytecode. Matching unit tests are required for new features and fixes.
 
 ### Contributing Unit Tests
 
