@@ -11,17 +11,18 @@ import software.amazon.nio.spi.s3.util.TimeOutUtils;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -226,15 +227,14 @@ class S3BasicFileAttributes implements BasicFileAttributes {
      * @return a map filtered to only contain keys that pass the attributeFilter
      */
     protected Map<String, Object> asMap(Predicate<String> attributeFilter){
-        HashMap<String, Object> map = new HashMap<>();
-        Arrays.stream(this.getClass().getMethods())
+        return Arrays.stream(this.getClass().getMethods())
                 .filter(method -> method.getParameterCount() == 0)
                 .filter(method -> !methodNamesToFilterOut.contains(method.getName()))
                 .filter(method -> attributeFilter.test(method.getName()))
-                .forEach(method -> {
+                .collect(Collectors.toMap(Method::getName, (method -> {
                     logger.debug("method name: '{}'", method.getName());
                     try {
-                        map.put(method.getName(), method.invoke(this));
+                        return method.invoke(this);
                     } catch (IllegalAccessException | InvocationTargetException e) {
                         // should not ever happen as these are all public no arg methods
                         String errorMsg = format(
@@ -242,8 +242,6 @@ class S3BasicFileAttributes implements BasicFileAttributes {
                         logger.error("{}, caused by {}", errorMsg, e.getCause().getMessage());
                         throw new RuntimeException(errorMsg, e);
                     }
-                });
-
-        return map;
+                })));
     }
 }
