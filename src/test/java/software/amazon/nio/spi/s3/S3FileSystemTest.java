@@ -27,6 +27,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
 import static org.mockito.Mockito.lenient;
+import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
+
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -44,7 +46,7 @@ public class S3FileSystemTest {
     @BeforeEach
     public void init() {
         provider = new S3FileSystemProvider();
-        s3FileSystem = provider.newFileSystem(s3Uri, Collections.emptyMap());
+        s3FileSystem = provider.getFileSystem(s3Uri, true);
         s3FileSystem.clientProvider = new FixedS3ClientProvider(mockClient);
         lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
@@ -101,7 +103,7 @@ public class S3FileSystemTest {
         final Iterator<Path> rootDirectoriesIterator = rootDirectories.iterator();
 
         assertTrue(rootDirectoriesIterator.hasNext());
-        assertEquals(S3Path.PATH_SEPARATOR, rootDirectoriesIterator.next().toString());
+        assertEquals(PATH_SEPARATOR, rootDirectoriesIterator.next().toString());
         assertFalse(rootDirectoriesIterator.hasNext());
     }
 
@@ -118,7 +120,7 @@ public class S3FileSystemTest {
     @Test
     public void getPath() {
         //additional path construction tests are in S3PathTest
-        assertEquals(s3FileSystem.getPath("/"), S3Path.getPath(s3FileSystem, S3Path.PATH_SEPARATOR));
+        assertEquals(s3FileSystem.getPath("/"), S3Path.getPath(s3FileSystem, PATH_SEPARATOR));
     }
 
     @Test

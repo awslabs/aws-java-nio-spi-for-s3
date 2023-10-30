@@ -18,6 +18,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -57,9 +58,9 @@ public class S3SeekableByteChannelTest {
                         bytes)));
 
         S3FileSystemProvider provider = new S3FileSystemProvider();
-        fs = provider.newFileSystem(URI.create("s3://test-bucket"));
+        fs = provider.getFileSystem(URI.create("s3://test-bucket"), true);
         fs.clientProvider(new FixedS3ClientProvider(mockClient));
-        path = fs.getPath("/object");
+        path = (S3Path) fs.getPath("/object");
     }
 
     @AfterEach
@@ -69,17 +70,19 @@ public class S3SeekableByteChannelTest {
 
     @Test
     public void readDelegateConstructedByDefault() throws IOException {
-        S3SeekableByteChannel channel = new S3SeekableByteChannel(path, mockClient);
-        assertNotNull(channel.getReadDelegate());
+        try(S3SeekableByteChannel channel = seekableByteChannelForRead()) {
+            assertNotNull(channel.getReadDelegate());
+        }
     }
 
     @Test
     public void read() throws IOException {
-        S3SeekableByteChannel channel = new S3SeekableByteChannel(path, mockClient);
-        ByteBuffer dst = ByteBuffer.allocate(6);
-        channel.read(dst);
-        assertArrayEquals(bytes, dst.array());
-        assertEquals(6L, channel.position());
+        try(S3SeekableByteChannel channel = seekableByteChannelForRead()) {
+            ByteBuffer dst = ByteBuffer.allocate(6);
+            channel.read(dst);
+            assertArrayEquals(bytes, dst.array());
+            assertEquals(6L, channel.position());
+        }
     }
 
     @Test
@@ -97,39 +100,49 @@ public class S3SeekableByteChannelTest {
 
     @Test
     public void position() throws IOException {
-        S3SeekableByteChannel channel = new S3SeekableByteChannel(path, mockClient);
-        assertEquals(0L, channel.position());
+        try(S3SeekableByteChannel channel = seekableByteChannelForRead()) {
+            assertEquals(0L, channel.position());
+        }
     }
 
     @Test
     public void testPosition() throws IOException {
-        S3SeekableByteChannel channel = new S3SeekableByteChannel(path, mockClient);
-        channel.position(1L);
-        assertEquals(1L, channel.position());
+        try(S3SeekableByteChannel channel = seekableByteChannelForRead()) {
+            channel.position(1L);
+            assertEquals(1L, channel.position());
+        }
     }
 
     @Test
     public void size() throws IOException {
-        S3SeekableByteChannel channel = new S3SeekableByteChannel(path, mockClient);
-        assertEquals(100L, channel.size());
+        try(S3SeekableByteChannel channel = seekableByteChannelForRead()) {
+            assertEquals(100L, channel.size());
+        }
     }
 
     @Test
     public void truncate() throws IOException {
-        S3SeekableByteChannel channel = new S3SeekableByteChannel(path, mockClient);
-        assertThrows(UnsupportedOperationException.class, () ->channel.truncate(0L));
+        try(S3SeekableByteChannel channel = seekableByteChannelForRead()) {
+            assertThrows(UnsupportedOperationException.class, () -> channel.truncate(0L));
+        }
     }
 
     @Test
     public void isOpen() throws IOException {
-        S3SeekableByteChannel channel = new S3SeekableByteChannel(path, mockClient);
-        assertTrue(channel.isOpen());
+        try(S3SeekableByteChannel channel = seekableByteChannelForRead()) {
+            assertTrue(channel.isOpen());
+        }
     }
 
     @Test
     public void close() throws IOException {
-        S3SeekableByteChannel channel = new S3SeekableByteChannel(path, mockClient);
+        S3SeekableByteChannel channel = seekableByteChannelForRead();
         channel.close();
         assertFalse(channel.isOpen());
     }
+
+    private S3SeekableByteChannel seekableByteChannelForRead() throws IOException {
+        return new S3SeekableByteChannel(path, mockClient, Collections.singleton(StandardOpenOption.READ));
+    }
+
 }

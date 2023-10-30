@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
  * rather than making another S3 request.
  * <p>As reads are made this object will update the current read position of the delegating {@code S3SeekableByteChannel}</p>
  */
-public class S3ReadAheadByteChannel implements ReadableByteChannel {
+class S3ReadAheadByteChannel implements ReadableByteChannel {
 
     private final S3AsyncClient client;
     private final S3Path path;
@@ -48,7 +48,7 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
     private boolean open;
     private final Cache<Integer, CompletableFuture<ByteBuffer>> readAheadBuffersCache;
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger logger = LoggerFactory.getLogger(S3ReadAheadByteChannel.class);
 
 
     /**
@@ -65,7 +65,7 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
      * @param timeUnit           the {@code TimeUnit} for the {@code timeout}.
      * @throws IOException if a problem occurs initializing the cached fragments
      */
-    public S3ReadAheadByteChannel(S3Path path, int maxFragmentSize, int maxNumberFragments, S3AsyncClient client, S3SeekableByteChannel delegator, Long timeout, TimeUnit timeUnit) throws IOException {
+    S3ReadAheadByteChannel(S3Path path, int maxFragmentSize, int maxNumberFragments, S3AsyncClient client, S3SeekableByteChannel delegator, Long timeout, TimeUnit timeUnit) throws IOException {
         Objects.requireNonNull(path);
         Objects.requireNonNull(client);
         Objects.requireNonNull(delegator);
@@ -159,6 +159,18 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
         }
     }
 
+    @Override
+    public boolean isOpen() {
+        return open;
+    }
+
+    @Override
+    public void close() {
+        open = false;
+        readAheadBuffersCache.invalidateAll();
+        readAheadBuffersCache.cleanUp();
+    }
+
     private void clearPriorFragments(int currentFragIndx) {
         final Set<@NonNull Integer> priorIndexes = readAheadBuffersCache
                 .asMap()
@@ -174,24 +186,12 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
         }
     }
 
-    @Override
-    public boolean isOpen() {
-        return open;
-    }
-
-    @Override
-    public void close() {
-        open = false;
-        readAheadBuffersCache.invalidateAll();
-        readAheadBuffersCache.cleanUp();
-    }
-
     /**
      * The number of fragments currently in the cache.
      *
      * @return the size of the cache after any async evictions or reloads have happened.
      */
-    protected int numberOfCachedFragments() {
+    int numberOfCachedFragments() {
         readAheadBuffersCache.cleanUp();
         return (int) readAheadBuffersCache.estimatedSize();
     }
@@ -202,7 +202,7 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
      *
      * @return the statistics of the internal cache.
      */
-    protected CacheStats cacheStatistics() {
+    CacheStats cacheStatistics() {
         return readAheadBuffersCache.stats();
     }
 
@@ -227,7 +227,7 @@ public class S3ReadAheadByteChannel implements ReadableByteChannel {
      * @param byteNumber the number of the byte in the object accessed by this channel
      * @return the index of the fragment in which {@code byteNumber} will be found.
      */
-    protected Integer fragmentIndexForByteNumber(long byteNumber) {
+    Integer fragmentIndexForByteNumber(long byteNumber) {
         return Math.toIntExact(Math.floorDiv(byteNumber, (long) maxFragmentSize));
     }
 }

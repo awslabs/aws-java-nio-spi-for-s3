@@ -10,8 +10,6 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
@@ -77,18 +75,18 @@ public class S3ClientProvider {
     final RetryCondition retryCondition;
 
     {
-        final Set<Integer> RETRYABLE_STATUS_CODES = Stream.of(
+        final Set<Integer> RETRYABLE_STATUS_CODES = Set.of(
                 HttpStatusCode.INTERNAL_SERVER_ERROR,
                 HttpStatusCode.BAD_GATEWAY,
                 HttpStatusCode.SERVICE_UNAVAILABLE,
                 HttpStatusCode.GATEWAY_TIMEOUT
-        ).collect(Collectors.toSet());
+        );
 
-        final Set<Class<? extends Exception>> RETRYABLE_EXCEPTIONS = Stream.of(
+        final Set<Class<? extends Exception>> RETRYABLE_EXCEPTIONS = Set.of(
                 RetryableException.class,
                 IOException.class,
                 ApiCallAttemptTimeoutException.class,
-                ApiCallTimeoutException.class).collect(Collectors.toSet());
+                ApiCallTimeoutException.class);
 
         retryCondition = OrRetryCondition.create(
                 RetryOnStatusCodeCondition.create(RETRYABLE_STATUS_CODES),
@@ -138,18 +136,6 @@ public class S3ClientProvider {
      */
     public <T extends AwsClient> T universalClient(boolean async) {
         return (T)((async) ? DEFAULT_ASYNC_CLIENT : DEFAULT_CLIENT);
-    }
-
-    /**
-     * Generate a client for the named bucket using a default client to determine the location of the named bucket
-     * @param bucketName the named of the bucket to make the client for
-     * @return an S3 client appropriate for the region of the named bucket
-     */
-    protected S3Client generateClient(String bucketName){
-        //
-        // TODO: use generics like in universalClient()
-        //
-        return this.generateClient(bucketName, universalClient());
     }
 
     /**

@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package software.amazon.nio.spi.s3x.util;
+package software.amazon.nio.spi.s3.util;
 
 import java.net.URI;
 import software.amazon.awssdk.services.s3.internal.BucketUtils;
-import software.amazon.nio.spi.s3.S3Path;
 import software.amazon.nio.spi.s3.util.S3FileSystemInfo;
+
+import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
 
 /**
  * Populates fields with information extracted by the S3 URI provided. This
@@ -76,7 +77,7 @@ public class S3XFileSystemInfo extends S3FileSystemInfo {
         if (uri.getPort() > 0) {
             endpoint += ":" + uri.getPort();
         }
-        bucket = uri.getPath().split(S3Path.PATH_SEPARATOR)[1];
+        bucket = uri.getPath().split(PATH_SEPARATOR)[1];
 
         BucketUtils.isValidDnsBucketName(bucket, true);
 

@@ -58,6 +58,7 @@ import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static software.amazon.awssdk.http.HttpStatusCode.FORBIDDEN;
 import static software.amazon.awssdk.http.HttpStatusCode.NOT_FOUND;
+import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExceptionOnTimeOut;
 
@@ -74,7 +75,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     /**
      * Constant for the S3 scheme "s3"
      */
-    public static final String SCHEME = "s3";
+    static final String SCHEME = "s3";
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
@@ -90,88 +91,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return SCHEME;
     }
 
-    /**
-     * Constructs a new {@code FileSystem} object identified by a URI. This
-     * method is invoked by the {@link FileSystems#newFileSystem(URI, Map)}
-     * method to open a new file system identified by a URI.
-     *
-     * <p> The {@code uri} parameter is an absolute, hierarchical URI, with a
-     * scheme equal (without regard to case) to the scheme supported by this
-     * provider. The exact form of the URI is highly provider dependent. The
-     * {@code env} parameter is a map of provider specific properties to configure
-     * the file system.
-     *
-     * <p> This method throws {@link FileSystemAlreadyExistsException} if the
-     * file system already exists because it was previously created by an
-     * invocation of this method. Once a file system is {@link
-     * FileSystem#close closed} it is provider-dependent if the
-     * provider allows a new file system to be created with the same URI as a
-     * file system it previously created.
-     *
-     * @param uri URI reference
-     * @param env A map of provider specific properties to configure the file system;
-     *            may be empty
-     * @return A new file system
-     *
-     * @throws FileSystemAlreadyExistsException if the file system has already been created
-     * @throws IllegalArgumentException if the pre-conditions for the uri parameter are not met, or the env parameter does not contain properties required by the provider, or a property value is invalid
+    /*
+     * @throws NotYetImplementedException
      */
     @Override
-    public S3FileSystem newFileSystem(URI uri, Map<String, ?> env)
-    throws FileSystemAlreadyExistsException {
-
-        if (uri == null) {
-            throw new IllegalArgumentException("uri can not be null");
-        }
-        if (uri.getScheme() == null) {
-            throw new IllegalArgumentException(
-                String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
-            );
-        }
-        if (uri.getAuthority() == null) {
-            throw new IllegalArgumentException(
-                String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
-            );
-        }
-
-        S3FileSystem fs = null;
-
-        S3FileSystemInfo info = fileSystemInfo(uri);
-        if (cache.containsKey(info.key())) {
-            throw new FileSystemAlreadyExistsException("a file system already exists for '" + info.key() + "', use getFileSystem() instead");
-        }
-
-        S3NioSpiConfiguration config = new S3NioSpiConfiguration(env)
-            .withEndpoint(info.endpoint())
-            .withBucketName(info.bucket())
-            ;
-
-        if (info.accessKey() != null) {
-            config.withCredentials(info.accessKey(), info.accessSecret());
-        }
-
-        cache.put(
-            info.key(),
-            fs = new S3FileSystem(this, config)
-        );
-
-        return fs;
-    }
-
-    /**
-     * Same as newFileSystem(uri, Collections.EMPTY_MAP);
-     *
-     * @param uri URI reference
-     *
-     * @return newFileSystem(uri, Collections.EMPTY_MAP)
-     *
-     * @throws FileSystemAlreadyExistsException if the file system has already been created
-     * @throws IllegalArgumentException if the pre-conditions for the uri parameter
-     *         are not met, or the env parameter does not contain properties
-     *         required by the provider, or a property value is invalid
-     */
-    public S3FileSystem newFileSystem(URI uri) {
-        return newFileSystem(uri, Collections.EMPTY_MAP);
+    public FileSystem newFileSystem(URI uri, Map<String, ?> env) {
+        throw new NotYetImplementedException("This method is not yet supported in v2.x. It might be implemented for bucket creation");
     }
 
     /**
@@ -208,51 +133,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
      *                                     permission.
      */
     @Override
-    public S3FileSystem getFileSystem(URI uri) {
+    public FileSystem getFileSystem(URI uri) {
         return getFileSystem(uri, false);
-    }
-
-    /**
-     * Similar to getFileSystem(uri), but it allows to create the file system if
-     * not yet created.
-     *
-     * @param uri URI reference
-     * @param create if true, the file system is created if not already done
-     *
-     * @return The file system
-     *
-     * @throws IllegalArgumentException    If the pre-conditions for the {@code uri} parameter aren't met
-     * @throws FileSystemNotFoundException If the file system does not exist
-     * @throws SecurityException           If a security manager is installed, and it denies an unspecified
-     *                                     permission.
-     */
-    protected S3FileSystem getFileSystem(URI uri, boolean create) {
-        S3FileSystemInfo info = fileSystemInfo(uri);
-        S3FileSystem fs = cache.get(info.key());
-
-        if (fs == null) {
-            if (!create) {
-                throw new FileSystemNotFoundException("file system not found for '" + info.key() + "'");
-            }
-            fs = newFileSystem(uri);
-        }
-
-        return fs;
-    }
-
-    public void closeFileSystem(FileSystem fs) {
-        for (String key: cache.keySet()) {
-            if (fs == cache.get(key)) {
-                cache.remove(key); return;
-            }
-        }
-        try {
-            if(fs.isOpen()) {
-                fs.close();
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     /**
@@ -282,7 +164,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @SuppressWarnings("NullableProblems")
     @Override
-    public S3Path getPath(URI uri)
+    public Path getPath(URI uri)
     throws IllegalArgumentException, FileSystemNotFoundException, SecurityException {
         Objects.requireNonNull(uri);
         return getFileSystem(uri, true).getPath(uri.getScheme() + ":/" + uri.getPath());
@@ -341,16 +223,15 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @param dir    the path to the directory
      * @param filter the directory stream filter
      * @return a new and open {@code DirectoryStream} object
-     * @throws IOException if the stream cannot be created or has a streaming problem.
      */
     @Override
-    public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
+    public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) {
         S3Path s3Path = checkPath(dir);
 
         String dirName = s3Path.toAbsolutePath().getKey();
 
         if (!s3Path.isDirectory()) {
-            dirName = dirName + S3Path.PATH_SEPARATOR;
+            dirName = dirName + PATH_SEPARATOR;
         }
 
         final String bucketName = s3Path.bucketName();
@@ -360,7 +241,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final ListObjectsV2Publisher listObjectsV2Publisher = fs.client().listObjectsV2Paginator(req -> req
                 .bucket(bucketName)
                 .prefix(finalDirName)
-                .delimiter(S3Path.PATH_SEPARATOR));
+                .delimiter(PATH_SEPARATOR));
 
         final Iterator<Path> iterator = pathIteratorForPublisher(filter, fs, finalDirName, listObjectsV2Publisher);
 
@@ -377,52 +258,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     * Get an iterator for a {@code ListObjectsV2Publisher}. This method is protected level access only for testing
-     * purposes. It is not intended to be used by any other code outside of this class.
-     * @param filter a filter to apply to returned Paths. Only accepted paths will be included.
-     * @param fs the Filesystem.
-     * @param finalDirName the directory name that will be streamed.
-     * @param listObjectsV2Publisher the publisher that returns objects and common prefixes that are iterated on.
-     * @return an iterator for {@code Path}s constructed from the {@code ListObjectsV2Publisher}s responses.
-     */
-    private Iterator<Path> pathIteratorForPublisher (
-            final DirectoryStream.Filter<? super Path> filter,
-            final FileSystem fs, String finalDirName,
-            final ListObjectsV2Publisher listObjectsV2Publisher) {
-        return Flowable.fromPublisher(listObjectsV2Publisher)
-                .flatMapIterable(response -> {
-
-                    //add common prefixes from this page
-                    List<String> items = response
-                            .commonPrefixes().stream()
-                            .map(CommonPrefix::prefix)
-                            .collect(Collectors.toList());
-
-                    //add s3 objects from this page
-                    items.addAll(response
-                            .contents().stream()
-                            .map(S3Object::key)
-                            .collect(Collectors.toList()));
-
-                    // convert to S3Path and apply directory stream filter
-                    return items.stream()
-                            .filter(p -> !((S3Path)fs.getPath(p)).getKey().equals(finalDirName))  // including the parent will induce loops
-                            .map(fs::getPath)
-                            .filter(path -> {
-                                try {
-                                    return filter.accept(path);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                    return false;
-                                }
-                            }).collect(Collectors.toList());
-                })
-                .blockingStream()
-                .map(Path.class::cast) // upcast to Path from S3Path
-                .iterator();
-    }
-
-    /**
      * Creates a new directory. This method works in exactly the manner
      * specified by the {@link Files#createDirectory} method.
      *
@@ -436,8 +271,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
         S3FileSystem fs = s3Directory.getFileSystem();
         try {
             String directoryKey = s3Directory.toRealPath(NOFOLLOW_LINKS).getKey();
-            if (!directoryKey.endsWith(S3Path.PATH_SEPARATOR) && !directoryKey.isEmpty()) {
-                directoryKey = directoryKey + S3Path.PATH_SEPARATOR;
+            if (!directoryKey.endsWith(PATH_SEPARATOR) && !directoryKey.isEmpty()) {
+                directoryKey = directoryKey + PATH_SEPARATOR;
             }
 
             long timeOut = TIMEOUT_TIME_LENGTH_1;
@@ -542,7 +377,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
                 for (List<ObjectIdentifier> keyList : keys) {
                     for (ObjectIdentifier objectIdentifier : keyList) {
-                        S3Path resolvedS3TargetPath = s3TargetPath.resolve(objectIdentifier.key().replaceFirst(prefix + S3Path.PATH_SEPARATOR, ""));
+                        S3Path resolvedS3TargetPath = s3TargetPath.resolve(objectIdentifier.key().replaceFirst(prefix + PATH_SEPARATOR, ""));
 
                         if (!copyOptions.contains(StandardCopyOption.REPLACE_EXISTING) && exists(s3Client, resolvedS3TargetPath)) {
                             throw new FileAlreadyExistsException("File already exists at the target key");
@@ -569,17 +404,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
-        }
-    }
-
-    protected boolean exists(S3AsyncClient s3Client, S3Path path) throws InterruptedException, TimeoutException {
-        try {
-            s3Client.headObject(HeadObjectRequest.builder().bucket(path.bucketName()).key(path.getKey()).build())
-                    .get(TIMEOUT_TIME_LENGTH_1, MINUTES);
-            return true;
-        } catch (ExecutionException | NoSuchKeyException e) {
-            logger.debug("Could not retrieve object head information", e);
-            return false;
         }
     }
 
@@ -763,7 +587,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @param <V>     type of FileAttributeView, see type
      * @param path    the path to the file
      * @param type    the {@code Class} object corresponding to the file attribute view.
-     *                Must be {@code BasicFileAttributeView.class} or {@code S3FileAttributeView.class}
+     *                Must be {@code BasicFileAttributeView.class}
      * @param options ignored as there are no links in S3
      * @return a file attribute view of the specified type, or {@code null} if
      * the attribute view type is not available
@@ -773,11 +597,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
         Objects.requireNonNull(type, "the type of attribute view required cannot be null");
         S3Path s3Path = checkPath(path);
 
-        if (type.equals(BasicFileAttributeView.class) || type.equals(S3FileAttributeView.class)) {
-            @SuppressWarnings("unchecked") final V v = (V) new S3FileAttributeView(s3Path);
+        if (type.equals(BasicFileAttributeView.class)) {
+            @SuppressWarnings("unchecked") final V v = (V) new S3BasicFileAttributeView(s3Path);
             return v;
         } else {
-            throw new IllegalArgumentException("type must be BasicFileAttributeView.class or S3FileAttributeView.class");
+            throw new IllegalArgumentException("type must be BasicFileAttributeView.class");
         }
     }
 
@@ -788,7 +612,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      *
      * @param path    the path to the file
      * @param type    the {@code Class} of the file attributes required
-     *                to read. Supported types are {@code BasicFileAttributes} and {@code S3FileAttributes}
+     *                to read. Supported types are {@code BasicFileAttributes}
      * @param options options indicating how symbolic links are handled
      * @return the file attributes or {@code null} if {@code path} is inferred to be a directory.
      */
@@ -796,11 +620,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
     public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) {
         Objects.requireNonNull(type);
         S3Path s3Path = checkPath(path);
-        S3AsyncClient s3Client = s3Path.getFileSystem().client();
 
-        if (type.equals(BasicFileAttributes.class) || type.equals(S3BasicFileAttributes.class)) {
+        if (type.equals(BasicFileAttributes.class)) {
             @SuppressWarnings("unchecked")
-            A a = (A) new S3BasicFileAttributes(s3Path, s3Client);
+            A a = (A) new S3BasicFileAttributes(s3Path);
             return a;
         } else {
             throw new UnsupportedOperationException("cannot read attributes of type: " + type);
@@ -831,18 +654,16 @@ public class S3FileSystemProvider extends FileSystemProvider {
         Objects.requireNonNull(attributes);
         S3Path s3Path = checkPath(path);
 
-        S3AsyncClient s3Client = s3Path.getFileSystem().client();
-
         if (s3Path.isDirectory() || attributes.trim().isEmpty())
             return Collections.emptyMap();
 
         if (attributes.equals("*") || attributes.equals("s3"))
-            return new S3BasicFileAttributes(s3Path, s3Client).asMap();
+            return new S3BasicFileAttributes(s3Path).asMap();
 
         final Set<String> attrSet = Arrays.stream(attributes.split(","))
                 .map(attr -> attr.replaceAll("^s3:", ""))
                 .collect(Collectors.toSet());
-        return readAttributes(path, S3BasicFileAttributes.class, options)
+        return ((S3BasicFileAttributes)readAttributes(path, BasicFileAttributes.class, options))
                 .asMap(attrSet::contains);
     }
 
@@ -856,6 +677,140 @@ public class S3FileSystemProvider extends FileSystemProvider {
         throw new UnsupportedOperationException("s3 file attributes cannot be modified by this class");
     }
 
+    /**
+     * Similar to getFileSystem(uri), but it allows to create the file system if
+     * not yet created.
+     *
+     * @param uri URI reference
+     * @param create if true, the file system is created if not already done
+     *
+     * @return The file system
+     *
+     * @throws IllegalArgumentException    If the pre-conditions for the {@code uri} parameter aren't met
+     * @throws FileSystemNotFoundException If the file system does not exist
+     * @throws SecurityException           If a security manager is installed, and it denies an unspecified
+     *                                     permission.
+     */
+    S3FileSystem getFileSystem(URI uri, boolean create) {
+        S3FileSystemInfo info = fileSystemInfo(uri);
+        S3FileSystem fs = cache.get(info.key());
+
+        if (fs == null) {
+            if (!create) {
+                throw new FileSystemNotFoundException("file system not found for '" + info.key() + "'");
+            }
+            fs = forUri(uri);
+        }
+
+        return fs;
+    }
+
+    S3FileSystem forUri(URI uri){
+        if (uri == null) {
+            throw new IllegalArgumentException("uri can not be null");
+        }
+        if (uri.getScheme() == null) {
+            throw new IllegalArgumentException(
+                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
+            );
+        }
+        if (uri.getAuthority() == null) {
+            throw new IllegalArgumentException(
+                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
+            );
+        }
+
+        S3FileSystemInfo info = fileSystemInfo(uri);
+        if (cache.containsKey(info.key())) {
+            throw new FileSystemAlreadyExistsException("a file system already exists for '" + info.key() + "', use getFileSystem() instead");
+        }
+
+        S3NioSpiConfiguration config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
+
+        if (info.accessKey() != null) {
+            config.withCredentials(info.accessKey(), info.accessSecret());
+        }
+
+        S3FileSystem fs = null;
+        cache.put(
+                info.key(),
+                fs = new S3FileSystem(this, config)
+        );
+        return fs;
+    }
+
+    void closeFileSystem(FileSystem fs) {
+        for (String key: cache.keySet()) {
+            if (fs == cache.get(key)) {
+                cache.remove(key); return;
+            }
+        }
+        try {
+            if(fs.isOpen()) {
+                fs.close();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    boolean exists(S3AsyncClient s3Client, S3Path path) throws InterruptedException, TimeoutException {
+        try {
+            s3Client.headObject(HeadObjectRequest.builder().bucket(path.bucketName()).key(path.getKey()).build())
+                    .get(TIMEOUT_TIME_LENGTH_1, MINUTES);
+            return true;
+        } catch (ExecutionException | NoSuchKeyException e) {
+            logger.debug("Could not retrieve object head information", e);
+            return false;
+        }
+    }
+
+    /**
+     * Get an iterator for a {@code ListObjectsV2Publisher}. This method is protected level access only for testing
+     * purposes. It is not intended to be used by any other code outside of this class.
+     * @param filter a filter to apply to returned Paths. Only accepted paths will be included.
+     * @param fs the Filesystem.
+     * @param finalDirName the directory name that will be streamed.
+     * @param listObjectsV2Publisher the publisher that returns objects and common prefixes that are iterated on.
+     * @return an iterator for {@code Path}s constructed from the {@code ListObjectsV2Publisher}s responses.
+     */
+    private Iterator<Path> pathIteratorForPublisher (
+            final DirectoryStream.Filter<? super Path> filter,
+            final FileSystem fs, String finalDirName,
+            final ListObjectsV2Publisher listObjectsV2Publisher) {
+        return Flowable.fromPublisher(listObjectsV2Publisher)
+                .flatMapIterable(response -> {
+
+                    //add common prefixes from this page
+                    List<String> items = response
+                            .commonPrefixes().stream()
+                            .map(CommonPrefix::prefix)
+                            .collect(Collectors.toList());
+
+                    //add s3 objects from this page
+                    items.addAll(response
+                            .contents().stream()
+                            .map(S3Object::key)
+                            .collect(Collectors.toList()));
+
+                    // convert to S3Path and apply directory stream filter
+                    return items.stream()
+                            .filter(p -> !((S3Path)fs.getPath(p)).getKey().equals(finalDirName))  // including the parent will induce loops
+                            .map(fs::getPath)
+                            .filter(path -> {
+                                try {
+                                    return filter.accept(path);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                    return false;
+                                }
+                            }).collect(Collectors.toList());
+                })
+                .blockingStream()
+                .map(Path.class::cast) // upcast to Path from S3Path
+                .iterator();
+    }
 
     /**
      * This method parses the provided URI into elements useful to address
@@ -878,7 +833,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      *
      * @return the information estracted from {@code uri}
      */
-    protected S3FileSystemInfo fileSystemInfo(URI uri) {
+    S3FileSystemInfo fileSystemInfo(URI uri) {
         return new S3FileSystemInfo(uri);
     }
 
@@ -896,7 +851,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
                     .get(timeOut, unit);
             List<ObjectIdentifier> objects = response.contents()
                     .stream()
-                    .filter(s3Object -> s3Object.key().equals(prefix) || s3Object.key().startsWith(prefix + S3Path.PATH_SEPARATOR))
+                    .filter(s3Object -> s3Object.key().equals(prefix) || s3Object.key().startsWith(prefix + PATH_SEPARATOR))
                     .map(s3Object -> ObjectIdentifier.builder().key(s3Object.key()).build())
                     .collect(Collectors.toList());
             if (!objects.isEmpty()) {
@@ -908,7 +863,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return keys;
     }
 
-    protected static S3Path checkPath(Path obj) {
+    static S3Path checkPath(Path obj) {
         Objects.requireNonNull(obj);
         if (!(obj instanceof S3Path))
             throw new ProviderMismatchException();

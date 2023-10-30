@@ -22,13 +22,12 @@ import java.nio.channels.SeekableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
-import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class S3SeekableByteChannel implements SeekableByteChannel {
+class S3SeekableByteChannel implements SeekableByteChannel {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SeekableByteChannel.class);
 
@@ -41,11 +40,7 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
     private boolean closed;
     private long size = -1L;
 
-    protected S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client) throws IOException {
-        this(s3Path, s3Client, Collections.singleton(StandardOpenOption.READ));
-    }
-
-    protected S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, Set<? extends OpenOption> options) throws IOException {
+    S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, Set<? extends OpenOption> options) throws IOException {
         this(s3Path, s3Client, 0L, options, null, null);
     }
 
@@ -300,7 +295,7 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
      * Access the underlying {@code ReadableByteChannel} used for reading
      * @return the channel. May be null if opened for writing only
      */
-    protected ReadableByteChannel getReadDelegate() {
+    ReadableByteChannel getReadDelegate() {
         return this.readDelegate;
     }
 
@@ -308,7 +303,7 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
      * Access the underlying {@code WritableByteChannel} used for writing
      * @return the channel. May be null if opened for reading only
      */
-    protected WritableByteChannel getWriteDelegate() {
+    WritableByteChannel getWriteDelegate() {
         return this.writeDelegate;
     }
 }

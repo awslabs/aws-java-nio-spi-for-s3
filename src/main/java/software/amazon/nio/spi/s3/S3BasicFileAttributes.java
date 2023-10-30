@@ -11,19 +11,18 @@ import software.amazon.nio.spi.s3.util.TimeOutUtils;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -31,35 +30,25 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 /**
  * Representation of {@link BasicFileAttributes} for an S3 object
  */
-public class S3BasicFileAttributes implements BasicFileAttributes {
+class S3BasicFileAttributes implements BasicFileAttributes {
 
     private final S3Path path;
     private final S3AsyncClient client;
     private final String bucketName;
 
-    private final Set<String> methodNamesToFilterOut =
-            Stream.of("wait","toString","hashCode","getClass","notify","notifyAll").collect(Collectors.toSet());
+    private static final Set<String> methodNamesToFilterOut =
+            Set.of("wait", "toString", "hashCode", "getClass", "notify", "notifyAll");
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
+    private static final Logger logger = LoggerFactory.getLogger(S3BasicFileAttributes.class.getName());
 
     /**
      * Constructor for the attributes of a path
      * @param path the path to represent the attributes of
      */
-    protected S3BasicFileAttributes(S3Path path){
-         this(path, path.getFileSystem().client());
-    }
-
-    /**
-     * Constructor for the attributes of a path. A client is provided to perform any necessary S3 operations. This
-     * method is suitable for Mocking by providing a Mocked client.
-     * @param path the path to represent the attributes of
-     * @param client the client to use for any S3 operations
-     */
-    protected S3BasicFileAttributes(S3Path path, S3AsyncClient client){
+    S3BasicFileAttributes(S3Path path){
         this.path = path;
-        this.client = client;
-        bucketName = path.bucketName();
+        this.client = path.getFileSystem().client();
+        this.bucketName = path.bucketName();
     }
 
     /**
@@ -238,15 +227,14 @@ public class S3BasicFileAttributes implements BasicFileAttributes {
      * @return a map filtered to only contain keys that pass the attributeFilter
      */
     protected Map<String, Object> asMap(Predicate<String> attributeFilter){
-        HashMap<String, Object> map = new HashMap<>();
-        Arrays.stream(this.getClass().getMethods())
+        return Arrays.stream(this.getClass().getMethods())
                 .filter(method -> method.getParameterCount() == 0)
                 .filter(method -> !methodNamesToFilterOut.contains(method.getName()))
                 .filter(method -> attributeFilter.test(method.getName()))
-                .forEach(method -> {
+                .collect(Collectors.toMap(Method::getName, (method -> {
                     logger.debug("method name: '{}'", method.getName());
                     try {
-                        map.put(method.getName(), method.invoke(this));
+                        return method.invoke(this);
                     } catch (IllegalAccessException | InvocationTargetException e) {
                         // should not ever happen as these are all public no arg methods
                         String errorMsg = format(
@@ -254,8 +242,6 @@ public class S3BasicFileAttributes implements BasicFileAttributes {
                         logger.error("{}, caused by {}", errorMsg, e.getCause().getMessage());
                         throw new RuntimeException(errorMsg, e);
                     }
-                });
-
-        return map;
+                })));
     }
 }

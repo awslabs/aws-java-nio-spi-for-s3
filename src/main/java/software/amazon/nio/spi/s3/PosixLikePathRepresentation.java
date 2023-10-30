@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
+
 /**
  * A class to hold a string representation of a Posix like path pointing to an S3 object or "directory". Provide methods
  * to obtain views of the representation according to Posix conventions and the directories implicit in S3 paths.
@@ -21,18 +23,18 @@ import java.util.stream.Collectors;
  */
 class PosixLikePathRepresentation {
 
-    public static final PosixLikePathRepresentation ROOT = new PosixLikePathRepresentation("/");
-    public static final PosixLikePathRepresentation EMPTY_PATH = new PosixLikePathRepresentation("");
-    public static final char PATH_SEPARATOR_CHAR = S3Path.PATH_SEPARATOR.charAt(0);
+    static final PosixLikePathRepresentation ROOT = new PosixLikePathRepresentation(PATH_SEPARATOR);
+    static final PosixLikePathRepresentation EMPTY_PATH = new PosixLikePathRepresentation("");
+    private static final char PATH_SEPARATOR_CHAR = PATH_SEPARATOR.charAt(0);
 
     private String path;
 
-    protected PosixLikePathRepresentation(String path) {
+    PosixLikePathRepresentation(String path) {
         if (path == null) throw new IllegalArgumentException("path may not be null");
         this.path = path;
     }
 
-    protected PosixLikePathRepresentation(char[] path) {
+    PosixLikePathRepresentation(char[] path) {
         new PosixLikePathRepresentation(new String(path));
     }
 
@@ -53,7 +55,7 @@ class PosixLikePathRepresentation {
      * @param more  zero or more path elements, {@code EMPTY_PATH} if {@code first} is null or empty
      * @return the representation of the path constructed from the arguments with non-redundant separators.
      */
-    public static PosixLikePathRepresentation of(String first, String... more) {
+    static PosixLikePathRepresentation of(String first, String... more) {
         if((first == null || first.trim().isEmpty()) && !(more == null || more.length == 0)) throw new IllegalArgumentException("The first element of the path may not be null or empty when more exists");
 
         if(first == null || first.trim().isEmpty()) return EMPTY_PATH;
@@ -77,10 +79,10 @@ class PosixLikePathRepresentation {
         String path = allParts.stream()
                 .flatMap(part -> Arrays.stream(part.split("/+")))
                 .filter(p -> !p.isEmpty())
-                .collect(Collectors.joining(S3Path.PATH_SEPARATOR));
+                .collect(Collectors.joining(PATH_SEPARATOR));
 
-        if (endsWithSeparator && !hasTrailingSeparatorString(path)) path = path + S3Path.PATH_SEPARATOR;
-        if (startsWithSeparator && !isAbsoluteString(path)) path = S3Path.PATH_SEPARATOR + path;
+        if (endsWithSeparator && !hasTrailingSeparatorString(path)) path = path + PATH_SEPARATOR;
+        if (startsWithSeparator && !isAbsoluteString(path)) path = PATH_SEPARATOR + path;
         return path;
     }
 
@@ -99,12 +101,12 @@ class PosixLikePathRepresentation {
      *
      * @return true if and only if this path has only length 1 and contains only "/"
      */
-    public boolean isRoot() {
+    boolean isRoot() {
         return isRootString(path);
     }
 
     private static boolean isRootString(String path) {
-        return path.equals(S3Path.PATH_SEPARATOR);
+        return path.equals(PATH_SEPARATOR);
     }
 
     /**
@@ -112,7 +114,7 @@ class PosixLikePathRepresentation {
      *
      * @return true if this path begins with '/'
      */
-    public boolean isAbsolute() {
+    boolean isAbsolute() {
         return isAbsoluteString(path);
     }
 
@@ -131,7 +133,7 @@ class PosixLikePathRepresentation {
      * Importantly, in a true Posix filesystem, if /foo/ is a directory then /foo is as well, however /foo in S3 cannot
      * be inferred to be a directory.
      */
-    public boolean isDirectory() {
+    boolean isDirectory() {
        return isDirectoryString(path);
     }
 
@@ -144,7 +146,7 @@ class PosixLikePathRepresentation {
                 || path.endsWith(PATH_SEPARATOR_CHAR + "..");
     }
 
-    public boolean hasTrailingSeparator(){
+    boolean hasTrailingSeparator(){
         return hasTrailingSeparatorString(path);
     }
 
@@ -153,7 +155,7 @@ class PosixLikePathRepresentation {
         return path.charAt(path.length() - 1) == PATH_SEPARATOR_CHAR;
     }
 
-    public char[] chars(){
+    char[] chars(){
         return path.toCharArray();
     }
 
@@ -168,10 +170,10 @@ class PosixLikePathRepresentation {
     }
 
 
-    public List<String> elements() {
+    List<String> elements() {
         if (this.isRoot()) {return Collections.emptyList();}
 
-        return Arrays.stream(path.split(S3Path.PATH_SEPARATOR))
+        return Arrays.stream(path.split(PATH_SEPARATOR))
                 .filter(s -> !s.trim().isEmpty())
                 .collect(Collectors.toList());
     }

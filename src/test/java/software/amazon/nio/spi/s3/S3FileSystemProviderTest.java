@@ -5,9 +5,9 @@
 
 package software.amazon.nio.spi.s3;
 
-import java.io.IOException;
-
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -28,6 +28,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 
+import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.AccessDeniedException;
@@ -35,7 +36,6 @@ import java.nio.file.AccessMode;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystem;
-import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -56,9 +56,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import org.junit.jupiter.api.AfterEach;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
@@ -97,55 +97,32 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void newFileSystem() {
-        //
-        // A filesystem for pathUri has been created already ;)
-        //
-        assertThatCode(() -> provider.newFileSystem(URI.create(pathUri)))
-                .as("filesystem created twice!")
-                .isInstanceOf(FileSystemAlreadyExistsException.class)
-                .hasMessageContaining("'foo'");
-        //
-        // New AWS S3 file system
-        //
-        S3FileSystem fs = provider.newFileSystem(URI.create("s3://foo2/baa"));
-        assertNotNull(fs); assertEquals("foo2", fs.bucketName()); assertNull(fs.configuration().getCredentials());
-
-        //
-        // New AWS S3 file system with same bucket but different path
-        //
-        assertThatCode(() -> provider.newFileSystem(URI.create("s3://foo2/baa2")))
-                .as("filesystem created twice!")
-                .isInstanceOf(FileSystemAlreadyExistsException.class)
-                .hasMessageContaining("'foo2'");
-        provider.closeFileSystem(fs);
+    @DisplayName("newFileSystem(URI, env) should throw")
+    public void newFileSystemURI() {
+        assertThatThrownBy(
+            () -> new S3FileSystemProvider().newFileSystem(URI.create(pathUri), Collections.emptyMap())
+        ).isInstanceOf(NotYetImplementedException.class);
     }
 
     @Test
-    public void newFileSystemWrongArguments() {
-        //
-        // IllegalArgumentException if URI is not good
-        //
-
-        assertThatCode(() -> provider.newFileSystem(null))
-                .as("missing argument check!")
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("uri can not be null");
-
-        assertThatCode(() -> provider.newFileSystem(URI.create("noscheme")))
-                .as("missing argument check!")
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("invalid uri 'noscheme', please provide an uri as s3://bucket");
-
-        assertThatCode(() -> provider.newFileSystem(URI.create("s3:///")))
-                .as("missing argument check!")
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("invalid uri 's3:///', please provide an uri as s3://bucket");
-        
+    @DisplayName("newFileSystem(Path, env) should throw")
+    public void newFileSystemPath() {
+        assertThatThrownBy(
+            () -> new S3FileSystemProvider().newFileSystem(Paths.get(pathUri), Collections.emptyMap())
+        ).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
     public void getFileSystem() {
+        assertThatCode(() -> provider.getFileSystem(null))
+                .as("missing argument check!")
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("uri can not be null");
+
+        assertThatCode(() -> provider.getFileSystem(URI.create("s3:///")))
+                .as("missing argument check!")
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Bucket name cannot be null");
         //
         // A filesystem for pathUri has been created already ;)
         //
@@ -154,7 +131,7 @@ public class S3FileSystemProviderTest {
         //
         // New AWS S3 file system
         //
-        S3FileSystem cfs = provider.newFileSystem(URI.create("s3://foo2/baa"));
+        S3FileSystem cfs = provider.getFileSystem(URI.create("s3://foo2/baa"), true);
         FileSystem gfs = provider.getFileSystem(URI.create("s3://foo2"));
         assertNotSame(fs, gfs); assertSame(cfs, gfs);
         gfs = provider.getFileSystem(URI.create("s3://foo2"));
@@ -164,7 +141,7 @@ public class S3FileSystemProviderTest {
         //
         // New AWS S3 file system with same bucket but different path
         //
-        cfs = provider.newFileSystem(URI.create("s3://foo3"));
+        cfs = provider.getFileSystem(URI.create("s3://foo3"), true);
         gfs = provider.getFileSystem(URI.create("s3://foo3/dir"));
         assertNotSame(fs, gfs); assertSame(cfs, gfs);
         gfs = provider.getFileSystem(URI.create("s3://foo3/dir"));
@@ -322,8 +299,8 @@ public class S3FileSystemProviderTest {
         when(mockClient.copyObject(any(CopyObjectRequest.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 CopyObjectResponse.builder().build()));
 
-        S3Path dir1 = fs.getPath("/dir1");
-        S3Path dir2 = fs.getPath("/dir2");
+        Path dir1 = fs.getPath("/dir1");
+        Path dir2 = fs.getPath("/dir2");
         assertThrows(FileAlreadyExistsException.class, () -> provider.copy(dir1, dir2));
         provider.copy(dir1, dir2, StandardCopyOption.REPLACE_EXISTING);
 
@@ -354,8 +331,8 @@ public class S3FileSystemProviderTest {
         when(mockClient.deleteObjects(any(DeleteObjectsRequest.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 DeleteObjectsResponse.builder().build()));
 
-        S3Path dir1 = fs.getPath("/dir1");
-        S3Path dir2 = fs.getPath("/dir2");
+        Path dir1 = fs.getPath("/dir1");
+        Path dir2 = fs.getPath("/dir2");
         assertThrows(FileAlreadyExistsException.class, () -> provider.move(dir1, dir2));
         provider.move(dir1, dir2, StandardCopyOption.REPLACE_EXISTING);
 
@@ -380,24 +357,24 @@ public class S3FileSystemProviderTest {
 
     @Test
     public void isSameFile() throws Exception {
-        S3Path foo = fs.getPath("/foo");
-        S3Path baa = fs.getPath("/baa");
+        Path foo = fs.getPath("/foo");
+        Path baa = fs.getPath("/baa");
 
         assertFalse(provider.isSameFile(foo, baa));
         assertTrue(provider.isSameFile(foo, foo));
 
-        S3Path alsoFoo = fs.getPath("foo");
+        Path alsoFoo = fs.getPath("foo");
         assertTrue(provider.isSameFile(foo, alsoFoo));
 
-        S3Path alsoFoo2 = fs.getPath("./foo");
+        Path alsoFoo2 = fs.getPath("./foo");
         assertTrue(provider.isSameFile(foo, alsoFoo2));
     }
 
     @Test
     public void isHidden() {
-        S3Path foo = fs.getPath("/foo");
+        Path foo = fs.getPath("/foo");
         //s3 doesn't have hidden files
-        S3Path baa = fs.getPath(".baa");
+        Path baa = fs.getPath(".baa");
 
         assertFalse(provider.isHidden(foo));
         assertFalse(provider.isHidden(baa));
@@ -405,7 +382,7 @@ public class S3FileSystemProviderTest {
 
     @Test
     public void getFileStore() {
-        S3Path foo = fs.getPath("/foo");
+        Path foo = fs.getPath("/foo");
         //s3 doesn't have file stores
         assertNull(provider.getFileStore(foo));
     }
@@ -418,7 +395,7 @@ public class S3FileSystemProviderTest {
                         .sdkHttpResponse(SdkHttpResponse.builder().statusCode(200).build())
                         .build()));
 
-        S3Path foo = fs.getPath("/foo");
+        Path foo = fs.getPath("/foo");
         provider.checkAccess(foo, AccessMode.READ);
         provider.checkAccess(foo, AccessMode.EXECUTE);
         provider.checkAccess(foo);
@@ -431,7 +408,7 @@ public class S3FileSystemProviderTest {
                         .sdkHttpResponse(SdkHttpResponse.builder().statusCode(403).build())
                         .build()));
 
-        S3Path foo = fs.getPath("/foo");
+        Path foo = fs.getPath("/foo");
         assertThrows(AccessDeniedException.class, () -> provider.checkAccess(foo));
     }
 
@@ -442,7 +419,7 @@ public class S3FileSystemProviderTest {
                         .sdkHttpResponse(SdkHttpResponse.builder().statusCode(404).build())
                         .build()));
 
-        S3Path foo = fs.getPath("/foo");
+        Path foo = fs.getPath("/foo");
         assertThrows(NoSuchFileException.class, () -> provider.checkAccess(foo));
     }
 
@@ -457,36 +434,30 @@ public class S3FileSystemProviderTest {
 
     @Test
     public void getFileAttributeView() {
-        S3Path foo = fs.getPath("/foo");
+        Path foo = fs.getPath("/foo");
         final BasicFileAttributeView fileAttributeView = provider.getFileAttributeView(foo, BasicFileAttributeView.class);
         assertNotNull(fileAttributeView);
-        assertTrue(fileAttributeView instanceof S3FileAttributeView);
-
-        final S3FileAttributeView fileAttributeView1 = provider.getFileAttributeView(foo, S3FileAttributeView.class);
-        assertNotNull(fileAttributeView1);
+        assertTrue(fileAttributeView instanceof S3BasicFileAttributeView);
     }
 
     @Test
     public void getFileAttributeViewIllegalArg() {
-        S3Path foo = fs.getPath("/foo");
+        Path foo = fs.getPath("/foo");
         assertThrows(IllegalArgumentException.class, () -> provider.getFileAttributeView(foo, FileAttributeView.class));
     }
 
     @Test
     public void readAttributes() {
-        S3Path foo = fs.getPath("/foo");
-        final BasicFileAttributes BasicFileAttributes = provider.readAttributes(foo, BasicFileAttributes.class);
-        assertNotNull(BasicFileAttributes);
-        assertTrue(BasicFileAttributes instanceof S3BasicFileAttributes);
-
-        final S3BasicFileAttributes s3BasicFileAttributes = provider.readAttributes(foo, S3BasicFileAttributes.class);
-        assertNotNull(s3BasicFileAttributes);
+        Path foo = fs.getPath("/foo");
+        final BasicFileAttributes basicFileAttributes = provider.readAttributes(foo, BasicFileAttributes.class);
+        assertNotNull(basicFileAttributes);
+        assertTrue(basicFileAttributes instanceof S3BasicFileAttributes);
     }
 
     @Test
     public void testReadAttributes() {
-        S3Path foo = fs.getPath("/foo");
-        S3Path fooDir = fs.getPath("/foo/");
+        Path foo = fs.getPath("/foo");
+        Path fooDir = fs.getPath("/foo/");
 
         when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.completedFuture(
                 HeadObjectResponse.builder()
@@ -508,7 +479,7 @@ public class S3FileSystemProviderTest {
 
     @Test
     public void setAttribute() {
-        S3Path foo = fs.getPath("/foo");
+        Path foo = fs.getPath("/foo");
         assertThrows(UnsupportedOperationException.class, () -> provider.setAttribute(foo, "x", "y"));
     }
     
@@ -522,4 +493,5 @@ public class S3FileSystemProviderTest {
 
         assertNull(BUILDER.forcePathStyle);
     }
+
 }

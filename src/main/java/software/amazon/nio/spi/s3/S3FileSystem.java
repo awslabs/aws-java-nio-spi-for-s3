@@ -7,10 +7,11 @@ package software.amazon.nio.spi.s3;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.channels.Channel;
 import java.nio.file.*;
 import java.nio.file.attribute.UserPrincipalLookupService;
@@ -21,23 +22,22 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
-import software.amazon.nio.spi.s3.util.S3FileSystemInfo;
+
+import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
 
 /**
  * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
  *
  */
 public class S3FileSystem extends FileSystem {
-    final Logger logger = LoggerFactory.getLogger(this.getClass());
+    static final Logger logger = LoggerFactory.getLogger(S3FileSystem.class);
 
     /**
      * View required by Java NIO
      */
-    public static final String BASIC_FILE_ATTRIBUTE_VIEW = "basic";
+    static final String BASIC_FILE_ATTRIBUTE_VIEW = "basic";
 
-    protected S3ClientProvider clientProvider;
+    S3ClientProvider clientProvider;
 
     private final String bucketName;
     private final S3FileSystemProvider provider;
@@ -54,9 +54,7 @@ public class S3FileSystem extends FileSystem {
      * @param config the configuration to use; can be null to use a default configuration
      *
      */
-    protected S3FileSystem(S3FileSystemProvider provider, S3NioSpiConfiguration config) {
-        super();
-
+    S3FileSystem(S3FileSystemProvider provider, S3NioSpiConfiguration config) {
         configuration = (config == null) ? new S3NioSpiConfiguration() : config;
         bucketName = configuration.getBucketName();
 
@@ -74,53 +72,6 @@ public class S3FileSystem extends FileSystem {
     @Override
     public FileSystemProvider provider() {
         return provider;
-    }
-
-    /**
-     * Returns the configuration object passed in the constructor or created
-     * by default.
-     *
-     * @return the configuration object for this file system
-     */
-    public S3NioSpiConfiguration configuration() {
-        return configuration;
-    }
-
-    /**
-     * Returns the client provider used to build aws clients
-     *
-     * @return the client provider
-     */
-    public S3ClientProvider clientProvider() {
-        return clientProvider;
-    }
-
-    /**
-     * Sets the client provider to use to build aws clients
-     *
-     * @param clientProvider the client provider
-     */
-    public void clientProvider(S3ClientProvider clientProvider) {
-        this.clientProvider = clientProvider;
-    }
-
-    /**
-     * @return the S3Client associated with this FileSystem
-     */
-    public S3AsyncClient client() {
-        if (client == null) {
-            client = clientProvider.generateAsyncClient(bucketName);
-        }
-
-        return client;
-    }
-
-    /**
-     * Obtain the name of the bucket represented by this <code>FileSystem</code> instance
-     * @return the bucket name
-     */
-    public String bucketName() {
-        return bucketName;
     }
 
     /**
@@ -192,7 +143,7 @@ public class S3FileSystem extends FileSystem {
      */
     @Override
     public String getSeparator() {
-        return S3Path.PATH_SEPARATOR;
+        return PATH_SEPARATOR;
     }
 
     /**
@@ -297,7 +248,7 @@ public class S3FileSystem extends FileSystem {
      */
     @SuppressWarnings("NullableProblems")
     @Override
-    public S3Path getPath(String first, String... more) {
+    public Path getPath(String first, String... more) {
         return S3Path.getPath(this, first, more);
     }
 
@@ -421,18 +372,65 @@ public class S3FileSystem extends FileSystem {
     }
 
     /**
+     * Returns the configuration object passed in the constructor or created
+     * by default.
+     *
+     * @return the configuration object for this file system
+     */
+    S3NioSpiConfiguration configuration() {
+        return configuration;
+    }
+
+    /**
+     * Returns the client provider used to build aws clients
+     *
+     * @return the client provider
+     */
+    public S3ClientProvider clientProvider() {
+        return clientProvider;
+    }
+
+    /**
+     * Sets the client provider to use to build aws clients
+     *
+     * @param clientProvider the client provider
+     */
+    public void clientProvider(S3ClientProvider clientProvider) {
+        this.clientProvider = clientProvider;
+    }
+
+    /**
+     * @return the S3Client associated with this FileSystem
+     */
+    S3AsyncClient client() {
+        if (client == null) {
+            client = clientProvider.generateAsyncClient(bucketName);
+        }
+
+        return client;
+    }
+
+    /**
+     * Obtain the name of the bucket represented by this <code>FileSystem</code> instance
+     * @return the bucket name
+     */
+    String bucketName() {
+        return bucketName;
+    }
+
+    /**
      * The list of currently open channels. Exposed mainly for testing
      * @return a read only view wrapping the set of currently open channels.
      */
-    protected Set<Channel> getOpenChannels(){
+    Set<Channel> getOpenChannels(){
         return Collections.unmodifiableSet(openChannels);
     }
 
-    protected void registerOpenChannel(S3SeekableByteChannel channel){
+    void registerOpenChannel(S3SeekableByteChannel channel){
         openChannels.add(channel);
     }
 
-    protected boolean deregisterClosedChannel(S3SeekableByteChannel closedChannel){
+    boolean deregisterClosedChannel(S3SeekableByteChannel closedChannel){
         assert !closedChannel.isOpen();
 
         return openChannels.remove(closedChannel);

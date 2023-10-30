@@ -5,8 +5,6 @@
 
 package software.amazon.nio.spi.s3;
 
-import software.amazon.awssdk.services.s3.model.S3Object;
-
 import java.io.File;
 import java.io.IOError;
 import java.io.UnsupportedEncodingException;
@@ -26,15 +24,14 @@ import java.util.List;
 import java.util.Objects;
 
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
+import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
 import static software.amazon.nio.spi.s3.S3FileSystemProvider.checkPath;
 
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 @SuppressWarnings("NullableProblems")
-public class S3Path implements Path {
-
-    public static final String PATH_SEPARATOR = "/";
+class S3Path implements Path {
 
     private final S3FileSystem fileSystem;
     private final PosixLikePathRepresentation pathRepresentation;
@@ -50,17 +47,6 @@ public class S3Path implements Path {
     private S3Path from(String path){
         return getPath(this.fileSystem, path);
     }
-
-    /**
-     * Construct a path from an S3 object in the bucket represented by the filesystem
-     * @param fs the filesystem that holds (or will hold) the object represented by {@code s3Object}
-     * @param s3Object the object
-     * @return a new {@code S3Path}
-     */
-    public static S3Path getPath(S3FileSystem fs, S3Object s3Object){
-        return getPath(fs, s3Object.key());
-    }
-
 
     /**
      * Construct a Path in the parent FileSystem using the POSIX style.
@@ -83,7 +69,7 @@ public class S3Path implements Path {
      * @throws InvalidPathException if the Path cannot be constructed
      * @return a new S3Path
      */
-    public static S3Path getPath(S3FileSystem fsForBucket, String first, String... more) {
+    static S3Path getPath(S3FileSystem fsForBucket, String first, String... more) {
         if(fsForBucket == null)  throw new IllegalArgumentException("The S3FileSystem may not be null");
         if(first == null ){
           throw new IllegalArgumentException("first element of the path may not be null");
@@ -129,14 +115,6 @@ public class S3Path implements Path {
     }
 
     /**
-     * The name of the S3 bucket that represents the root ("/") of this Path
-     * @return the bucketName, equivalent to <code>getFileSystem().bucketName()</code>
-     */
-    public String bucketName() {
-        return fileSystem.bucketName();
-    }
-
-    /**
      * Tells whether this path is absolute.
      *
      * <p> An absolute path is complete in that it doesn't need to be combined
@@ -147,14 +125,6 @@ public class S3Path implements Path {
     @Override
     public boolean isAbsolute() {
         return pathRepresentation.isAbsolute();
-    }
-
-    /**
-     * Is the path inferred to be an S3 directory?
-     * @return true if the path can be inferrred to be a directory
-     */
-    public boolean isDirectory() {
-        return pathRepresentation.isDirectory();
     }
 
     /**
@@ -831,16 +801,32 @@ public class S3Path implements Path {
     }
 
     /**
+     * The name of the S3 bucket that represents the root ("/") of this Path
+     * @return the bucketName, equivalent to <code>getFileSystem().bucketName()</code>
+     */
+    String bucketName() {
+        return fileSystem.bucketName();
+    }
+
+    /**
+     * Is the path inferred to be an S3 directory?
+     * @return true if the path can be inferred to be a directory
+     */
+    boolean isDirectory() {
+        return pathRepresentation.isDirectory();
+    }
+
+    /**
      * The key of the object for S3. Essentially the "real path" with the "/" prefix and bucket name removed.
      * @return the key
      */
-    public String getKey(){
+    String getKey(){
         if(isEmpty()) return "";
         String s = toRealPath(NOFOLLOW_LINKS).toString();
-        if(s.startsWith(S3Path.PATH_SEPARATOR+bucketName())) {
-                s = s.replaceFirst(S3Path.PATH_SEPARATOR+bucketName(), "");
+        if(s.startsWith(PATH_SEPARATOR+bucketName())) {
+                s = s.replaceFirst(PATH_SEPARATOR+bucketName(), "");
         }
-        while(s.startsWith(S3Path.PATH_SEPARATOR)){
+        while(s.startsWith(PATH_SEPARATOR)){
             s = s.substring(1);
         }
         return s;
@@ -852,7 +838,7 @@ public class S3Path implements Path {
         final boolean isAbsolute;
         final boolean hasTrailingSeparator;
 
-        public S3PathIterator(Iterator<String> delegate, boolean isAbsolute, boolean hasTrailingSeparator){
+        private S3PathIterator(Iterator<String> delegate, boolean isAbsolute, boolean hasTrailingSeparator){
             this.delegate = delegate;
             this.isAbsolute = isAbsolute;
             this.hasTrailingSeparator = hasTrailingSeparator;
