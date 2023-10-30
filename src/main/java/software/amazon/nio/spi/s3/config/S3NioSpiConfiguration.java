@@ -177,7 +177,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         }
         endpoint = endpoint.trim();
 
-        if ((endpoint.length() > 0) && !ENDPOINT_REGEXP.matcher(endpoint).matches()) {
+        if (!endpoint.isEmpty() && !ENDPOINT_REGEXP.matcher(endpoint).matches()) {
             throw new IllegalArgumentException(
                 String.format("endpoint '%s' does not match format host:port where port is a number", endpoint)
             );
@@ -211,7 +211,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * @return this instance
      */
     public S3NioSpiConfiguration withRegion(String region) {
-        if ((region == null) || StringUtils.isBlank(region)) {
+        if ((region == null) || region.isBlank()) {
             remove(AWS_REGION_PROPERTY);
         } else {
             put(AWS_REGION_PROPERTY, region.trim());

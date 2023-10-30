@@ -35,7 +35,6 @@ import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
-import static software.amazon.nio.spi.s3.util.StringUtils.isBlank;
 
 /**
  * Factory/builder class that creates sync and async S3 clients. It also provides
@@ -180,7 +179,7 @@ public class S3ClientProvider {
         logger.debug("generating client for bucket: '{}'", bucketName);
         S3Client bucketSpecificClient = null;
 
-        if ((configuration.getEndpoint() == null) || isBlank(configuration.getEndpoint())) {
+        if ((configuration.getEndpoint() == null) || configuration.getEndpoint().isBlank()) {
             //
             // we try to locate a bucket only if no endpoint is provided, which
             // means we are dealing with AWS S3 buckets
@@ -240,7 +239,7 @@ public class S3ClientProvider {
         logger.debug("generating asynchronous client for bucket: '{}'", bucketName);
         S3AsyncClient bucketSpecificClient = null;
 
-        if ((configuration.getEndpoint() == null) || isBlank(configuration.getEndpoint())) {
+        if ((configuration.getEndpoint() == null) || configuration.getEndpoint().isBlank()) {
             //
             // we try to locate a bucket only if no endpoint is provided, which
             // means we are dealing with AWS S3 buckets
@@ -303,7 +302,7 @@ public class S3ClientProvider {
                 )
             );
         
-        if (!isBlank(endpoint)) {
+        if (!endpoint.isBlank()) {
             clientBuilder.endpointOverride(URI.create(configuration.getEndpointProtocol() + "://" + endpoint));
         }
 
@@ -322,7 +321,7 @@ public class S3ClientProvider {
 
         logger.debug("bucket region is: '{}'", region.id());
 
-        if (!isBlank(endpoint)) {
+        if (!endpoint.isBlank()) {
             asyncClientBuilder.endpointOverride(URI.create(configuration.getEndpointProtocol() + "://" + endpoint));
         }
 

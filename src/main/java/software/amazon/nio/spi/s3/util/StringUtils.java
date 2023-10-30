@@ -34,22 +34,4 @@ public class StringUtils {
         return sj.toString();
     }
 
-    /**
-     * Like Java 11's String.isBlank(): it returns true if the string is empty or
-     * contains only white space codepoints, otherwise false.
-     *
-     * @param s the string to check
-     *
-     * @return true if the string is empty or contains only white space codepoints, otherwise false
-     *
-     * TODO: to replace with Java11's isBlank when moving away from Java8
-     */
-    public static boolean isBlank(final String s) {
-        for (int i=0; i<s.length(); ++i) {
-            if (!Character.isWhitespace(s.charAt(i))) {
-                return false;
-            }
-        }
-        return true;
-    }
 }

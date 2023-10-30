@@ -25,19 +25,19 @@ group = 'software.amazon.nio.s3'
 archivesBaseName = 'nio-spi-for-s3'
 version = '2.0.0-dev'
 
-apply plugin: 'java'
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
-
-
 java {
     withSourcesJar()
     withJavadocJar()
 }
 
-compileJava {
-    // see https://docs.gradle.org/6.6/userguide/building_java_projects.html#sec:java_cross_compilation
-    options.release = 8
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release.set(11)
 }
 
 sourceSets {
@@ -58,8 +58,7 @@ dependencies {
     implementation 'org.slf4j:slf4j-api:2.0.9'
     implementation 'ch.qos.logback:logback-classic:1.4.11'
     implementation 'ch.qos.logback:logback-core:1.4.11'
-    // cannot use caffeine v3 because that requires java 11
-    implementation('com.github.ben-manes.caffeine:caffeine:2.9.3')
+    implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
 
     examplesImplementation project
 }
