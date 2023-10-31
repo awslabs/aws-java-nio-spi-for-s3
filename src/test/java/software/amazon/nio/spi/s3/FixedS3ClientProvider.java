@@ -24,7 +24,7 @@ public class FixedS3ClientProvider extends S3ClientProvider {
     }
 
     @Override
-    public S3Client universalClient() {
+    S3Client universalClient() {
         return (S3Client)client;
     }
 

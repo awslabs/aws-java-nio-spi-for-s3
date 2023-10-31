@@ -121,7 +121,7 @@ public class S3ClientProvider {
      *
      * @return a S3Client not bound to a region
      */
-    public S3Client universalClient() {
+    S3Client universalClient() {
         return universalClient(false);
     }
 
@@ -133,7 +133,7 @@ public class S3ClientProvider {
      * @param <T> type of AwsClient
      * @return a S3Client not bound to a region
      */
-    public <T extends AwsClient> T universalClient(boolean async) {
+    <T extends AwsClient> T universalClient(boolean async) {
         return (T)((async) ? DEFAULT_ASYNC_CLIENT : DEFAULT_CLIENT);
     }
 
@@ -160,7 +160,7 @@ public class S3ClientProvider {
      *
      * @return an S3 client appropriate for the region of the named bucket
      */
-    protected S3Client generateSyncClient(String bucketName, S3Client locationClient) {
+    S3Client generateSyncClient(String bucketName, S3Client locationClient) {
         return getClientForBucket(bucketName, locationClient, this::clientForRegion);
     }
 
@@ -174,11 +174,11 @@ public class S3ClientProvider {
      *
      * @return an S3 client appropriate for the region of the named bucket
      */
-    protected S3AsyncClient generateAsyncClient (String bucketName, S3Client locationClient) {
+    S3AsyncClient generateAsyncClient (String bucketName, S3Client locationClient) {
         return getClientForBucket(bucketName, locationClient, this::asyncClientForRegion);
     }
 
-    protected <T extends AwsClient> T getClientForBucket(
+    private <T extends AwsClient> T getClientForBucket(
             String bucketName,
             S3Client locationClient,
             Function<String, T> getClientForRegion
