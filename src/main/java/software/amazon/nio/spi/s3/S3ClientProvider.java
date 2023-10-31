@@ -216,13 +216,13 @@ public class S3ClientProvider {
             logger.debug("determining bucket location with getBucketLocation");
             return locationClient.getBucketLocation(builder -> builder.bucket(bucketName)).locationConstraintAsString();
         } catch (S3Exception e) {
-            if(e.statusCode() == 403) {
+            if(isForbidden(e)) {
                 logger.debug("Cannot determine location of '{}' bucket directly. Attempting to obtain bucket location with headBucket operation", bucketName);
                 try {
                     final HeadBucketResponse headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
                     return getBucketRegionFromResponse(headBucketResponse.sdkHttpResponse());
                 } catch (S3Exception e2) {
-                    if (e2.statusCode() == 301) {
+                    if (isRedirect(e2)) {
                         return getBucketRegionFromResponse(e2.awsErrorDetails().sdkHttpResponse());
                     } else {
                         throw e2;
@@ -233,6 +233,9 @@ public class S3ClientProvider {
             }
         }
     }
+
+    private boolean isForbidden(S3Exception e) { return e.statusCode() == 403; }
+    private boolean isRedirect(S3Exception e) { return e.statusCode() == 301; }
 
     private String getBucketRegionFromResponse(SdkHttpResponse response) {
         return response.firstMatchingHeader("x-amz-bucket-region").orElseThrow(() ->
