@@ -37,13 +37,13 @@ public class S3ClientProviderTest {
     S3ClientProvider provider;
 
     @BeforeEach
-    public void before() throws Exception {
-        provider = new S3ClientProvider();
+    public void before() {
+        provider = new S3ClientProvider(null);
     }
 
     @Test
     public void initialization() {
-        final S3ClientProvider P = new S3ClientProvider();
+        final S3ClientProvider P = new S3ClientProvider(null);
 
         assertNotNull(P.configuration);
 

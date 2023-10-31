@@ -19,6 +19,7 @@ public class FixedS3ClientProvider extends S3ClientProvider {
     final public AwsClient client;
 
     public FixedS3ClientProvider(S3AsyncClient client) {
+        super(null);
         this.client = client;
     }
 

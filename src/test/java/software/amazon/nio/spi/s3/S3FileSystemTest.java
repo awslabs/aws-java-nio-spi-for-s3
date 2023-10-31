@@ -88,8 +88,8 @@ public class S3FileSystemTest {
 
     @Test
     public void getAndSetClientProvider() {
-        final S3ClientProvider P1 = new S3ClientProvider();
-        final S3ClientProvider P2 = new S3ClientProvider();
+        final S3ClientProvider P1 = new S3ClientProvider(null);
+        final S3ClientProvider P2 = new S3ClientProvider(null);
         s3FileSystem.clientProvider(P1); then(s3FileSystem.clientProvider()).isSameAs(P1);
         s3FileSystem.clientProvider(P2); then(s3FileSystem.clientProvider()).isSameAs(P2);
     }

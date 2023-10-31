@@ -105,10 +105,6 @@ public class S3ClientProvider {
         this.configuration = (c == null) ? new S3NioSpiConfiguration() : c;
     }
 
-    public S3ClientProvider() {
-        this(null);
-    }
-
     public S3CrtAsyncClientBuilder asyncClientBuilder() {
         return asyncClientBuilder;
     }
