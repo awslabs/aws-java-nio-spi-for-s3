@@ -7,9 +7,9 @@ package software.amazon.nio.spi.s3;
 
 import java.io.File;
 import java.io.IOError;
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.InvalidPathException;
 import java.nio.file.LinkOption;
@@ -631,17 +631,10 @@ class S3Path implements Path {
         elements.forEachRemaining(
             (e) -> {
                 String name = e.getFileName().toString();
-                try {
-                    if (name.endsWith(PATH_SEPARATOR)) {
-                        name = name.substring(0, name.length()-1);
-                    }
-                    uri.append(PATH_SEPARATOR).append(URLEncoder.encode(name, "UTF-8"));
-                } catch (UnsupportedEncodingException x) {
-                    //
-                    // NOTE: I do not know how to reproduce this case...
-                    //
-                    throw new IllegalArgumentException("path '" + uri + "' can not be converted to URI: " + x.getMessage(), x);
+                if (name.endsWith(PATH_SEPARATOR)) {
+                    name = name.substring(0, name.length()-1);
                 }
+                uri.append(PATH_SEPARATOR).append(URLEncoder.encode(name, StandardCharsets.UTF_8));
             }
         );
         if (isDirectory()) {

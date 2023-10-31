@@ -79,7 +79,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
-    private static Map<String, S3FileSystem> cache = new HashMap<>();
+    private static final Map<String, S3FileSystem> cache = new HashMap<>();
 
     /**
      * Returns the URI scheme that identifies this provider.
@@ -711,12 +711,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
         if (uri.getScheme() == null) {
             throw new IllegalArgumentException(
-                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
+                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri)
             );
         }
         if (uri.getAuthority() == null) {
             throw new IllegalArgumentException(
-                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
+                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri)
             );
         }
 
