@@ -14,6 +14,7 @@ plugins {
     id 'jacoco'
     id 'jvm-test-suite'
     id 'com.github.johnrengelman.shadow' version '7.1.2'
+    id 'com.palantir.revapi' version '1.7.0'
 }
 
 repositories {
