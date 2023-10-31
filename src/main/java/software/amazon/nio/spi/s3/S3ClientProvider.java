@@ -195,27 +195,8 @@ public class S3ClientProvider {
             // we try to locate a bucket only if no endpoint is provided, which
             // means we are dealing with AWS S3 buckets
             //
-            String bucketLocation = null;
-            try {
-                logger.debug("determining bucket location with getBucketLocation");
-                bucketLocation = locationClient.getBucketLocation(builder -> builder.bucket(bucketName)).locationConstraintAsString();
-            } catch (S3Exception e) {
-                if(e.statusCode() == 403) {
-                    logger.debug("Cannot determine location of '{}' bucket directly. Attempting to obtain bucket location with headBucket operation", bucketName);
-                    try {
-                        final HeadBucketResponse headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
-                        bucketLocation = getBucketRegionFromResponse(headBucketResponse.sdkHttpResponse());
-                    } catch (S3Exception e2) {
-                        if (e2.statusCode() == 301) {
-                            bucketLocation = getBucketRegionFromResponse(e2.awsErrorDetails().sdkHttpResponse());
-                        } else {
-                            throw e2;
-                        }
-                    }
-                } else {
-                    throw e;
-                }
-            }
+            String bucketLocation = determineBucketLocation(bucketName, locationClient);
+
             if ( bucketLocation != null) bucketSpecificClient = getClientForRegion.apply(bucketLocation);
 
             //
@@ -228,6 +209,29 @@ public class S3ClientProvider {
         return (bucketSpecificClient != null)
                 ? bucketSpecificClient
                 : getClientForRegion.apply(configuration.getRegion());
+    }
+
+    private String determineBucketLocation(String bucketName, S3Client locationClient) {
+        try {
+            logger.debug("determining bucket location with getBucketLocation");
+            return locationClient.getBucketLocation(builder -> builder.bucket(bucketName)).locationConstraintAsString();
+        } catch (S3Exception e) {
+            if(e.statusCode() == 403) {
+                logger.debug("Cannot determine location of '{}' bucket directly. Attempting to obtain bucket location with headBucket operation", bucketName);
+                try {
+                    final HeadBucketResponse headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
+                    return getBucketRegionFromResponse(headBucketResponse.sdkHttpResponse());
+                } catch (S3Exception e2) {
+                    if (e2.statusCode() == 301) {
+                        return getBucketRegionFromResponse(e2.awsErrorDetails().sdkHttpResponse());
+                    } else {
+                        throw e2;
+                    }
+                }
+            } else {
+                throw e;
+            }
+        }
     }
 
     private String getBucketRegionFromResponse(SdkHttpResponse response) {
