@@ -187,7 +187,7 @@ public class S3ClientProvider {
             S3Client locationClient,
             Function<String, T> getClientForRegion
     ) {
-        logger.debug("generating asynchronous client for bucket: '{}'", bucketName);
+        logger.debug("generating client for bucket: '{}'", bucketName);
         T bucketSpecificClient = null;
 
         if ((configuration.getEndpoint() == null) || configuration.getEndpoint().isBlank()) {
@@ -197,13 +197,13 @@ public class S3ClientProvider {
             //
             String bucketLocation = determineBucketLocation(bucketName, locationClient);
 
-            if ( bucketLocation != null) bucketSpecificClient = getClientForRegion.apply(bucketLocation);
-
-            //
-            // if here, no S3 nor other client has been created yet and we do not
-            // have a location; we'll let it figure out from the profile region
-            //
-            logger.warn("Unable to determine the region of bucket: '{}'. Generating a client for the profile region.", bucketName);
+            if ( bucketLocation != null) {
+                bucketSpecificClient = getClientForRegion.apply(bucketLocation);
+            } else {
+                // if here, no S3 nor other client has been created yet, and we do not
+                // have a location; we'll let it figure out from the profile region
+                logger.warn("Unable to determine the region of bucket: '{}'. Generating a client for the profile region.", bucketName);
+            }
         }
 
         return (bucketSpecificClient != null)
