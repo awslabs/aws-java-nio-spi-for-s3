@@ -199,16 +199,15 @@ public class S3ClientProvider {
             try {
                 logger.debug("determining bucket location with getBucketLocation");
                 bucketLocation = locationClient.getBucketLocation(builder -> builder.bucket(bucketName)).locationConstraintAsString();
-                bucketSpecificClient = getClientForRegion.apply(bucketLocation);
             } catch (S3Exception e) {
                 if(e.statusCode() == 403) {
                     logger.debug("Cannot determine location of '{}' bucket directly. Attempting to obtain bucket location with headBucket operation", bucketName);
                     try {
                         final HeadBucketResponse headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
-                        bucketSpecificClient = getClientForRegion.apply(getBucketRegionFromResponse(headBucketResponse.sdkHttpResponse()));
+                        bucketLocation = getBucketRegionFromResponse(headBucketResponse.sdkHttpResponse());
                     } catch (S3Exception e2) {
                         if (e2.statusCode() == 301) {
-                            bucketSpecificClient = getClientForRegion.apply(getBucketRegionFromResponse(e2.awsErrorDetails().sdkHttpResponse()));
+                            bucketLocation = getBucketRegionFromResponse(e2.awsErrorDetails().sdkHttpResponse());
                         } else {
                             throw e2;
                         }
@@ -217,6 +216,7 @@ public class S3ClientProvider {
                     throw e;
                 }
             }
+            if ( bucketLocation != null) bucketSpecificClient = getClientForRegion.apply(bucketLocation);
 
             //
             // if here, no S3 nor other client has been created yet and we do not
