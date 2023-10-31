@@ -43,6 +43,9 @@ To send us a pull request, please:
 4. Ensure unit tests cover your change and demonstrate expected behavior
 5. Ensure unit tests do NOT require AWS credentials or S3 connectivity by using Mocks for any `S3Client` or `S3AsyncClient`. Remember, unit tests test this library and not the functionality of S3.
 6. Run `./gradlew check` to ensure local tests pass and test coverage reports are produced.
+This will also check for API/ABI compatibility using the [rev-api gradle plugin](https://github.com/palantir/gradle-revapi/tree/develop).
+In case there is a justified breaking change, you can [accept](https://github.com/palantir/gradle-revapi/tree/develop#accepting-breaks) them.
+Please mention the change and reason when opening the PR, so that maintainers consider this when versioning.
 7. Ensure test coverage is not degraded. Reports can be found at `build/reports/jacoco/test/html/index.html`.
 8. Send us a pull request, answering any default questions in the pull request interface.
 9. Pay attention to any automated CI failures reported in the pull request, and stay involved in the conversation.

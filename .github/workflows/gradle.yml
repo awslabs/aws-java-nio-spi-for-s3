@@ -35,7 +35,11 @@ jobs:
 
     - name: Setup Gradle
       uses: gradle/gradle-build-action@v2.4.2
-    
+
+    # Temporary until release of v2
+    - name: Accept breaking changes
+      run: ./gradlew :revapiAcceptAllBreaks --justification 'Changes for v2'
+
     - name: Execute Gradle build
       run: ./gradlew build
     
