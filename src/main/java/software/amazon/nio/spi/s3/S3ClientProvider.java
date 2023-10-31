@@ -213,21 +213,29 @@ public class S3ClientProvider {
 
     private String determineBucketLocation(String bucketName, S3Client locationClient) {
         try {
-            logger.debug("determining bucket location with getBucketLocation");
-            return locationClient.getBucketLocation(builder -> builder.bucket(bucketName)).locationConstraintAsString();
+            return getBucketLocation(bucketName, locationClient);
         } catch (S3Exception e) {
             if(isForbidden(e)) {
-                logger.debug("Cannot determine location of '{}' bucket directly. Attempting to obtain bucket location with headBucket operation", bucketName);
-                try {
-                    final HeadBucketResponse headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
-                    return getBucketRegionFromResponse(headBucketResponse.sdkHttpResponse());
-                } catch (S3Exception e2) {
-                    if (isRedirect(e2)) {
-                        return getBucketRegionFromResponse(e2.awsErrorDetails().sdkHttpResponse());
-                    } else {
-                        throw e2;
-                    }
-                }
+                return getBucketLocationFromHead(bucketName, locationClient);
+            } else {
+                throw e;
+            }
+        }
+    }
+
+    private String getBucketLocation(String bucketName, S3Client locationClient) {
+        logger.debug("determining bucket location with getBucketLocation");
+        return locationClient.getBucketLocation(builder -> builder.bucket(bucketName)).locationConstraintAsString();
+    }
+
+    private String getBucketLocationFromHead(String bucketName, S3Client locationClient) {
+        try {
+            logger.debug("Cannot determine location of '{}' bucket directly. Attempting to obtain bucket location with headBucket operation", bucketName);
+            final HeadBucketResponse headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
+            return getBucketRegionFromResponse(headBucketResponse.sdkHttpResponse());
+        } catch (S3Exception e) {
+            if (isRedirect(e)) {
+                return getBucketRegionFromResponse(e.awsErrorDetails().sdkHttpResponse());
             } else {
                 throw e;
             }
