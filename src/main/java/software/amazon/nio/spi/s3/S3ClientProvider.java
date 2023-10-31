@@ -99,7 +99,7 @@ public class S3ClientProvider {
         );
     }
 
-    Logger logger = LoggerFactory.getLogger("S3ClientStoreProvider");
+    static private final Logger logger = LoggerFactory.getLogger(S3ClientProvider.class);
 
     public S3ClientProvider(S3NioSpiConfiguration c) {
         this.configuration = (c == null) ? new S3NioSpiConfiguration() : c;
