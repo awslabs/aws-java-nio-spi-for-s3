@@ -80,8 +80,10 @@ class S3Path implements Path {
         first = first.trim();
 
         if( first.isEmpty() && !(more == null || more.length == 0)) throw new IllegalArgumentException("The first element of the path may not be empty when more exists");
-        if(first.startsWith(fsForBucket.provider().getScheme()+":/")) {
-            first = removeScheme(first, fsForBucket.provider().getScheme());
+
+        String scheme = fsForBucket.provider().getScheme();
+        if(first.startsWith(scheme +":/")) {
+            first = removeScheme(first, scheme);
             first = removeCredentials(first, configuration);
             first = removeEndpoint(first, configuration.getEndpoint());
             first = removeBucket(first, configuration.getBucketName());
