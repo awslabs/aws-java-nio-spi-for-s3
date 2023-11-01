@@ -700,6 +700,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
                 throw new FileSystemNotFoundException("file system not found for '" + info.key() + "'");
             }
             fs = forUri(uri);
+            cache.put(info.key(), fs);
         }
 
         return fs;
@@ -731,12 +732,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
             config.withCredentials(info.accessKey(), info.accessSecret());
         }
 
-        S3FileSystem fs = null;
-        cache.put(
-                info.key(),
-                fs = new S3FileSystem(this, config)
-        );
-        return fs;
+        return new S3FileSystem(this, config);
     }
 
     void closeFileSystem(FileSystem fs) {
