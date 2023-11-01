@@ -722,10 +722,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
 
         S3FileSystemInfo info = fileSystemInfo(uri);
-        if (cache.containsKey(info.key())) {
-            throw new FileSystemAlreadyExistsException("a file system already exists for '" + info.key() + "', use getFileSystem() instead");
-        }
-
         S3NioSpiConfiguration config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
 
         if (info.accessKey() != null) {
