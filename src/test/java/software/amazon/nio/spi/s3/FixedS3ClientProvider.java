@@ -19,11 +19,12 @@ public class FixedS3ClientProvider extends S3ClientProvider {
     final public AwsClient client;
 
     public FixedS3ClientProvider(S3AsyncClient client) {
+        super(null);
         this.client = client;
     }
 
     @Override
-    public S3Client universalClient() {
+    S3Client universalClient() {
         return (S3Client)client;
     }
 

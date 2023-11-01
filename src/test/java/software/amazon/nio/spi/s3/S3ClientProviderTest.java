@@ -37,13 +37,13 @@ public class S3ClientProviderTest {
     S3ClientProvider provider;
 
     @BeforeEach
-    public void before() throws Exception {
-        provider = new S3ClientProvider();
+    public void before() {
+        provider = new S3ClientProvider(null);
     }
 
     @Test
     public void initialization() {
-        final S3ClientProvider P = new S3ClientProvider();
+        final S3ClientProvider P = new S3ClientProvider(null);
 
         assertNotNull(P.configuration);
 
@@ -80,7 +80,7 @@ public class S3ClientProviderTest {
                         .build());
 
         // which should get you a client
-        final S3Client s3Client = provider.generateClient("test-bucket", mockClient);
+        final S3Client s3Client = provider.generateSyncClient("test-bucket", mockClient);
         assertNotNull(s3Client);
 
         final InOrder inOrder = inOrder(mockClient);
@@ -159,7 +159,7 @@ public class S3ClientProviderTest {
         );
 
         // then you should get a NoSuchElement exception when you try to get the header
-        assertThrows(NoSuchElementException.class, () -> provider.generateClient("test-bucket", mockClient));
+        assertThrows(NoSuchElementException.class, () -> provider.generateSyncClient("test-bucket", mockClient));
 
         final InOrder inOrder = inOrder(mockClient);
         inOrder.verify(mockClient).getBucketLocation(anyConsumer());
