@@ -23,6 +23,7 @@ import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Object;
@@ -283,7 +284,7 @@ public class S3FileSystemProviderTest {
         verify(mockClient, times(1)).deleteObjects(argumentCaptor.capture());
         DeleteObjectsRequest captorValue = argumentCaptor.getValue();
         assertEquals("foo", captorValue.bucket());
-        List<String> keys = captorValue.delete().objects().stream().map(objectIdentifier -> objectIdentifier.key()).collect(Collectors.toList());
+        List<String> keys = captorValue.delete().objects().stream().map(ObjectIdentifier::key).collect(Collectors.toList());
         assertEquals(2, keys.size());
         assertTrue(keys.contains("dir/key1"));
         assertTrue(keys.contains("dir/subdir/key2"));
@@ -351,7 +352,7 @@ public class S3FileSystemProviderTest {
         assertEquals("dir2/subdir/key2", requestValues.get(1).destinationKey());
         ArgumentCaptor<DeleteObjectsRequest> deleteArgumentCaptor = ArgumentCaptor.forClass(DeleteObjectsRequest.class);
         verify(mockClient, times(1)).deleteObjects(deleteArgumentCaptor.capture());
-        List<String> keys = deleteArgumentCaptor.getValue().delete().objects().stream().map(objectIdentifier -> objectIdentifier.key()).collect(Collectors.toList());
+        List<String> keys = deleteArgumentCaptor.getValue().delete().objects().stream().map(ObjectIdentifier::key).collect(Collectors.toList());
         assertEquals(2, keys.size());
         assertTrue(keys.contains("dir1/key1"));
         assertTrue(keys.contains("dir1/subdir/key2"));
