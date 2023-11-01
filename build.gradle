@@ -39,6 +39,7 @@ java {
 
 tasks.withType(JavaCompile).configureEach {
     options.release.set(11)
+    options.compilerArgs += ['-Xlint:all,-serial']
 }
 
 sourceSets {
