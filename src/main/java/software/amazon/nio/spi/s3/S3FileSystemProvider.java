@@ -245,7 +245,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         final Iterator<Path> iterator = pathIteratorForPublisher(filter, fs, finalDirName, listObjectsV2Publisher);
 
-        return new DirectoryStream<Path>() {
+        return new DirectoryStream<>() {
             @Override
             public void close() {
             }
