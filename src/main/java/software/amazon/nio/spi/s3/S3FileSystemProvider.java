@@ -693,17 +693,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     S3FileSystem getFileSystem(URI uri, boolean create) {
         S3FileSystemInfo info = fileSystemInfo(uri);
-        S3FileSystem fs = cache.get(info.key());
-
-        if (fs == null) {
+        return cache.computeIfAbsent(info.key(), (key) -> {
             if (!create) {
                 throw new FileSystemNotFoundException("file system not found for '" + info.key() + "'");
             }
-            fs = forUri(uri);
-            cache.put(info.key(), fs);
-        }
-
-        return fs;
+            return forUri(uri);
+        });
     }
 
     S3FileSystem forUri(URI uri){
