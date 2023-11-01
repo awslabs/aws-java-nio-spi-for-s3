@@ -56,6 +56,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
@@ -168,7 +169,7 @@ public class S3FileSystemProviderTest {
     public void newByteChannel() throws Exception {
         final SeekableByteChannel channel = provider.newByteChannel(Paths.get(URI.create(pathUri)), Collections.singleton(StandardOpenOption.READ));
         assertNotNull(channel);
-        assertTrue(channel instanceof S3SeekableByteChannel);
+        assertThat(channel).isInstanceOf(S3SeekableByteChannel.class);
     }
 
     @Test
@@ -450,7 +451,7 @@ public class S3FileSystemProviderTest {
         Path foo = fs.getPath("/foo");
         final BasicFileAttributes basicFileAttributes = provider.readAttributes(foo, BasicFileAttributes.class);
         assertNotNull(basicFileAttributes);
-        assertTrue(basicFileAttributes instanceof S3BasicFileAttributes);
+        assertThat(basicFileAttributes).isInstanceOf(S3BasicFileAttributes.class);
     }
 
     @Test
