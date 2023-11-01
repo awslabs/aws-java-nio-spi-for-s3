@@ -29,7 +29,6 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 
-import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.AccessDeniedException;
@@ -53,7 +52,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -176,7 +174,7 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void newDirectoryStream() throws IOException, ExecutionException, InterruptedException {
+    public void newDirectoryStream() {
 
         S3Object object1 = S3Object.builder().key(pathUri+"/key1").build();
         S3Object object2 = S3Object.builder().key(pathUri+"/key2").build();
@@ -197,7 +195,7 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void pathIteratorForPublisher_withPagination() throws IOException {
+    public void pathIteratorForPublisher_withPagination() {
         final ListObjectsV2Publisher publisher = new ListObjectsV2Publisher(mockClient,
                 ListObjectsV2Request.builder()
                         .bucket(fs.bucketName())
@@ -224,7 +222,7 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void pathIteratorForPublisher_appliesFilter() throws IOException {
+    public void pathIteratorForPublisher_appliesFilter() {
         final ListObjectsV2Publisher publisher = new ListObjectsV2Publisher(mockClient,
                 ListObjectsV2Request.builder()
                         .bucket(fs.bucketName())
@@ -405,7 +403,7 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void checkAccessWhenAccessDenied() throws Exception {
+    public void checkAccessWhenAccessDenied() {
         when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 HeadObjectResponse.builder()
                         .sdkHttpResponse(SdkHttpResponse.builder().statusCode(403).build())
@@ -416,7 +414,7 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void checkAccessWhenNoSuchFile() throws Exception {
+    public void checkAccessWhenNoSuchFile() {
         when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 HeadObjectResponse.builder()
                         .sdkHttpResponse(SdkHttpResponse.builder().statusCode(404).build())
