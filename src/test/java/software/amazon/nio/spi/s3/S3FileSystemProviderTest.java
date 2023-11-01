@@ -65,6 +65,8 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
+
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 @SuppressWarnings("unchecked")
@@ -80,7 +82,7 @@ public class S3FileSystemProviderTest {
     @BeforeEach
     public void init() {
         provider = new S3FileSystemProvider();
-        lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
+        lenient().when(mockClient.headObject(anyConsumer())).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
         fs = provider.getFileSystem(URI.create(pathUri), true);
         fs.clientProvider(new FixedS3ClientProvider(mockClient));
@@ -178,7 +180,7 @@ public class S3FileSystemProviderTest {
         S3Object object1 = S3Object.builder().key(pathUri+"/key1").build();
         S3Object object2 = S3Object.builder().key(pathUri+"/key2").build();
 
-        when(mockClient.listObjectsV2Paginator(any(Consumer.class))).thenReturn(new ListObjectsV2Publisher(mockClient,
+        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(new ListObjectsV2Publisher(mockClient,
                 ListObjectsV2Request.builder()
                         .bucket(fs.bucketName())
                         .prefix(pathUri + "/")
@@ -204,7 +206,7 @@ public class S3FileSystemProviderTest {
         S3Object object2 = S3Object.builder().key(pathUri+"/key2").build();
         S3Object object3 = S3Object.builder().key(pathUri+"/").build();
 
-        when(mockClient.listObjectsV2Paginator(any(Consumer.class))).thenReturn(publisher);
+        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(publisher);
         when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2, object3).build()));
 
@@ -231,7 +233,7 @@ public class S3FileSystemProviderTest {
         S3Object object2 = S3Object.builder().key(pathUri+"/key2").build();
         S3Object object3 = S3Object.builder().key(pathUri+"/").build();
 
-        when(mockClient.listObjectsV2Paginator(any(Consumer.class))).thenReturn(publisher);
+        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(publisher);
         when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2, object3).build()));
 
@@ -270,7 +272,7 @@ public class S3FileSystemProviderTest {
     public void delete() throws Exception {
         S3Object object1 = S3Object.builder().key("dir/key1").build();
         S3Object object2 = S3Object.builder().key("dir/subdir/key2").build();
-        when(mockClient.listObjectsV2(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
+        when(mockClient.listObjectsV2(anyConsumer())).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2).isTruncated(false).nextContinuationToken(null).build()));
         when(mockClient.deleteObjects(any(DeleteObjectsRequest.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 DeleteObjectsResponse.builder().build()));
@@ -291,7 +293,7 @@ public class S3FileSystemProviderTest {
     public void copy() throws Exception {
         S3Object object1 = S3Object.builder().key("dir1/key1").build();
         S3Object object2 = S3Object.builder().key("dir1/subdir/key2").build();
-        when(mockClient.listObjectsV2(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
+        when(mockClient.listObjectsV2(anyConsumer())).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2).isTruncated(false).nextContinuationToken(null).build()));
         HeadObjectRequest headObjectRequest1 = HeadObjectRequest.builder().bucket("foo").key("dir2/key1").build();
         when(mockClient.headObject(headObjectRequest1)).thenReturn(CompletableFuture.supplyAsync(() ->
@@ -321,7 +323,7 @@ public class S3FileSystemProviderTest {
     public void move() throws Exception {
         S3Object object1 = S3Object.builder().key("dir1/key1").build();
         S3Object object2 = S3Object.builder().key("dir1/subdir/key2").build();
-        when(mockClient.listObjectsV2(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
+        when(mockClient.listObjectsV2(anyConsumer())).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2).isTruncated(false).nextContinuationToken(null).build()));
         HeadObjectRequest headObjectRequest1 = HeadObjectRequest.builder().bucket("foo").key("dir2/key1").build();
         when(mockClient.headObject(headObjectRequest1)).thenReturn(CompletableFuture.supplyAsync(() ->
@@ -459,7 +461,7 @@ public class S3FileSystemProviderTest {
         Path foo = fs.getPath("/foo");
         Path fooDir = fs.getPath("/foo/");
 
-        when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.completedFuture(
+        when(mockClient.headObject(anyConsumer())).thenReturn(CompletableFuture.completedFuture(
                 HeadObjectResponse.builder()
                         .lastModified(Instant.EPOCH)
                         .contentLength(100L)
