@@ -150,9 +150,7 @@ public class S3FileSystemProviderTest {
         provider.closeFileSystem(cfs);
 
         assertThrows(
-            FileSystemNotFoundException.class, () -> {
-                provider.getFileSystem(URI.create("s3://nobucket"));
-            }
+            FileSystemNotFoundException.class, () -> provider.getFileSystem(URI.create("s3://nobucket"))
         );
     }
 
