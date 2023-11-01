@@ -17,6 +17,7 @@ import static org.assertj.core.api.BDDAssertions.entry;
 import static org.assertj.core.api.BDDAssertions.then;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
@@ -56,9 +57,13 @@ public class S3NioSpiConfigurationTest {
     }
 
     @Test
-    public void overridesAsMap() {
-        assertThrows(NullPointerException.class, () -> new S3NioSpiConfiguration((Map)null));
+    @DisplayName("new S3NioSpiConfiguration should not support `null` Map of overrides")
+    public void nullMapNotSupported() {
+        assertThrows(NullPointerException.class, () -> new S3NioSpiConfiguration((Map<String, ?>) null));
+    }
 
+    @Test
+    public void overridesAsMap() {
         Map<String, String> map = new HashMap<>();
         map.put(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, "1212");
         S3NioSpiConfiguration c = new S3NioSpiConfiguration(map);
