@@ -15,7 +15,6 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.BDDAssertions.then;
@@ -24,10 +23,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
 import static org.mockito.Mockito.lenient;
 import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
+import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
 
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.exception.SdkClientException;
@@ -48,7 +47,7 @@ public class S3FileSystemTest {
         provider = new S3FileSystemProvider();
         s3FileSystem = provider.getFileSystem(s3Uri, true);
         s3FileSystem.clientProvider = new FixedS3ClientProvider(mockClient);
-        lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
+        lenient().when(mockClient.headObject(anyConsumer())).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
     }
 

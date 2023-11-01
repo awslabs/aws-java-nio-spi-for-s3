@@ -16,7 +16,6 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +24,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
+import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
+
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -54,7 +55,7 @@ public class S3ReadAheadByteChannelTest {
         final GetObjectResponse response = GetObjectResponse.builder().build();
         final ResponseBytes<GetObjectResponse> bytes1 = ResponseBytes.fromByteArray(response, "abcdefghijklmnopqrstuvwxyz".getBytes(StandardCharsets.UTF_8));
         final ResponseBytes<GetObjectResponse> bytes2 = ResponseBytes.fromByteArray(response, "ABCDEFGHIJKLMNOPQRSTUVWXYZ".getBytes(StandardCharsets.UTF_8));
-        lenient().when(client.getObject(any(Consumer.class), any(ByteArrayAsyncResponseTransformer.class))).thenReturn(CompletableFuture.supplyAsync(() -> bytes1), CompletableFuture.supplyAsync(() -> bytes2));
+        lenient().when(client.getObject(anyConsumer(), any(ByteArrayAsyncResponseTransformer.class))).thenReturn(CompletableFuture.supplyAsync(() -> bytes1), CompletableFuture.supplyAsync(() -> bytes2));
 
         readAheadByteChannel = new S3ReadAheadByteChannel(path, 26, 2, client, delegator, null, null);
     }

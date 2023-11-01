@@ -13,7 +13,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 
 import static org.assertj.core.api.BDDAssertions.then;
@@ -21,10 +20,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
 import static org.mockito.Mockito.lenient;
 import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
+import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
 
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -50,7 +49,7 @@ public class S3PathTest {
     public void init(){
         fileSystem = provider.getFileSystem(URI.create(uriString), true);
         fileSystem.clientProvider(new FixedS3ClientProvider(mockClient));
-        lenient().when(mockClient.headObject(any(Consumer.class))).thenReturn(
+        lenient().when(mockClient.headObject(anyConsumer())).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
 
         root = S3Path.getPath(fileSystem, PATH_SEPARATOR);

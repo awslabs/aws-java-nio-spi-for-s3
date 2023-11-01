@@ -6,17 +6,17 @@
 package software.amazon.nio.spi.s3;
 
 import java.util.NoSuchElementException;
-import java.util.function.Consumer;
 import static org.assertj.core.api.BDDAssertions.then;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.when;
+import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
+
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.http.SdkHttpResponse;
@@ -59,7 +59,7 @@ public class S3ClientProviderTest {
 
     @Test
     public void testGenerateAsyncClientWithNoErrors() {
-        when(mockClient.getBucketLocation(any(Consumer.class)))
+        when(mockClient.getBucketLocation(anyConsumer()))
                 .thenReturn(GetBucketLocationResponse.builder().locationConstraint("us-west-2").build());
         final S3AsyncClient s3Client = provider.generateAsyncClient("test-bucket", mockClient);
         assertNotNull(s3Client);
@@ -68,11 +68,11 @@ public class S3ClientProviderTest {
     @Test
     public void testGenerateClientWith403Response() {
         // when you get a forbidden response from getBucketLocation
-        when(mockClient.getBucketLocation(any(Consumer.class))).thenThrow(
+        when(mockClient.getBucketLocation(anyConsumer())).thenThrow(
                 S3Exception.builder().statusCode(403).build()
         );
         // you should fall back to a head bucket attempt
-        when(mockClient.headBucket(any(Consumer.class)))
+        when(mockClient.headBucket(anyConsumer()))
                 .thenReturn((HeadBucketResponse) HeadBucketResponse.builder()
                         .sdkHttpResponse(SdkHttpResponse.builder()
                                 .putHeader("x-amz-bucket-region", "us-west-2")
@@ -84,19 +84,19 @@ public class S3ClientProviderTest {
         assertNotNull(s3Client);
 
         final InOrder inOrder = inOrder(mockClient);
-        inOrder.verify(mockClient).getBucketLocation(any(Consumer.class));
-        inOrder.verify(mockClient).headBucket(any(Consumer.class));
+        inOrder.verify(mockClient).getBucketLocation(anyConsumer());
+        inOrder.verify(mockClient).headBucket(anyConsumer());
         inOrder.verifyNoMoreInteractions();
     }
 
     @Test
     public void testGenerateAsyncClientWith403Response() {
         // when you get a forbidden response from getBucketLocation
-        when(mockClient.getBucketLocation(any(Consumer.class))).thenThrow(
+        when(mockClient.getBucketLocation(anyConsumer())).thenThrow(
                 S3Exception.builder().statusCode(403).build()
         );
         // you should fall back to a head bucket attempt
-        when(mockClient.headBucket(any(Consumer.class)))
+        when(mockClient.headBucket(anyConsumer()))
                 .thenReturn((HeadBucketResponse) HeadBucketResponse.builder()
                         .sdkHttpResponse(SdkHttpResponse.builder()
                                 .putHeader("x-amz-bucket-region", "us-west-2")
@@ -108,19 +108,19 @@ public class S3ClientProviderTest {
         assertNotNull(s3Client);
 
         final InOrder inOrder = inOrder(mockClient);
-        inOrder.verify(mockClient).getBucketLocation(any(Consumer.class));
-        inOrder.verify(mockClient).headBucket(any(Consumer.class));
+        inOrder.verify(mockClient).getBucketLocation(anyConsumer());
+        inOrder.verify(mockClient).headBucket(anyConsumer());
         inOrder.verifyNoMoreInteractions();
     }
 
     @Test
     public void testGenerateAsyncClientWith403Then301Responses(){
         // when you get a forbidden response from getBucketLocation
-        when(mockClient.getBucketLocation(any(Consumer.class))).thenThrow(
+        when(mockClient.getBucketLocation(anyConsumer())).thenThrow(
                 S3Exception.builder().statusCode(403).build()
         );
         // and you get a 301 response on headBucket
-        when(mockClient.headBucket(any(Consumer.class))).thenThrow(
+        when(mockClient.headBucket(anyConsumer())).thenThrow(
                 S3Exception.builder()
                         .statusCode(301)
                         .awsErrorDetails(AwsErrorDetails.builder()
@@ -136,19 +136,19 @@ public class S3ClientProviderTest {
         assertNotNull(s3Client);
 
         final InOrder inOrder = inOrder(mockClient);
-        inOrder.verify(mockClient).getBucketLocation(any(Consumer.class));
-        inOrder.verify(mockClient).headBucket(any(Consumer.class));
+        inOrder.verify(mockClient).getBucketLocation(anyConsumer());
+        inOrder.verify(mockClient).headBucket(anyConsumer());
         inOrder.verifyNoMoreInteractions();
     }
 
     @Test
     public void testGenerateClientWith403Then301ResponsesNoHeader(){
         // when you get a forbidden response from getBucketLocation
-        when(mockClient.getBucketLocation(any(Consumer.class))).thenThrow(
+        when(mockClient.getBucketLocation(anyConsumer())).thenThrow(
                 S3Exception.builder().statusCode(403).build()
         );
         // and you get a 301 response on headBucket but no header for region
-        when(mockClient.headBucket(any(Consumer.class))).thenThrow(
+        when(mockClient.headBucket(anyConsumer())).thenThrow(
                 S3Exception.builder()
                         .statusCode(301)
                         .awsErrorDetails(AwsErrorDetails.builder()
@@ -162,8 +162,8 @@ public class S3ClientProviderTest {
         assertThrows(NoSuchElementException.class, () -> provider.generateClient("test-bucket", mockClient));
 
         final InOrder inOrder = inOrder(mockClient);
-        inOrder.verify(mockClient).getBucketLocation(any(Consumer.class));
-        inOrder.verify(mockClient).headBucket(any(Consumer.class));
+        inOrder.verify(mockClient).getBucketLocation(anyConsumer());
+        inOrder.verify(mockClient).headBucket(anyConsumer());
         inOrder.verifyNoMoreInteractions();
     }
 
@@ -171,11 +171,11 @@ public class S3ClientProviderTest {
     @Test
     public void testGenerateAsyncClientWith403Then301ResponsesNoHeader(){
         // when you get a forbidden response from getBucketLocation
-        when(mockClient.getBucketLocation(any(Consumer.class))).thenThrow(
+        when(mockClient.getBucketLocation(anyConsumer())).thenThrow(
                 S3Exception.builder().statusCode(403).build()
         );
         // and you get a 301 response on headBucket but no header for region
-        when(mockClient.headBucket(any(Consumer.class))).thenThrow(
+        when(mockClient.headBucket(anyConsumer())).thenThrow(
                 S3Exception.builder()
                         .statusCode(301)
                         .awsErrorDetails(AwsErrorDetails.builder()
@@ -189,8 +189,8 @@ public class S3ClientProviderTest {
         assertThrows(NoSuchElementException.class, () -> provider.generateAsyncClient("test-bucket", mockClient));
 
         final InOrder inOrder = inOrder(mockClient);
-        inOrder.verify(mockClient).getBucketLocation(any(Consumer.class));
-        inOrder.verify(mockClient).headBucket(any(Consumer.class));
+        inOrder.verify(mockClient).getBucketLocation(anyConsumer());
+        inOrder.verify(mockClient).headBucket(anyConsumer());
         inOrder.verifyNoMoreInteractions();
     }
 

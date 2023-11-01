@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +31,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
+import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
+
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,10 +49,10 @@ public class S3SeekableByteChannelTest {
     @BeforeEach
     public void init() {
         // forward to the method that uses the HeadObjectRequest parameter
-        lenient().when(mockClient.headObject(any(Consumer.class))).thenCallRealMethod();
+        lenient().when(mockClient.headObject(anyConsumer())).thenCallRealMethod();
         lenient().when(mockClient.headObject(any(HeadObjectRequest.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
-        lenient().when(mockClient.getObject(any(Consumer.class), any(AsyncResponseTransformer.class))).thenCallRealMethod();
+        lenient().when(mockClient.getObject(anyConsumer(), any(AsyncResponseTransformer.class))).thenCallRealMethod();
         lenient().when(mockClient.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> ResponseBytes.fromByteArray(
                         GetObjectResponse.builder().contentLength(6L).build(),
