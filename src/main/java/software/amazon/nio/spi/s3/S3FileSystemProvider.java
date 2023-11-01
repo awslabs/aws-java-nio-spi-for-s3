@@ -697,11 +697,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
             if (!create) {
                 throw new FileSystemNotFoundException("file system not found for '" + info.key() + "'");
             }
-            return forUri(uri);
+            return forUri(uri, info);
         });
     }
 
-    S3FileSystem forUri(URI uri){
+    S3FileSystem forUri(URI uri, S3FileSystemInfo info){
         if (uri == null) {
             throw new IllegalArgumentException("uri can not be null");
         }
@@ -716,7 +716,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
             );
         }
 
-        S3FileSystemInfo info = fileSystemInfo(uri);
         S3NioSpiConfiguration config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
 
         if (info.accessKey() != null) {
