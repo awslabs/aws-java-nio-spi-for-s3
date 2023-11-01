@@ -91,8 +91,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return SCHEME;
     }
 
-    /*
-     * @throws NotYetImplementedException
+    /**
+     * @throws NotYetImplementedException This method is not yet supported in v2.x. It might be implemented for bucket creation
      */
     @Override
     public FileSystem newFileSystem(URI uri, Map<String, ?> env) {
