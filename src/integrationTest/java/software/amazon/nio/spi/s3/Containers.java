@@ -37,6 +37,17 @@ abstract class Containers {
          .doesNotThrowAnyException();
     }
 
+    public static void putObject(String bucket, String key, String content) {
+        assertThatCode(() -> {
+            Container.ExecResult execResultCreateFile = LOCAL_STACK_CONTAINER.execInContainer("sh", "-c", "echo -n '" + content + "' > " + key);
+            Container.ExecResult execResultPut = LOCAL_STACK_CONTAINER.execInContainer(("awslocal s3api put-object --bucket " + bucket + " --key " + key + " --body " + key).split(" "));
+
+            assertThat(execResultCreateFile.getExitCode()).isZero();
+            assertThat(execResultPut.getExitCode()).withFailMessage("Failed put: %s ", execResultPut.getStderr()).isZero();
+        }).as("Failed to put object '%s' in bucket '%s'", key, bucket)
+                .doesNotThrowAnyException();
+    }
+
     public static String localStackConnectionEndpoint() {
         return localStackConnectionEndpoint(null, null);
     }
