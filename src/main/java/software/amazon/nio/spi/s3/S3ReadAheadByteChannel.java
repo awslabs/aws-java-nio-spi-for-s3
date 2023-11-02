@@ -178,7 +178,7 @@ class S3ReadAheadByteChannel implements ReadableByteChannel {
                 .filter(idx -> idx < currentFragIndx)
                 .collect(Collectors.toSet());
 
-        if (priorIndexes.size() > 0) {
+        if (!priorIndexes.isEmpty()) {
             logger.debug("invalidating fragment(s) '{}' from '{}'",
                     priorIndexes.stream().map(Objects::toString).collect(Collectors.joining(", ")), path.toUri());
 
