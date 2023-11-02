@@ -58,7 +58,7 @@ public class S3FileSystem extends FileSystem {
         configuration = (config == null) ? new S3NioSpiConfiguration() : config;
         bucketName = configuration.getBucketName();
 
-        logger.debug("creating FileSystem for 's3://{}'", bucketName);
+        logger.debug("creating FileSystem for '{}://{}'", provider.getScheme(), bucketName);
 
         clientProvider = new S3ClientProvider(configuration);
         this.provider = provider;
