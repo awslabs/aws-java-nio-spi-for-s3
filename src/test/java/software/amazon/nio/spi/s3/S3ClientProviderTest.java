@@ -6,6 +6,8 @@
 package software.amazon.nio.spi.s3;
 
 import java.util.NoSuchElementException;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.BDDAssertions.then;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,11 +49,12 @@ public class S3ClientProviderTest {
 
         assertNotNull(P.configuration);
 
-        assertTrue(P.universalClient() instanceof S3Client);
         assertNotNull(P.universalClient());
+        assertThat(P.universalClient()).isInstanceOf(S3Client.class);
 
-        assertTrue(P.universalClient(true) instanceof S3AsyncClient);
-        assertNotNull(P.universalClient());
+        S3AsyncClient t = P.universalClient(true);
+        assertNotNull(t);
+        assertThat(t).isInstanceOf(S3AsyncClient.class);
 
         S3NioSpiConfiguration config = new S3NioSpiConfiguration();
         assertSame(config, new S3ClientProvider(config).configuration);

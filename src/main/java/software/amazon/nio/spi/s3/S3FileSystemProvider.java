@@ -79,7 +79,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
-    private static Map<String, S3FileSystem> cache = new HashMap<>();
+    private static final Map<String, S3FileSystem> cache = new HashMap<>();
 
     /**
      * Returns the URI scheme that identifies this provider.
@@ -91,8 +91,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return SCHEME;
     }
 
-    /*
-     * @throws NotYetImplementedException
+    /**
+     * @throws NotYetImplementedException This method is not yet supported in v2.x. It might be implemented for bucket creation
      */
     @Override
     public FileSystem newFileSystem(URI uri, Map<String, ?> env) {
@@ -245,7 +245,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         final Iterator<Path> iterator = pathIteratorForPublisher(filter, fs, finalDirName, listObjectsV2Publisher);
 
-        return new DirectoryStream<Path>() {
+        return new DirectoryStream<>() {
             @Override
             public void close() {
             }
@@ -693,36 +693,27 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     S3FileSystem getFileSystem(URI uri, boolean create) {
         S3FileSystemInfo info = fileSystemInfo(uri);
-        S3FileSystem fs = cache.get(info.key());
-
-        if (fs == null) {
+        return cache.computeIfAbsent(info.key(), (key) -> {
             if (!create) {
                 throw new FileSystemNotFoundException("file system not found for '" + info.key() + "'");
             }
-            fs = forUri(uri);
-        }
-
-        return fs;
+            return forUri(uri, info);
+        });
     }
 
-    S3FileSystem forUri(URI uri){
+    S3FileSystem forUri(URI uri, S3FileSystemInfo info){
         if (uri == null) {
             throw new IllegalArgumentException("uri can not be null");
         }
         if (uri.getScheme() == null) {
             throw new IllegalArgumentException(
-                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
+                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri)
             );
         }
         if (uri.getAuthority() == null) {
             throw new IllegalArgumentException(
-                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri.toString())
+                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri)
             );
-        }
-
-        S3FileSystemInfo info = fileSystemInfo(uri);
-        if (cache.containsKey(info.key())) {
-            throw new FileSystemAlreadyExistsException("a file system already exists for '" + info.key() + "', use getFileSystem() instead");
         }
 
         S3NioSpiConfiguration config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
@@ -731,12 +722,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
             config.withCredentials(info.accessKey(), info.accessSecret());
         }
 
-        S3FileSystem fs = null;
-        cache.put(
-                info.key(),
-                fs = new S3FileSystem(this, config)
-        );
-        return fs;
+        return new S3FileSystem(this, config);
     }
 
     void closeFileSystem(FileSystem fs) {

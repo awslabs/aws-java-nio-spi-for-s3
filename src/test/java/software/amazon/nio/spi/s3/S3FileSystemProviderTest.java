@@ -23,12 +23,12 @@ import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 
-import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.AccessDeniedException;
@@ -52,11 +52,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
@@ -151,9 +151,7 @@ public class S3FileSystemProviderTest {
         provider.closeFileSystem(cfs);
 
         assertThrows(
-            FileSystemNotFoundException.class, () -> {
-                provider.getFileSystem(URI.create("s3://nobucket"));
-            }
+            FileSystemNotFoundException.class, () -> provider.getFileSystem(URI.create("s3://nobucket"))
         );
     }
 
@@ -171,11 +169,11 @@ public class S3FileSystemProviderTest {
     public void newByteChannel() throws Exception {
         final SeekableByteChannel channel = provider.newByteChannel(Paths.get(URI.create(pathUri)), Collections.singleton(StandardOpenOption.READ));
         assertNotNull(channel);
-        assertTrue(channel instanceof S3SeekableByteChannel);
+        assertThat(channel).isInstanceOf(S3SeekableByteChannel.class);
     }
 
     @Test
-    public void newDirectoryStream() throws IOException, ExecutionException, InterruptedException {
+    public void newDirectoryStream() {
 
         S3Object object1 = S3Object.builder().key(pathUri+"/key1").build();
         S3Object object2 = S3Object.builder().key(pathUri+"/key2").build();
@@ -196,7 +194,7 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void pathIteratorForPublisher_withPagination() throws IOException {
+    public void pathIteratorForPublisher_withPagination() {
         final ListObjectsV2Publisher publisher = new ListObjectsV2Publisher(mockClient,
                 ListObjectsV2Request.builder()
                         .bucket(fs.bucketName())
@@ -223,7 +221,7 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void pathIteratorForPublisher_appliesFilter() throws IOException {
+    public void pathIteratorForPublisher_appliesFilter() {
         final ListObjectsV2Publisher publisher = new ListObjectsV2Publisher(mockClient,
                 ListObjectsV2Request.builder()
                         .bucket(fs.bucketName())
@@ -283,7 +281,7 @@ public class S3FileSystemProviderTest {
         verify(mockClient, times(1)).deleteObjects(argumentCaptor.capture());
         DeleteObjectsRequest captorValue = argumentCaptor.getValue();
         assertEquals("foo", captorValue.bucket());
-        List<String> keys = captorValue.delete().objects().stream().map(objectIdentifier -> objectIdentifier.key()).collect(Collectors.toList());
+        List<String> keys = captorValue.delete().objects().stream().map(ObjectIdentifier::key).collect(Collectors.toList());
         assertEquals(2, keys.size());
         assertTrue(keys.contains("dir/key1"));
         assertTrue(keys.contains("dir/subdir/key2"));
@@ -351,7 +349,7 @@ public class S3FileSystemProviderTest {
         assertEquals("dir2/subdir/key2", requestValues.get(1).destinationKey());
         ArgumentCaptor<DeleteObjectsRequest> deleteArgumentCaptor = ArgumentCaptor.forClass(DeleteObjectsRequest.class);
         verify(mockClient, times(1)).deleteObjects(deleteArgumentCaptor.capture());
-        List<String> keys = deleteArgumentCaptor.getValue().delete().objects().stream().map(objectIdentifier -> objectIdentifier.key()).collect(Collectors.toList());
+        List<String> keys = deleteArgumentCaptor.getValue().delete().objects().stream().map(ObjectIdentifier::key).collect(Collectors.toList());
         assertEquals(2, keys.size());
         assertTrue(keys.contains("dir1/key1"));
         assertTrue(keys.contains("dir1/subdir/key2"));
@@ -404,7 +402,7 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void checkAccessWhenAccessDenied() throws Exception {
+    public void checkAccessWhenAccessDenied() {
         when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 HeadObjectResponse.builder()
                         .sdkHttpResponse(SdkHttpResponse.builder().statusCode(403).build())
@@ -415,7 +413,7 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void checkAccessWhenNoSuchFile() throws Exception {
+    public void checkAccessWhenNoSuchFile() {
         when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 HeadObjectResponse.builder()
                         .sdkHttpResponse(SdkHttpResponse.builder().statusCode(404).build())
@@ -453,7 +451,7 @@ public class S3FileSystemProviderTest {
         Path foo = fs.getPath("/foo");
         final BasicFileAttributes basicFileAttributes = provider.readAttributes(foo, BasicFileAttributes.class);
         assertNotNull(basicFileAttributes);
-        assertTrue(basicFileAttributes instanceof S3BasicFileAttributes);
+        assertThat(basicFileAttributes).isInstanceOf(S3BasicFileAttributes.class);
     }
 
     @Test

@@ -7,9 +7,9 @@ package software.amazon.nio.spi.s3;
 
 import java.io.File;
 import java.io.IOError;
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.InvalidPathException;
 import java.nio.file.LinkOption;
@@ -70,8 +70,8 @@ class S3Path implements Path {
      * @return a new S3Path
      */
     static S3Path getPath(S3FileSystem fsForBucket, String first, String... more) {
-        if(fsForBucket == null)  throw new IllegalArgumentException("The S3FileSystem may not be null");
-        if(first == null ){
+        if(fsForBucket == null) throw new IllegalArgumentException("The S3FileSystem may not be null");
+        if(first == null) {
           throw new IllegalArgumentException("first element of the path may not be null");
         }
 
@@ -79,26 +79,14 @@ class S3Path implements Path {
 
         first = first.trim();
 
-        if((first.isEmpty()) && !(more == null || more.length == 0)) throw new IllegalArgumentException("The first element of the path may not be empty when more exists");
-        if(first.startsWith(fsForBucket.provider().getScheme()+":/")) {
-            first = first.substring(fsForBucket.provider().getScheme().length()+2);
+        if( first.isEmpty() && !(more == null || more.length == 0)) throw new IllegalArgumentException("The first element of the path may not be empty when more exists");
 
-            String part = null;
-            if (configuration.getCredentials() != null) {
-                AwsCredentials credentials = configuration.getCredentials();
-                part = credentials.accessKeyId() + ':' + credentials.secretAccessKey();
-                if (first.startsWith('/' + part)) {
-                    first = PATH_SEPARATOR + first.substring(part.length()+2);
-                }
-            }
-            part = configuration.getEndpoint();
-            if (!part.isEmpty() && first.startsWith(PATH_SEPARATOR + part)) {
-                first = first.substring(part.length()+1);
-            }
-            part = configuration.getBucketName();
-            if (first.startsWith(PATH_SEPARATOR + part)) {
-                first = first.substring(part.length()+1);
-            }
+        String scheme = fsForBucket.provider().getScheme();
+        if(first.startsWith(scheme +":/")) {
+            first = removeScheme(first, scheme);
+            first = removeCredentials(first, configuration);
+            first = removeEndpoint(first, configuration.getEndpoint());
+            first = removeBucket(first, configuration.getBucketName());
         }
 
         return new S3Path(fsForBucket, PosixLikePathRepresentation.of(first, more));
@@ -631,17 +619,10 @@ class S3Path implements Path {
         elements.forEachRemaining(
             (e) -> {
                 String name = e.getFileName().toString();
-                try {
-                    if (name.endsWith(PATH_SEPARATOR)) {
-                        name = name.substring(0, name.length()-1);
-                    }
-                    uri.append(PATH_SEPARATOR).append(URLEncoder.encode(name, "UTF-8"));
-                } catch (UnsupportedEncodingException x) {
-                    //
-                    // NOTE: I do not know how to reproduce this case...
-                    //
-                    throw new IllegalArgumentException("path '" + uri + "' can not be converted to URI: " + x.getMessage(), x);
+                if (name.endsWith(PATH_SEPARATOR)) {
+                    name = name.substring(0, name.length()-1);
                 }
+                uri.append(PATH_SEPARATOR).append(URLEncoder.encode(name, StandardCharsets.UTF_8));
             }
         );
         if (isDirectory()) {
@@ -868,4 +849,32 @@ class S3Path implements Path {
         }
     }
 
+    private static String removeScheme(String path, String scheme){
+        return path.substring(scheme.length()+2);
+    }
+
+    private static String removeCredentials(String first, S3NioSpiConfiguration configuration) {
+        if (configuration.getCredentials() != null) {
+            AwsCredentials credentials = configuration.getCredentials();
+            String credentialsAsString = credentials.accessKeyId() + ':' + credentials.secretAccessKey();
+            if (first.startsWith('/' + credentialsAsString)) {
+                first = PATH_SEPARATOR + first.substring(credentialsAsString.length()+2);
+            }
+        }
+        return first;
+    }
+
+    private static String removeEndpoint(String first, String endpoint) {
+        if (!endpoint.isEmpty() && first.startsWith(PATH_SEPARATOR + endpoint)) {
+            first = first.substring(endpoint.length()+1);
+        }
+        return first;
+    }
+
+    private static String removeBucket(String first, String part) {
+        if (first.startsWith(PATH_SEPARATOR + part)) {
+            first = first.substring(part.length()+1);
+        }
+        return first;
+    }
 }
