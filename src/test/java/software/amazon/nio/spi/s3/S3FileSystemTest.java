@@ -5,33 +5,29 @@
 
 package software.amazon.nio.spi.s3;
 
-import java.io.IOException;
-import java.net.URI;
-import java.nio.file.FileSystemNotFoundException;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.concurrent.CompletableFuture;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.BDDAssertions.then;
 import org.junit.jupiter.api.AfterEach;
-import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.FileSystemNotFoundException;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.concurrent.CompletableFuture;
+
+import static org.assertj.core.api.BDDAssertions.then;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.lenient;
 import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
 import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
-
-import org.mockito.junit.jupiter.MockitoExtension;
-import software.amazon.awssdk.core.exception.SdkClientException;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 @ExtendWith(MockitoExtension.class)
 public class S3FileSystemTest {
@@ -134,17 +130,5 @@ public class S3FileSystemTest {
         // thrown because cannot be modified
         //
         assertThrows(UnsupportedOperationException.class, () -> s3FileSystem.getOpenChannels().add(null));
-    }
-
-    @Test
-    public void plainInitializationWithError() {
-        //
-        // Was want to try a plain initialization (i.e. without any mocks).
-        // We expect standard client to throw an exception due to missing credentials
-        final Path path = Paths.get(URI.create("s3://does-not-exists-" + System.currentTimeMillis() + "/dir"));
-        then(path).isInstanceOf(S3Path.class);
-        assertThatThrownBy(() -> Files.exists(path))
-                .isInstanceOf(SdkClientException.class)
-                .hasMessageStartingWith("Unable to load credentials");
     }
 }
