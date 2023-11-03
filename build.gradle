@@ -145,6 +145,19 @@ testing {
     }
 }
 
+reporting {
+    reports {
+        testFullCodeCoverageReport(JacocoCoverageReport) {
+            testType = 'full'
+        }
+    }
+}
+
+tasks.named('testFullCodeCoverageReport') {
+    dependsOn( testCodeCoverageReport, integrationTestCodeCoverageReport )
+    executionData fileTree( project.buildDir.absolutePath ).include( "jacoco/*.exec" )
+}
+
 jacocoTestReport {
     dependsOn test
     reports {
