@@ -13,6 +13,7 @@ plugins {
     id 'maven-publish'
     id 'jacoco'
     id 'jvm-test-suite'
+    id 'jacoco-report-aggregation'
     id 'com.github.johnrengelman.shadow' version '7.1.2'
     id 'com.palantir.revapi' version '1.7.0'
 }
