@@ -252,7 +252,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
             @Override
             public Iterator<Path> iterator() {
-                return iterator;
+                return Objects.requireNonNull(iterator);
             }
         };
     }
@@ -535,16 +535,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     public void checkAccess(Path path, AccessMode... modes) throws IOException {
         try {
             final S3Path s3Path = checkPath(path.toRealPath(NOFOLLOW_LINKS));
-            final S3FileSystem fs = s3Path.getFileSystem();
-            final String bucketName = fs.bucketName();
-            final S3AsyncClient s3Client = fs.client();
-
-            final CompletableFuture<? extends S3Response> response;
-            if (s3Path.equals(s3Path.getRoot())) {
-                response = s3Client.headBucket(request -> request.bucket(bucketName));
-            } else {
-                response = s3Client.headObject(req -> req.bucket(bucketName).key(s3Path.getKey()));
-            }
+            final CompletableFuture<? extends S3Response> response = getCompletableFutureForHead(s3Path);
 
             long timeOut = TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
             TimeUnit unit = MINUTES;
@@ -577,6 +568,20 @@ public class S3FileSystemProvider extends FileSystemProvider {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
+    }
+
+    private CompletableFuture<? extends S3Response> getCompletableFutureForHead(S3Path s3Path) {
+        final S3FileSystem fs = s3Path.getFileSystem();
+        final String bucketName = fs.bucketName();
+        final S3AsyncClient s3Client = fs.client();
+
+        final CompletableFuture<? extends S3Response> response;
+        if (s3Path.equals(s3Path.getRoot())) {
+            response = s3Client.headBucket(request -> request.bucket(bucketName));
+        } else {
+            response = s3Client.headObject(req -> req.bucket(bucketName).key(s3Path.getKey()));
+        }
+        return response;
     }
 
     /**
@@ -728,15 +733,24 @@ public class S3FileSystemProvider extends FileSystemProvider {
     void closeFileSystem(FileSystem fs) {
         for (String key: cache.keySet()) {
             if (fs == cache.get(key)) {
-                cache.remove(key); return;
+                try (FileSystem closeable = cache.remove(key)) {
+                    closeFileSystemIfOpen(closeable);
+                    return;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
         try {
-            if(fs.isOpen()) {
-                fs.close();
-            }
+            closeFileSystemIfOpen(fs);
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private void closeFileSystemIfOpen(FileSystem fs) throws IOException {
+        if(fs.isOpen()){
+            fs.close();
         }
     }
 
@@ -788,7 +802,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
                                 try {
                                     return filter.accept(path);
                                 } catch (IOException e) {
-                                    e.printStackTrace();
+                                    logger.warn("An IOException was thrown while filtering the path: {}." +
+                                            " Set log level to debug to show stack trace", path);
+                                    logger.debug(e.getMessage(), e);
                                     return false;
                                 }
                             }).collect(Collectors.toList());
@@ -801,23 +817,23 @@ public class S3FileSystemProvider extends FileSystemProvider {
     /**
      * This method parses the provided URI into elements useful to address
      * and configure the access to a bucket. These are:
-     *
+     * <br>
      * - key: the file system key that can be used to uniquely identify a S3
      *        file systems instance (for example for caching purposes)
      * - bucket: the name of the bucked to be addressed
      * - endpoint: non default endpoint where the bucket is located
-     *
+     * <br>
      * The default implementation in {@code S3FileSystemProvider} treats {@code uri}
-     * strictly a AWS S3 URI (see Accessing a bucket using S3:// section in
-     * https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-bucket-intro.html).
+     * strictly a AWS S3 URI (see Accessing a bucket using S3:// section <a href="in
+     ">* https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-bucket-</a>intro.html).
      * As such, it returns an empty endpoint and the name of the bucket as key.
-     *
+     * <br>
      * Subclasses can override this method to implement alternative parsing of
      * the provided URI so that they can implement alternative URI schemes.
      *
      * @param uri the uri to address the bucket
      *
-     * @return the information estracted from {@code uri}
+     * @return the information extracted from {@code uri}
      */
     S3FileSystemInfo fileSystemInfo(URI uri) {
         return new S3FileSystemInfo(uri);
