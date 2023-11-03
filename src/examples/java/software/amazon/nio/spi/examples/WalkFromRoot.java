@@ -4,10 +4,9 @@ package software.amazon.nio.spi.examples;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
+import java.nio.file.Paths;
 import java.util.stream.Stream;
 
 public class WalkFromRoot {
@@ -30,15 +29,18 @@ public class WalkFromRoot {
         if (!bucketName.startsWith("s3:") && !bucketName.startsWith("s3x:")) {
             bucketName = "s3://" + bucketName;
         }
-        try (FileSystem s3 = FileSystems.newFileSystem(URI.create(bucketName), Collections.emptyMap())) {
 
-            assert s3.getClass().getName().contains("S3FileSystem");
 
-            for (Path rootDir : s3.getRootDirectories()) {
-                try (Stream<Path> pathStream = Files.walk(rootDir)) {
-                    pathStream.forEach(System.out::println);
-                }
+        Path root = Paths.get(URI.create(bucketName));
+        System.out.println("root.getClass() = " + root.getClass());
+        
+        FileSystem s3 = root.getFileSystem();
+
+        for (Path rootDir : s3.getRootDirectories()) {
+            try (Stream<Path> pathStream = Files.walk(rootDir)) {
+                pathStream.forEach(System.out::println);
             }
         }
+
     }
 }
