@@ -195,31 +195,34 @@ class S3SeekableByteChannel implements SeekableByteChannel {
         validateOpen();
 
         if (size < 0) {
-
-            long timeOut = TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
-            TimeUnit unit = TimeUnit.MINUTES;
-
-            LOGGER.debug("requesting size of '{}'", path.toUri());
-            synchronized (this) {
-                final HeadObjectResponse headObjectResponse;
-                try {
-                    headObjectResponse = s3Client.headObject(builder -> builder
-                            .bucket(path.bucketName())
-                            .key(path.getKey())).get(timeOut, unit);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new RuntimeException(e);
-                } catch (ExecutionException e) {
-                    throw new IOException(e);
-                } catch (TimeoutException e) {
-                    throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(LOGGER, "size", timeOut, unit);
-                }
-
-                LOGGER.debug("size of '{}' is '{}'", path.toUri(), headObjectResponse.contentLength());
-                this.size = headObjectResponse.contentLength();
-            }
+            fetchSize();
         }
         return this.size;
+    }
+
+    private void fetchSize() throws IOException {
+        long timeOut = TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
+        TimeUnit unit = TimeUnit.MINUTES;
+
+        LOGGER.debug("requesting size of '{}'", path.toUri());
+        synchronized (this) {
+            final HeadObjectResponse headObjectResponse;
+            try {
+                headObjectResponse = s3Client.headObject(builder -> builder
+                        .bucket(path.bucketName())
+                        .key(path.getKey())).get(timeOut, unit);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+            } catch (ExecutionException e) {
+                throw new IOException(e);
+            } catch (TimeoutException e) {
+                throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(LOGGER, "size", timeOut, unit);
+            }
+
+            LOGGER.debug("size of '{}' is '{}'", path.toUri(), headObjectResponse.contentLength());
+            this.size = headObjectResponse.contentLength();
+        }
     }
 
     /**
