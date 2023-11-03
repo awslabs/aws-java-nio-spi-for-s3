@@ -8,9 +8,7 @@ package software.amazon.nio.spi.s3;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
-import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -23,16 +21,13 @@ import java.nio.channels.WritableByteChannel;
 import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 class S3SeekableByteChannel implements SeekableByteChannel {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SeekableByteChannel.class);
 
     private long position;
-    private final S3AsyncClient s3Client;
     private final S3Path path;
     private final ReadableByteChannel readDelegate;
     private final S3WritableByteChannel writeDelegate;
@@ -48,7 +43,6 @@ class S3SeekableByteChannel implements SeekableByteChannel {
         position = startAt;
         path = s3Path;
         closed = false;
-        this.s3Client = s3Client;
         s3Path.getFileSystem().registerOpenChannel(this);
 
         if (options.contains(StandardOpenOption.WRITE) && options.contains(StandardOpenOption.READ)) {
@@ -195,31 +189,16 @@ class S3SeekableByteChannel implements SeekableByteChannel {
         validateOpen();
 
         if (size < 0) {
-
-            long timeOut = TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
-            TimeUnit unit = TimeUnit.MINUTES;
-
-            LOGGER.debug("requesting size of '{}'", path.toUri());
-            synchronized (this) {
-                final HeadObjectResponse headObjectResponse;
-                try {
-                    headObjectResponse = s3Client.headObject(builder -> builder
-                            .bucket(path.bucketName())
-                            .key(path.getKey())).get(timeOut, unit);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new RuntimeException(e);
-                } catch (ExecutionException e) {
-                    throw new IOException(e);
-                } catch (TimeoutException e) {
-                    throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(LOGGER, "size", timeOut, unit);
-                }
-
-                LOGGER.debug("size of '{}' is '{}'", path.toUri(), headObjectResponse.contentLength());
-                this.size = headObjectResponse.contentLength();
-            }
+            fetchSize();
         }
         return this.size;
+    }
+
+    private void fetchSize() {
+        synchronized (this) {
+            this.size = new S3BasicFileAttributes(path).size();
+            LOGGER.debug("size of '{}' is '{}'", path.toUri(), this.size);
+        }
     }
 
     /**
