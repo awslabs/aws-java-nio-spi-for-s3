@@ -55,7 +55,7 @@ public class S3ClientProvider {
     final protected S3NioSpiConfiguration configuration;
 
     /**
-     * Default client using the "https://s3.us-east-1.amazonaws.com" endpoint
+     * Default client using the "<a href="https://s3.us-east-1.amazonaws.com">...</a>" endpoint
      */
     private static final S3Client DEFAULT_CLIENT = S3Client.builder()
             .endpointOverride(URI.create("https://s3.us-east-1.amazonaws.com"))
@@ -63,7 +63,7 @@ public class S3ClientProvider {
             .build();
 
     /**
-     * Default asynchronous client using the "https://s3.us-east-1.amazonaws.com" endpoint
+     * Default asynchronous client using the "<a href="https://s3.us-east-1.amazonaws.com">...</a>" endpoint
      */
     private static final S3AsyncClient DEFAULT_ASYNC_CLIENT = S3AsyncClient.builder()
             .endpointOverride(URI.create("https://s3.us-east-1.amazonaws.com"))
@@ -184,11 +184,8 @@ public class S3ClientProvider {
         logger.debug("generating client for bucket: '{}'", bucketName);
         T bucketSpecificClient = null;
 
-        if ((configuration.getEndpoint() == null) || configuration.getEndpoint().isBlank()) {
-            //
-            // we try to locate a bucket only if no endpoint is provided, which
-            // means we are dealing with AWS S3 buckets
-            //
+        if (configuration.endpointURI() == null) {
+            // we try to locate a bucket only if no endpoint is provided, which means we are dealing with AWS S3 buckets
             String bucketLocation = determineBucketLocation(bucketName, locationClient);
 
             if ( bucketLocation != null) {
@@ -253,24 +250,7 @@ public class S3ClientProvider {
         if (!crt) {
             return configureClientForRegion(regionName, S3AsyncClient.builder());
         }
-        Region region = getRegionFromRegionName(regionName);
-        logger.debug("bucket region is: '{}'", region.id());
-
-        URI endpointUri = configuration.endpointURI();
-        if (endpointUri != null) {
-            asyncClientBuilder.endpointOverride(endpointUri);
-        }
-
-        AwsCredentials credentials = configuration.getCredentials();
-        if (credentials != null) {
-            asyncClientBuilder.credentialsProvider(() -> credentials);
-        }
-
-        return asyncClientBuilder.forcePathStyle(configuration.getForcePathStyle()).region(region).build();
-    }
-
-    private static Region getRegionFromRegionName(String regionName) {
-        return (regionName == null || regionName.isBlank()) ? Region.US_EAST_1 : Region.of(regionName);
+        return configureCrtClientForRegion(regionName);
     }
 
     private <ActualClient extends AwsClient, ActualBuilder extends S3BaseClientBuilder<ActualBuilder, ActualClient>> ActualClient configureClientForRegion(
@@ -301,4 +281,26 @@ public class S3ClientProvider {
 
         return builder.build();
     }
+
+    private S3AsyncClient configureCrtClientForRegion(String regionName) {
+        Region region = getRegionFromRegionName(regionName);
+        logger.debug("bucket region is: '{}'", region.id());
+
+        URI endpointUri = configuration.endpointURI();
+        if (endpointUri != null) {
+            asyncClientBuilder.endpointOverride(endpointUri);
+        }
+
+        AwsCredentials credentials = configuration.getCredentials();
+        if (credentials != null) {
+            asyncClientBuilder.credentialsProvider(() -> credentials);
+        }
+
+        return asyncClientBuilder.forcePathStyle(configuration.getForcePathStyle()).region(region).build();
+    }
+
+    private static Region getRegionFromRegionName(String regionName) {
+        return (regionName == null || regionName.isBlank()) ? Region.US_EAST_1 : Region.of(regionName);
+    }
+
 }
