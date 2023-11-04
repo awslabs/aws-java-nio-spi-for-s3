@@ -30,8 +30,8 @@ import software.amazon.awssdk.http.HttpStatusCode;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -244,30 +244,7 @@ public class S3ClientProvider {
     }
 
     private S3Client clientForRegion(String regionName) {
-        Region region = getRegionFromRegionName(regionName);
-        logger.debug("bucket region is: '{}'", region.id());
-
-
-        S3ClientBuilder clientBuilder =  S3Client.builder()
-            .forcePathStyle(configuration.getForcePathStyle())
-            .region(region)
-            .overrideConfiguration(
-                conf -> conf.retryPolicy(
-                    builder -> builder.retryCondition(retryCondition).backoffStrategy(backoffStrategy)
-                )
-            );
-
-        URI endpointUri = configuration.endpointURI();
-        if (endpointUri != null) {
-            clientBuilder.endpointOverride(endpointUri);
-        }
-
-        AwsCredentials credentials = configuration.getCredentials();
-        if (credentials != null) {
-            clientBuilder.credentialsProvider(() -> credentials);
-        }
-
-        return clientBuilder.build();
+        return configureClientForRegion(regionName, S3Client.builder());
     }
 
     private S3AsyncClient asyncClientForRegion(String regionName) {
@@ -289,5 +266,34 @@ public class S3ClientProvider {
 
     private static Region getRegionFromRegionName(String regionName) {
         return (regionName == null || regionName.isBlank()) ? Region.US_EAST_1 : Region.of(regionName);
+    }
+
+    private <ActualClient extends AwsClient, ActualBuilder extends S3BaseClientBuilder<ActualBuilder, ActualClient>> ActualClient configureClientForRegion(
+            String regionName,
+            S3BaseClientBuilder<ActualBuilder, ActualClient> builder)
+    {
+        Region region = getRegionFromRegionName(regionName);
+        logger.debug("bucket region is: '{}'", region.id());
+
+        builder
+                .forcePathStyle(configuration.getForcePathStyle())
+                .region(region)
+                .overrideConfiguration(
+                        conf -> conf.retryPolicy(
+                                configBuilder -> configBuilder.retryCondition(retryCondition).backoffStrategy(backoffStrategy)
+                        )
+                );
+
+        URI endpointUri = configuration.endpointURI();
+        if (endpointUri != null) {
+            builder.endpointOverride(endpointUri);
+        }
+
+        AwsCredentials credentials = configuration.getCredentials();
+        if (credentials != null) {
+            builder.credentialsProvider(() -> credentials);
+        }
+
+        return builder.build();
     }
 }
