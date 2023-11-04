@@ -288,6 +288,6 @@ public class S3ClientProvider {
     }
 
     private static Region getRegionFromRegionName(String regionName) {
-        return ((regionName == null) || (regionName.trim().isEmpty())) ? Region.US_EAST_1 : Region.of(regionName);
+        return (regionName == null || regionName.isBlank()) ? Region.US_EAST_1 : Region.of(regionName);
     }
 }
