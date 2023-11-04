@@ -244,11 +244,9 @@ public class S3ClientProvider {
     }
 
     private S3Client clientForRegion(String regionName) {
-        String endpoint = configuration.getEndpoint();
-        AwsCredentials credentials = configuration.getCredentials();
-        Region region = ((regionName == null) || (regionName.trim().isEmpty())) ? Region.US_EAST_1 : Region.of(regionName);
-
+        Region region = getRegionFromRegionName(regionName);
         logger.debug("bucket region is: '{}'", region.id());
+
 
         S3ClientBuilder clientBuilder =  S3Client.builder()
             .forcePathStyle(configuration.getForcePathStyle())
@@ -258,11 +256,13 @@ public class S3ClientProvider {
                     builder -> builder.retryCondition(retryCondition).backoffStrategy(backoffStrategy)
                 )
             );
-        
-        if (!endpoint.isBlank()) {
-            clientBuilder.endpointOverride(URI.create(configuration.getEndpointProtocol() + "://" + endpoint));
+
+        URI endpointUri = configuration.endpointURI();
+        if (endpointUri != null) {
+            clientBuilder.endpointOverride(endpointUri);
         }
 
+        AwsCredentials credentials = configuration.getCredentials();
         if (credentials != null) {
             clientBuilder.credentialsProvider(() -> credentials);
         }
@@ -271,21 +271,23 @@ public class S3ClientProvider {
     }
 
     private S3AsyncClient asyncClientForRegion(String regionName) {
-        String endpoint = configuration.getEndpoint();
-        AwsCredentials credentials = configuration.getCredentials();
-
-        Region region = ((regionName == null) || (regionName.trim().isEmpty())) ? Region.US_EAST_1 : Region.of(regionName);
-
+        Region region = getRegionFromRegionName(regionName);
         logger.debug("bucket region is: '{}'", region.id());
 
-        if (!endpoint.isBlank()) {
-            asyncClientBuilder.endpointOverride(URI.create(configuration.getEndpointProtocol() + "://" + endpoint));
+        URI endpointUri = configuration.endpointURI();
+        if (endpointUri != null) {
+            asyncClientBuilder.endpointOverride(endpointUri);
         }
 
+        AwsCredentials credentials = configuration.getCredentials();
         if (credentials != null) {
             asyncClientBuilder.credentialsProvider(() -> credentials);
         }
 
         return asyncClientBuilder.forcePathStyle(configuration.getForcePathStyle()).region(region).build();
+    }
+
+    private static Region getRegionFromRegionName(String regionName) {
+        return ((regionName == null) || (regionName.trim().isEmpty())) ? Region.US_EAST_1 : Region.of(regionName);
     }
 }
