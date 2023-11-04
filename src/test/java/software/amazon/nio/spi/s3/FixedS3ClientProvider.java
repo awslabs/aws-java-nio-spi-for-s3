@@ -29,7 +29,7 @@ public class FixedS3ClientProvider extends S3ClientProvider {
     }
 
     @Override
-    protected S3AsyncClient generateAsyncClient(String bucketName) {
+    protected S3AsyncClient generateAsyncClient(String bucketName, boolean crt) {
         return (S3AsyncClient)client;
     }
 

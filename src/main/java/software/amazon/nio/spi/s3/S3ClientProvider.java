@@ -142,10 +142,11 @@ public class S3ClientProvider {
      * discovery client.
      *
      * @param bucket the named of the bucket to make the client for
+     * @param crt    whether to return a CRT async client or not
      * @return an S3 client appropriate for the region of the named bucket
      */
-    protected S3AsyncClient generateAsyncClient(String bucket) {
-        return generateAsyncClient(bucket, universalClient());
+    protected S3AsyncClient generateAsyncClient(String bucket, boolean crt) {
+        return generateAsyncClient(bucket, universalClient(), crt);
     }
 
     /**
@@ -168,10 +169,11 @@ public class S3ClientProvider {
      * @param bucketName     the name of the bucket to make the client for
      * @param locationClient the client used to determine the location of the
      *                       named bucket, recommend using DEFAULT_CLIENT
+     * @param crt            whether to return a CRT async client or not
      * @return an S3 client appropriate for the region of the named bucket
      */
-    S3AsyncClient generateAsyncClient(String bucketName, S3Client locationClient) {
-        return getClientForBucket(bucketName, locationClient, this::asyncClientForRegion);
+    S3AsyncClient generateAsyncClient(String bucketName, S3Client locationClient, boolean crt) {
+        return getClientForBucket(bucketName, locationClient, (region) -> asyncClientForRegion(region, crt));
     }
 
     private <T extends AwsClient> T getClientForBucket(
@@ -247,7 +249,10 @@ public class S3ClientProvider {
         return configureClientForRegion(regionName, S3Client.builder());
     }
 
-    private S3AsyncClient asyncClientForRegion(String regionName) {
+    private S3AsyncClient asyncClientForRegion(String regionName, boolean crt) {
+        if (!crt) {
+            return configureClientForRegion(regionName, S3AsyncClient.builder());
+        }
         Region region = getRegionFromRegionName(regionName);
         logger.debug("bucket region is: '{}'", region.id());
 

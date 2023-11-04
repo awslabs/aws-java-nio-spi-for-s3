@@ -62,7 +62,8 @@ class S3SeekableByteChannel implements SeekableByteChannel {
             position = 0L;
         } else if (options.contains(StandardOpenOption.READ) || options.isEmpty()) {
             LOGGER.debug("using S3ReadAheadByteChannel as read delegate for path '{}'", s3Path.toUri());
-            readDelegate = new S3ReadAheadByteChannel(s3Path, config.getMaxFragmentSize(), config.getMaxFragmentNumber(), s3Client, this, timeout, timeUnit);
+            S3AsyncClient readClient = s3Path.getFileSystem().readClient();
+            readDelegate = new S3ReadAheadByteChannel(s3Path, config.getMaxFragmentSize(), config.getMaxFragmentNumber(), readClient, this, timeout, timeUnit);
             writeDelegate = null;
         } else {
             throw new IOException("Invalid channel mode");

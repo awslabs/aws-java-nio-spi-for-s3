@@ -64,7 +64,7 @@ public class S3ClientProviderTest {
     public void testGenerateAsyncClientWithNoErrors() {
         when(mockClient.getBucketLocation(anyConsumer()))
                 .thenReturn(GetBucketLocationResponse.builder().locationConstraint("us-west-2").build());
-        final S3AsyncClient s3Client = provider.generateAsyncClient("test-bucket", mockClient);
+        final S3AsyncClient s3Client = provider.generateAsyncClient("test-bucket", mockClient, true);
         assertNotNull(s3Client);
     }
 
@@ -107,7 +107,7 @@ public class S3ClientProviderTest {
                         .build());
 
         // which should get you a client
-        final S3AsyncClient s3Client = provider.generateAsyncClient("test-bucket", mockClient);
+        final S3AsyncClient s3Client = provider.generateAsyncClient("test-bucket", mockClient, true);
         assertNotNull(s3Client);
 
         final InOrder inOrder = inOrder(mockClient);
@@ -135,7 +135,7 @@ public class S3ClientProviderTest {
         );
 
         // then you should be able to get a client as long as the error response header contains the region
-        final S3AsyncClient s3Client = provider.generateAsyncClient("test-bucket", mockClient);
+        final S3AsyncClient s3Client = provider.generateAsyncClient("test-bucket", mockClient, true);
         assertNotNull(s3Client);
 
         final InOrder inOrder = inOrder(mockClient);
@@ -189,7 +189,7 @@ public class S3ClientProviderTest {
         );
 
         // then you should get a NoSuchElement exception when you try to get the header
-        assertThrows(NoSuchElementException.class, () -> provider.generateAsyncClient("test-bucket", mockClient));
+        assertThrows(NoSuchElementException.class, () -> provider.generateAsyncClient("test-bucket", mockClient, true));
 
         final InOrder inOrder = inOrder(mockClient);
         inOrder.verify(mockClient).getBucketLocation(anyConsumer());
@@ -203,12 +203,12 @@ public class S3ClientProviderTest {
         provider.asyncClientBuilder = BUILDER;
 
         provider.configuration.withEndpoint("endpoint1:1010");
-        provider.generateAsyncClient("bucket1");
+        provider.generateAsyncClient("bucket1", true);
         then(BUILDER.endpointOverride.toString()).isEqualTo("https://endpoint1:1010");
         then(BUILDER.region).isEqualTo(Region.US_EAST_1);  // just a default in the case not provide
 
         provider.configuration.withEndpoint("endpoint2:2020");
-        provider.generateAsyncClient("bucket2");
+        provider.generateAsyncClient("bucket2", true);
         then(BUILDER.endpointOverride.toString()).isEqualTo("https://endpoint2:2020");
         then(BUILDER.region).isEqualTo(Region.US_EAST_1);  // just a default in the case not provide
     }
