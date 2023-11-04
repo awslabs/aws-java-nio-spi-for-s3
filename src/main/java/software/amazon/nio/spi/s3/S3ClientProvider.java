@@ -130,11 +130,11 @@ public class S3ClientProvider {
      * that can be used by certain S3 operations for discovery
      *
      * @param async true to return an asynchronous client, false otherwise
-     * @param <T> type of AwsClient
+     * @param <T>   type of AwsClient
      * @return a S3Client not bound to a region
      */
     <T extends AwsClient> T universalClient(boolean async) {
-        return (T)((async) ? DEFAULT_ASYNC_CLIENT : DEFAULT_CLIENT);
+        return (T) ((async) ? DEFAULT_ASYNC_CLIENT : DEFAULT_CLIENT);
     }
 
     /**
@@ -142,22 +142,19 @@ public class S3ClientProvider {
      * discovery client.
      *
      * @param bucket the named of the bucket to make the client for
-     *
      * @return an S3 client appropriate for the region of the named bucket
-     *
      */
     protected S3AsyncClient generateAsyncClient(String bucket) {
-        return generateAsyncClient(bucket,  universalClient());
+        return generateAsyncClient(bucket, universalClient());
     }
 
     /**
      * Generate a client for the named bucket using a provided client to
      * determine the location of the named client
      *
-     * @param bucketName the name of the bucket to make the client for
+     * @param bucketName     the name of the bucket to make the client for
      * @param locationClient the client used to determine the location of the
-     *        named bucket, recommend using DEFAULT_CLIENT
-     *
+     *                       named bucket, recommend using DEFAULT_CLIENT
      * @return an S3 client appropriate for the region of the named bucket
      */
     S3Client generateSyncClient(String bucketName, S3Client locationClient) {
@@ -168,13 +165,12 @@ public class S3ClientProvider {
      * Generate an async  client for the named bucket using a provided client to
      * determine the location of the named client
      *
-     * @param bucketName the name of the bucket to make the client for
+     * @param bucketName     the name of the bucket to make the client for
      * @param locationClient the client used to determine the location of the
-     *        named bucket, recommend using DEFAULT_CLIENT
-     *
+     *                       named bucket, recommend using DEFAULT_CLIENT
      * @return an S3 client appropriate for the region of the named bucket
      */
-    S3AsyncClient generateAsyncClient (String bucketName, S3Client locationClient) {
+    S3AsyncClient generateAsyncClient(String bucketName, S3Client locationClient) {
         return getClientForBucket(bucketName, locationClient, this::asyncClientForRegion);
     }
 
