@@ -27,5 +27,10 @@ public class CopyToS3 {
 
         // Remove the copy option to prevent replacement of an existing file.
         Files.copy(tempFile, s3Path, StandardCopyOption.REPLACE_EXISTING);
+
+
+        // Copy to a local temp file.
+        final Path tempFile2 = Paths.get(URI.create("file:///tmp/temp2.tmp"));
+        Files.copy(s3Path, tempFile2);
     }
 }
