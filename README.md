@@ -33,6 +33,11 @@ java -jar myExecutableJar --input s3x://my-s3-service:9000/some-bucket/input/fil
 If this library is exposed as an extension (see above), then no code changes or recompilation of `myExecutable` are
 required.
 
+Several examples are included in the `examples` module. In most cases it is sufficient to use Java `Path` objects constructed
+with a `URI` representing `s3://` URI. Constructing `Path`s with `String`s (as opposed to `URI`s) will normally default
+to the local filesystems NIO provider rather than this provider so use of `URI`s should always be preferred over `String`s
+for all `Path` objects (even local ones).
+
 ### Using this package as a provider for Java 9 and above
 
 With the introduction of modules in Java 9 the extension mechanism was retired. Providers should now be supplied as java modules.
@@ -57,6 +62,7 @@ declarations.
 
 For example:
 
+`build.pom`
 ```xml
 <dependency>
     <groupId>software.amazon.nio.s3</groupId>
@@ -65,6 +71,7 @@ For example:
 </dependency>
 ```
 
+`build.gradle`
 ```groovy
     implementation("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.0.0-dev")
 ```
@@ -99,7 +106,7 @@ blocked by bucket access control lists and/ or bucket policies.
 
 ## S3 Compatible Endpoints and Credentials
 
-This NIO provider supports any S3-like service. To access a 3rd party service,
+This NIO provider also supports 3rd party S3-like services. To access a 3rd party service,
 follow this URI pattern:
 
 ```
@@ -110,7 +117,7 @@ If no credentials are given the default AWS configuration mechanism will be used
 the section above.
 
 In the case the target service uses HTTP instead of HTTPS (e.g. a testing environment),
-the protocol to use can be fonfigured through the following environment variable or system
+the protocol to use can be configured through the following environment variable or system
 property:
 
 ```
@@ -280,9 +287,10 @@ path representations. The logic of these is encoded in the `PosixLikePathReprese
 
 An `S3Path` is inferred to be a directory if the path ends with `/`, `/.` or `/..` or contains only `.` or `..`.
 
-For example, these paths are inferred to be directories `/dir/`, `/dir/.`, `/dir/..`. However `dir` and `/dir` cannot be inferred to be a directory.
-This is a divergence from a true POSIX filesystem where if `/dir/` is a directory then `/dir` and `dir` relative to `/` must also be a directory.
-S3 holds no metadata that can be used to make this inference.
+For example, these paths are inferred to be directories `/dir/`, `/dir/.`, `/dir/..`. However `dir` and `/dir` cannot 
+be inferred to be a directory.
+This is a divergence from a true POSIX filesystem where if `/dir/` is a directory then `/dir` and `dir` relative 
+to `/` must also be a directory. S3 holds no metadata that can be used to make this inference.
 
 #### Working directory
 
@@ -304,6 +312,15 @@ The POSIX path special symbols `.` and `..` are treated as they would be in a no
 cause some S3 objects to be effectively invisible to this implementation. For example `s3://mybucket/foo/./baa` is
 an allowed S3 URI that is *not* equivalent to `s3://mybucket/foo/baa` even though this library will resolve the path `/foo/./baa`
 to `/foo/baa`.
+
+#### S3 "URI" and Java `URI` incompatibility
+
+The definition of an S3 URI doesn't completely conform to the W3C specification. For example an object in `mybucket` called
+`my%object` will result in an S3 URI called `s3://mybucket/my%object` even though the `%` symbol should be URL encoded.
+The Java NIO libraries depend on the use of Java `URI` objects which are `final` and which *do* follow the W3C specification 
+and therefore must URL encode the URI. This results in a small incompatibility where the above URI cannot be represented
+by this library. Whenever possible avoiding the use of special characters in S3 filenames and paths is recommended. Otherwise
+cautious use of URL escapes will be needed.
 
 ## Building this library
 
@@ -355,7 +372,8 @@ Code must compile to JDK 11 compatible bytecode. Matching unit tests are require
 
 ### Contributing Unit Tests
 
-We use JUnit 5 and Mockito for unit testing.
+We use [JUnit 5](https://junit.org/junit5/), [AssertJ](https://assertj.github.io/doc/) and [Mockito](https://site.mockito.org/) 
+for unit testing.
 
 When contributing code for bug fixes or feature improvements, matching tests should also be provided. Tests must not
 rely on specific S3 bucket access or credentials. To this end, S3 clients and other artifacts should be mocked as
