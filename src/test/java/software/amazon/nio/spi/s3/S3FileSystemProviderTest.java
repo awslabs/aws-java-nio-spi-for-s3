@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
@@ -66,8 +67,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
-
-import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 @SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
@@ -264,6 +263,20 @@ public class S3FileSystemProviderTest {
         verify(mockClient, times(1)).putObject(argumentCaptor.capture(), any(AsyncRequestBody.class));
         assertEquals("foo", argumentCaptor.getValue().bucket());
         assertEquals("baa/baz/", argumentCaptor.getValue().key());
+    }
+
+    @Test
+    public void createRootDirectory_shouldFail() {
+        assertThatThrownBy(() -> provider.createDirectory(fs.getPath("/")))
+                .isInstanceOf(FileAlreadyExistsException.class)
+                .hasMessage("Root directory already exists");
+    }
+
+    @Test
+    public void createRooDirectory_withEmpty_shouldFail(){
+        assertThatThrownBy(() -> provider.createDirectory(fs.getPath("")))
+                .isInstanceOf(FileAlreadyExistsException.class)
+                .hasMessage("Root directory already exists");
     }
 
     @Test
@@ -493,5 +506,4 @@ public class S3FileSystemProviderTest {
 
         assertNull(BUILDER.forcePathStyle);
     }
-
 }
