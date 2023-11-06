@@ -329,6 +329,14 @@ we could test for file existence before deletion this would require an additiona
 operation. Because S3 only guarantees read after write consistency it would be possible for a file to be created or 
 deleted between these two operations. Therefore, we currently always return `true`
 
+### Copies of a directory will also copy contents
+
+Our implementation of `FileSystemProvider.copy` will also copy the content of the directory via batched copy operations. This is a variance
+from some other implementations such as `UnixFileSystemProvider` where directory contents are not copied and the
+use of the {@code walkFileTree} is suggested to perform deep copies. In S3 this could result in an explosion
+of API calls which would be both expensive in time and possibly money. By performing batch copies we can greatly reduce
+the number of calls.
+
 ## Building this library
 
 The library uses the gradle build system and targets Java 11 to allow it to be used in many contexts. To build you can simply run:

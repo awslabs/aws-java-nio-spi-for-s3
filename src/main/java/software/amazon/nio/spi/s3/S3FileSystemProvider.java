@@ -345,6 +345,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * specified by the {@link Files#copy(Path, Path, CopyOption[])} method
      * except that both the source and target paths must be associated with
      * this provider.
+     * <br>
+     * Our implementation will also copy the content of the directory via batched copy operations. This is a variance
+     * from some other implementations such as `UnixFileSystemProvider` where directory contents are not copied and the
+     * use of the {@code walkFileTree} is suggested to perform deep copies. In S3 this could result in an explosion
+     * of API calls which would be both expensive in time and possibly money.
      *
      * @param source  the path to the file to copy
      * @param target  the path to the target file
@@ -352,11 +357,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public void copy(Path source, Path target, CopyOption... options) throws IOException {
-        //
-        // TODO: source and target can belong to any file system (confirmed, see
-        //       https://github.com/awslabs/aws-java-nio-spi-for-s3/issues/135),
-        //       we can not assume they points to S3 objects
-        //
         try {
             // If both paths point to the same object, this is a no-op
             if (source.equals(target)) {
