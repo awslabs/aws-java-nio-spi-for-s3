@@ -322,6 +322,13 @@ and therefore must URL encode the URI. This results in a small incompatibility w
 by this library. Whenever possible avoiding the use of special characters in S3 filenames and paths is recommended. Otherwise
 cautious use of URL escapes will be needed.
 
+#### `S3FileSystemProvider.deleteIfExists(path)` will always return true
+
+The AWS S3 JDK `delete` operation doesn't return any indication of whether the file existed before deletion. Although
+we could test for file existence before deletion this would require an additional API call and would not be an atomic
+operation. Because S3 only guarantees read after write consistency it would be possible for a file to be created or 
+deleted between these two operations. Therefore, we currently always return `true`
+
 ## Building this library
 
 The library uses the gradle build system and targets Java 11 to allow it to be used in many contexts. To build you can simply run:
