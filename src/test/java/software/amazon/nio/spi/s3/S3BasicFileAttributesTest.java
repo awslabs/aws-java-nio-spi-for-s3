@@ -44,5 +44,11 @@ public class S3BasicFileAttributesTest {
             assertThat(directoryAttributes.lastAccessTime()).isEqualTo(FileTime.from(Instant.EPOCH));
         }
 
+        @Test
+        @DisplayName("creationTime() should return epoch")
+        void creationTime() {
+            assertThat(directoryAttributes.creationTime()).isEqualTo(FileTime.from(Instant.EPOCH));
+        }
+
     }
 }
