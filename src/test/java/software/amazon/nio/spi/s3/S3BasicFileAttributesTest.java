@@ -1,6 +1,9 @@
 package software.amazon.nio.spi.s3;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 import java.nio.file.attribute.FileTime;
@@ -64,6 +67,11 @@ public class S3BasicFileAttributesTest {
             assertThat(directoryAttributes.fileKey()).isNull();
         }
 
+        @Test
+        @DisplayName("isDirectory() should return true")
+        void isDirectory() {
+            assertThat(directoryAttributes.isDirectory()).isTrue();
+        }
 
     }
 }
