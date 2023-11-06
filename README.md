@@ -329,11 +329,19 @@ jar to use. Don't put both jars on your classpath or extension path, you will ob
 
 ## Testing
 
-To run unit tests and produce code coverage reports, run this command:
+Run unit tests with `./gradlew test`
 
-```shell
-./gradlew test
-```
+Run integration tests with `./gradlew integrationTest`
+
+Produce code coverage reports with `./gradlew testFullCodeCoverageReport`
+
+HTML output of the reports can be found at:
+
+| Type        | Test Report | Coverage Report                                                        |
+|-------------|--------------|------------------------------------------------------------------------|
+| Unit        | build/reports/tests/test/index.html             | build/reports/jacoco/testCodeCoverageReport/html/index.html            |
+| Integration | build/reports/tests/integrationTest/index.html             | build/reports/jacoco/integrationTestCodeCoverageReport/html/index.html |
+| Full | - | build/reports/jacoco/testFullCodeCoverageReport/html/index.html        |
 
 HTML output of the test reports can be found at `build/reports/tests/test/index.html` and test coverage reports are
 found at `build/reports/jacoco/test/html/index.html`
