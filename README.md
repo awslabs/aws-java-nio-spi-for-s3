@@ -333,7 +333,7 @@ deleted between these two operations. Therefore, we currently always return `tru
 
 Our implementation of `FileSystemProvider.copy` will also copy the content of the directory via batched copy operations. This is a variance
 from some other implementations such as `UnixFileSystemProvider` where directory contents are not copied and the
-use of the {@code walkFileTree} is suggested to perform deep copies. In S3 this could result in an explosion
+use of the `walkFileTree` method is suggested to perform deep copies. In S3 this could result in an explosion
 of API calls which would be both expensive in time and possibly money. By performing batch copies we can greatly reduce
 the number of calls.
 
