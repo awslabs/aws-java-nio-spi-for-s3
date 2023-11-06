@@ -58,6 +58,12 @@ public class S3BasicFileAttributesTest {
             assertThat(directoryAttributes.size()).isZero();
         }
 
+        @Test
+        @DisplayName("fileKey() should return null")
+        void fileKey() {
+            assertThat(directoryAttributes.fileKey()).isNull();
+        }
+
 
     }
 }
