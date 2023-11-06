@@ -6,6 +6,7 @@
 package software.amazon.nio.spi.s3.config;
 
 
+import java.net.URI;
 import java.util.HashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -415,5 +416,13 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
                     propertyVal, propName, defaultVal);
             return defaultVal;
         }
+    }
+
+    public URI endpointURI() {
+        String endpoint = getEndpoint();
+        if (endpoint.isBlank()) {
+            return null;
+        }
+        return URI.create(String.format("%s://%s", getEndpointProtocol(), getEndpoint()));
     }
 }
