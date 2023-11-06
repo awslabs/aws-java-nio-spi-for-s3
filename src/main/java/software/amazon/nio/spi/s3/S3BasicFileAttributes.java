@@ -165,7 +165,7 @@ class S3BasicFileAttributes implements BasicFileAttributes {
      * @throws RuntimeException if the S3Clients {@code RetryConditions} configuration was not able to handle the exception.
      */
     @Override
-    public long size() throws RuntimeException{
+    public long size() {
         if(isDirectory()) return 0;
 
         try {
