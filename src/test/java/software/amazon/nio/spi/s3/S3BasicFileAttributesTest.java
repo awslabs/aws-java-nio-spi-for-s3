@@ -52,5 +52,12 @@ public class S3BasicFileAttributesTest {
             assertThat(directoryAttributes.creationTime()).isEqualTo(EPOCH_FILE_TIME);
         }
 
+        @Test
+        @DisplayName("size() should return 0")
+        void size() {
+            assertThat(directoryAttributes.size()).isZero();
+        }
+
+
     }
 }
