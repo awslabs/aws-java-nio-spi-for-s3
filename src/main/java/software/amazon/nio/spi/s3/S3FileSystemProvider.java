@@ -268,6 +268,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
         S3Path s3Directory = checkPath(dir);
+        if(s3Directory.toString().equals("/") || s3Directory.toString().isEmpty()) {
+            throw new FileAlreadyExistsException("Root directory already exists");
+        }
+
         S3FileSystem fs = s3Directory.getFileSystem();
         try {
             String directoryKey = s3Directory.toRealPath(NOFOLLOW_LINKS).getKey();
