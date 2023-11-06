@@ -85,5 +85,11 @@ public class S3BasicFileAttributesTest {
             assertThat(directoryAttributes.isSymbolicLink()).isFalse();
         }
 
+        @Test
+        @DisplayName("isOther() should return false")
+        void isOther() {
+            assertThat(directoryAttributes.isOther()).isFalse();
+        }
+
     }
 }
