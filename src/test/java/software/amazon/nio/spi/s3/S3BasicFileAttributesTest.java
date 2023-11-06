@@ -14,6 +14,8 @@ import static org.mockito.Mockito.when;
 @DisplayName("S3BasicFileAttributes")
 public class S3BasicFileAttributesTest {
 
+    private static final FileTime EPOCH_FILE_TIME = FileTime.from(Instant.EPOCH);
+
     @Nested
     @DisplayName("directory")
     class Directories {
@@ -35,19 +37,19 @@ public class S3BasicFileAttributesTest {
         @Test
         @DisplayName("lastModifiedTime() should return epoch")
         void lastModifiedTime() {
-            assertThat(directoryAttributes.lastModifiedTime()).isEqualTo(FileTime.from(Instant.EPOCH));
+            assertThat(directoryAttributes.lastModifiedTime()).isEqualTo(EPOCH_FILE_TIME);
         }
 
         @Test
         @DisplayName("lastAccessTime() should return epoch")
         void lastAccessTime() {
-            assertThat(directoryAttributes.lastAccessTime()).isEqualTo(FileTime.from(Instant.EPOCH));
+            assertThat(directoryAttributes.lastAccessTime()).isEqualTo(EPOCH_FILE_TIME);
         }
 
         @Test
         @DisplayName("creationTime() should return epoch")
         void creationTime() {
-            assertThat(directoryAttributes.creationTime()).isEqualTo(FileTime.from(Instant.EPOCH));
+            assertThat(directoryAttributes.creationTime()).isEqualTo(EPOCH_FILE_TIME);
         }
 
     }
