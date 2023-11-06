@@ -73,5 +73,11 @@ public class S3BasicFileAttributesTest {
             assertThat(directoryAttributes.isDirectory()).isTrue();
         }
 
+        @Test
+        @DisplayName("isRegularFile() should return false")
+        void isRegularFile() {
+            assertThat(directoryAttributes.isRegularFile()).isFalse();
+        }
+
     }
 }
