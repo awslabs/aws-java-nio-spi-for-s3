@@ -47,7 +47,7 @@ public class S3BasicFileAttributesTest {
             when(fs.configuration()).thenReturn(new S3NioSpiConfiguration());
             when(provider.getScheme()).thenReturn("s3");
 
-            S3Path directory = S3Path.getPath(fs, "s3://somebucket/somedirectory/");
+            S3Path directory = S3Path.getPath(fs, "/somedirectory/");
             directoryAttributes = new S3BasicFileAttributes(directory);
         }
 
@@ -126,7 +126,7 @@ public class S3BasicFileAttributesTest {
 
             when(fs.client()).thenReturn(mockClient);
 
-            S3Path file = S3Path.getPath(fs, "s3://somebucket/somefile");
+            S3Path file = S3Path.getPath(fs, "somefile");
             attributes = new S3BasicFileAttributes(file);
         }
 
