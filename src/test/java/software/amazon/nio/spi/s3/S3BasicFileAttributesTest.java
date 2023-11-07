@@ -13,6 +13,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
+import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
 import java.nio.file.attribute.FileTime;
 import java.nio.file.spi.FileSystemProvider;
@@ -50,7 +51,7 @@ public class S3BasicFileAttributesTest {
             when(provider.getScheme()).thenReturn("s3");
 
             S3Path directory = S3Path.getPath(fs, "/somedirectory/");
-            directoryAttributes = new S3BasicFileAttributes(directory);
+            directoryAttributes = new S3BasicFileAttributes(directory, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1));
         }
 
         @Test
@@ -129,7 +130,7 @@ public class S3BasicFileAttributesTest {
             when(fs.client()).thenReturn(mockClient);
 
             S3Path file = S3Path.getPath(fs, "somefile");
-            attributes = new S3BasicFileAttributes(file);
+            attributes = new S3BasicFileAttributes(file, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1));
         }
 
         @BeforeEach
@@ -224,12 +225,12 @@ public class S3BasicFileAttributesTest {
         S3AsyncClient mockClient = mock();
         when(fs.client()).thenReturn(mockClient);
 
-        var attributes = new S3BasicFileAttributes(S3Path.getPath(fs, "somefile"));
+        var attributes = new S3BasicFileAttributes(S3Path.getPath(fs, "somefile"), Duration.ofMillis(1));
 
         when(mockClient.headObject(anyConsumer())).thenReturn(
             CompletableFuture.supplyAsync(() -> {
                 try {
-                    Thread.sleep(Duration.ofMillis(100).toMillis());
+                    Thread.sleep(Duration.ofMinutes(1).toMillis());
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }

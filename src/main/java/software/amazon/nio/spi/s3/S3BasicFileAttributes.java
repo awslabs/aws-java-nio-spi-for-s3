@@ -16,6 +16,7 @@ import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
@@ -26,7 +27,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
  * Representation of {@link BasicFileAttributes} for an S3 object
@@ -36,6 +37,7 @@ class S3BasicFileAttributes implements BasicFileAttributes {
     private final S3Path path;
     private final S3AsyncClient client;
     private final String bucketName;
+    private final Duration timeout;
 
     private static final Set<String> methodNamesToFilterOut =
             Set.of("wait", "toString", "hashCode", "getClass", "notify", "notifyAll");
@@ -44,12 +46,15 @@ class S3BasicFileAttributes implements BasicFileAttributes {
 
     /**
      * Constructor for the attributes of a path
-     * @param path the path to represent the attributes of
+     *
+     * @param path    the path to represent the attributes of
+     * @param timeout timeout for requests to get attributes
      */
-    S3BasicFileAttributes(S3Path path){
+    S3BasicFileAttributes(S3Path path, Duration timeout){
         this.path = path;
         this.client = path.getFileSystem().client();
         this.bucketName = path.bucketName();
+        this.timeout = timeout;
     }
 
     /**
@@ -173,7 +178,7 @@ class S3BasicFileAttributes implements BasicFileAttributes {
             return client.headObject(req -> req
                     .bucket(bucketName)
                     .key(path.getKey())
-            ).get(TimeOutUtils.TIMEOUT_TIME_LENGTH_1, MINUTES);
+            ).get(timeout.toMillis(), MILLISECONDS);
         } catch (ExecutionException e) {
             String errMsg = format("an '%s' error occurred while obtaining the metadata (for operation %s) of '%s' that was not handled successfully by the S3Client's configured RetryConditions", e.getCause().toString(), forOperation, path.toUri());
             logger.error(errMsg);
@@ -182,7 +187,7 @@ class S3BasicFileAttributes implements BasicFileAttributes {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         } catch (TimeoutException e){
-            throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(logger, forOperation, TimeOutUtils.TIMEOUT_TIME_LENGTH_1, MINUTES);
+            throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(logger, forOperation, timeout.toMillis(), MILLISECONDS);
         }
     }
 

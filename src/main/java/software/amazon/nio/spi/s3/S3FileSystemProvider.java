@@ -38,6 +38,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -645,7 +646,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         if (type.equals(BasicFileAttributes.class)) {
             @SuppressWarnings("unchecked")
-            A a = (A) new S3BasicFileAttributes(s3Path);
+            A a = (A) new S3BasicFileAttributes(s3Path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1));
             return a;
         } else {
             throw new UnsupportedOperationException("cannot read attributes of type: " + type);
@@ -680,7 +681,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
             return Collections.emptyMap();
 
         if (attributes.equals("*") || attributes.equals("s3"))
-            return new S3BasicFileAttributes(s3Path).asMap();
+            return new S3BasicFileAttributes(s3Path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1)).asMap();
 
         final Set<String> attrSet = Arrays.stream(attributes.split(","))
                 .map(attr -> attr.replaceAll("^s3:", ""))
