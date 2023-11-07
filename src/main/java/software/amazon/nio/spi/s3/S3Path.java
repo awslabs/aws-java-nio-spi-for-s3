@@ -5,6 +5,9 @@
 
 package software.amazon.nio.spi.s3;
 
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
+
 import java.io.File;
 import java.io.IOError;
 import java.net.URI;
@@ -26,9 +29,6 @@ import java.util.Objects;
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
 import static software.amazon.nio.spi.s3.S3FileSystemProvider.checkPath;
-
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
-import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 @SuppressWarnings("NullableProblems")
 class S3Path implements Path {
