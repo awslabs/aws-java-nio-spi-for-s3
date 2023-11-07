@@ -1,5 +1,6 @@
 package software.amazon.nio.spi.s3;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Named;
@@ -33,11 +34,12 @@ public class S3BasicFileAttributesTest {
 
     @Nested
     @DisplayName("directory")
+    @TestInstance(TestInstance.Lifecycle.PER_CLASS)
     class Directories {
 
         private S3BasicFileAttributes directoryAttributes;
 
-        @BeforeEach
+        @BeforeAll
         void configureDirectory(){
             S3FileSystem fs = mock();
             FileSystemProvider provider = mock();
@@ -112,7 +114,7 @@ public class S3BasicFileAttributesTest {
         private S3BasicFileAttributes attributes;
         private final S3AsyncClient mockClient = mock();
 
-        @BeforeEach
+        @BeforeAll
         void configureRegularFile() {
             S3FileSystem fs = mock();
 
@@ -126,6 +128,10 @@ public class S3BasicFileAttributesTest {
 
             S3Path file = S3Path.getPath(fs, "s3://somebucket/somefile");
             attributes = new S3BasicFileAttributes(file);
+        }
+
+        @BeforeEach
+        void resetMockClient() {
             reset(mockClient);
         }
 
