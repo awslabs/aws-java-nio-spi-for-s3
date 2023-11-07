@@ -615,6 +615,10 @@ class S3Path implements Path {
         Iterator<Path> elements = path.iterator();
 
         StringBuilder uri = new StringBuilder(fileSystem.provider().getScheme() + "://");
+        String endpoint = fileSystem.configuration().getEndpoint();
+        if (!endpoint.isEmpty()) {
+            uri.append(fileSystem.configuration().getEndpoint()).append(PATH_SEPARATOR);
+        }
         uri.append(bucketName());
         elements.forEachRemaining(
             (e) -> {

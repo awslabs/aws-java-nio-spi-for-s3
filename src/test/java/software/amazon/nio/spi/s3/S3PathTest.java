@@ -506,4 +506,13 @@ public class S3PathTest {
         then(Paths.get(URI.create("s3x://key:secret@somewhere.com:1010/bucket/afile.txt")).toString()).isEqualTo("/afile.txt");
     }
 
+    @Test
+    public void toUriProvidesFullUri() {
+        URI uri = URI.create("s3://bucket/subfolder/afile.txt");
+        then(Paths.get(uri).toUri()).isEqualTo(uri);
+
+        uri = URI.create("s3x://somewhere.com:1010/bucket/subfolder/afile.txt");
+        then(Paths.get(uri).toUri()).isEqualTo(uri);
+    }
+
 }

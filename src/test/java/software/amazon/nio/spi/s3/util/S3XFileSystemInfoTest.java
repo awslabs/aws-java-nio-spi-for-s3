@@ -20,7 +20,6 @@ import java.net.URI;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.BDDAssertions.then;
 import org.junit.jupiter.api.Test;
-import software.amazon.nio.spi.s3.util.S3XFileSystemInfo;
 
 /**
  *
