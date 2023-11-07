@@ -5,13 +5,6 @@
 
 package software.amazon.nio.spi.s3;
 
-import java.io.IOException;
-import java.net.URI;
-import java.time.Duration;
-import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.function.Function;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
@@ -36,6 +29,13 @@ import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
+
+import java.io.IOException;
+import java.net.URI;
+import java.time.Duration;
+import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Factory/builder class that creates sync and async S3 clients. It also provides
@@ -103,10 +103,6 @@ public class S3ClientProvider {
 
     public S3ClientProvider(S3NioSpiConfiguration c) {
         this.configuration = (c == null) ? new S3NioSpiConfiguration() : c;
-    }
-
-    public S3CrtAsyncClientBuilder asyncClientBuilder() {
-        return asyncClientBuilder;
     }
 
     public void asyncClientBuilder(final S3CrtAsyncClientBuilder builder) {
