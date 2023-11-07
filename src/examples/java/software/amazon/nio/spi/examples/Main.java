@@ -24,7 +24,7 @@ public class Main {
     public static void main(String[] args) throws IOException {
 
         if(args.length == 0){
-            System.out.println("Provide one or more S3 URIs to read from.");
+            System.err.println("Provide one or more S3 URIs to read from.");
             System.exit(1);
         }
 
@@ -36,10 +36,10 @@ public class Main {
             // proves that the correct path type is being used
             assert path.getClass().getName().contains("S3Path");
 
-            System.out.println("*** READING FROM "+path.toUri()+" ***");
+            System.err.println("*** READING FROM "+path.toUri()+" ***");
             Files.readAllLines(path)
                     .forEach(System.out::println);
-            System.out.println("*** FINISHED READING OBJECT ***\n");
+            System.err.println("*** FINISHED READING OBJECT ***\n");
         }
     }
 }

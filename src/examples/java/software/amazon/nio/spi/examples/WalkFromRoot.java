@@ -32,7 +32,7 @@ public class WalkFromRoot {
 
 
         Path root = Paths.get(URI.create(bucketName));
-        System.out.println("root.getClass() = " + root.getClass());
+        System.err.println("root.getClass() = " + root.getClass());
         
         FileSystem s3 = root.getFileSystem();
 
