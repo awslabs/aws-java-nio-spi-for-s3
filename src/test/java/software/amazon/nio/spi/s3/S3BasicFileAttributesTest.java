@@ -2,8 +2,13 @@ package software.amazon.nio.spi.s3;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
@@ -12,6 +17,8 @@ import java.nio.file.attribute.FileTime;
 import java.nio.file.spi.FileSystemProvider;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -99,6 +106,7 @@ public class S3BasicFileAttributesTest {
 
     @Nested
     @DisplayName("regular file")
+    @TestInstance(TestInstance.Lifecycle.PER_CLASS)
     class RegularFiles {
 
         private S3BasicFileAttributes attributes;
@@ -121,17 +129,31 @@ public class S3BasicFileAttributesTest {
             reset(mockClient);
         }
 
-        @Test
-        @DisplayName("lastModifiedTime() should return the Instant from the head response")
-        void lastModifiedTime() {
+        @ParameterizedTest(name = "{0} should return the Instant from the head response")
+        @MethodSource("dateGetters")
+        @DisplayName("date getter")
+        void lastModifiedTime(Function<S3BasicFileAttributes, FileTime> dateGetter) {
             when(mockClient.headObject(anyConsumer())).thenReturn(
                     CompletableFuture.supplyAsync(() ->
                             HeadObjectResponse.builder().lastModified(Instant.parse("2023-11-07T08:29:12.847553Z")).build()
                     )
             );
 
-            FileTime expectedLastModifiedTime = FileTime.from(Instant.parse("2023-11-07T08:29:12.847553Z"));
-            assertThat(attributes.lastModifiedTime()).isEqualTo(expectedLastModifiedTime);
+            FileTime expectedFileTime = FileTime.from(Instant.parse("2023-11-07T08:29:12.847553Z"));
+            assertThat(dateGetter.apply(attributes)).isEqualTo(expectedFileTime);
+        }
+
+        private Stream<Arguments> dateGetters() {
+            final Function<S3BasicFileAttributes, FileTime> lastModifiedTimeGetter = S3BasicFileAttributes::lastModifiedTime;
+            final Function<S3BasicFileAttributes, FileTime> creationTimeGetter = S3BasicFileAttributes::creationTime;
+            final Function<S3BasicFileAttributes, FileTime> lastAccessTimeGetter = S3BasicFileAttributes::lastAccessTime;
+            return Stream.of(
+                    Arguments.of(Named.of("lastModifiedTime", lastModifiedTimeGetter)),
+                    Arguments.of(Named.of("creationTime", creationTimeGetter)),
+                    Arguments.of(Named.of("lastAccessTime", lastAccessTimeGetter))
+            );
         }
     }
+
+
 }
