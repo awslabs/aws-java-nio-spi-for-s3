@@ -7,6 +7,7 @@ package software.amazon.nio.spi.s3;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.nio.spi.s3.util.TimeOutUtils;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 
@@ -68,23 +69,7 @@ class S3BasicFileAttributes implements BasicFileAttributes {
             return FileTime.from(Instant.EPOCH);
         }
 
-        final Instant lastModified;
-        try {
-            lastModified = client.headObject(req -> req
-                    .bucket(bucketName)
-                    .key(path.getKey())
-            ).get(TimeOutUtils.TIMEOUT_TIME_LENGTH_1, MINUTES).lastModified();
-        } catch (ExecutionException e) {
-            String errMsg = format("an '%s' error occurred while obtaining the last modified time of '%s' that was not handled successfully by the S3Client's configured RetryConditions", e.getCause().toString(), path.toUri());
-            logger.error(errMsg);
-            throw new RuntimeException(errMsg, e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        } catch (TimeoutException e) {
-            throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(logger, "lastModifiedTime()", TimeOutUtils.TIMEOUT_TIME_LENGTH_1, MINUTES);
-        }
-        return FileTime.from(lastModified);
+        return FileTime.from(getObjectMetadata("lastModifiedTime()").lastModified());
     }
 
     /**
@@ -167,22 +152,7 @@ class S3BasicFileAttributes implements BasicFileAttributes {
     @Override
     public long size() {
         if(isDirectory()) return 0;
-
-        try {
-            return client.headObject(req -> req
-                    .bucket(bucketName)
-                    .key(path.getKey())
-            ).get(TimeOutUtils.TIMEOUT_TIME_LENGTH_1, MINUTES).contentLength();
-        } catch (ExecutionException e) {
-            String errMsg = format("an '%s' error occurred while obtaining the size of '%s' that was not handled successfully by the S3Client's configured RetryConditions", e.getCause().toString(), path.toUri());
-            logger.error(errMsg);
-            throw new RuntimeException(errMsg, e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        } catch (TimeoutException e){
-            throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(logger, "size()", TimeOutUtils.TIMEOUT_TIME_LENGTH_1, MINUTES);
-        }
+        return getObjectMetadata("size()").contentLength();
     }
 
     /**
@@ -195,21 +165,24 @@ class S3BasicFileAttributes implements BasicFileAttributes {
     @Override
     public Object fileKey() {
         if (path.isDirectory()) return null;
+        return getObjectMetadata("fileKey()").eTag();
+    }
 
+    private HeadObjectResponse getObjectMetadata(String forOperation) {
         try {
             return client.headObject(req -> req
                     .bucket(bucketName)
-                    .key(path.toString())
-            ).get(TimeOutUtils.TIMEOUT_TIME_LENGTH_1, MINUTES).eTag();
+                    .key(path.getKey())
+            ).get(TimeOutUtils.TIMEOUT_TIME_LENGTH_1, MINUTES);
         } catch (ExecutionException e) {
-            String errMsg = format("an '%s' error occurred while obtaining the file key of '%s' that was not handled successfully by the S3Client's configured RetryConditions", e.getCause().toString(), path.toUri());
+            String errMsg = format("an '%s' error occurred while obtaining the metadata (for operation %s) of '%s' that was not handled successfully by the S3Client's configured RetryConditions", e.getCause().toString(), forOperation, path.toUri());
             logger.error(errMsg);
             throw new RuntimeException(errMsg, e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         } catch (TimeoutException e){
-            throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(logger, "size()", TimeOutUtils.TIMEOUT_TIME_LENGTH_1, MINUTES);
+            throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(logger, forOperation, TimeOutUtils.TIMEOUT_TIME_LENGTH_1, MINUTES);
         }
     }
 
