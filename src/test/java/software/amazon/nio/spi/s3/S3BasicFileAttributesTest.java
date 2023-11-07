@@ -173,6 +173,12 @@ public class S3BasicFileAttributesTest {
             assertThat(attributes.isDirectory()).isFalse();
         }
 
+        @Test
+        @DisplayName("isRegularFile() should return true")
+        void isRegularFile() {
+            assertThat(attributes.isRegularFile()).isTrue();
+        }
+
         private Stream<Arguments> dateGetters() {
             final Function<S3BasicFileAttributes, FileTime> lastModifiedTimeGetter = S3BasicFileAttributes::lastModifiedTime;
             final Function<S3BasicFileAttributes, FileTime> creationTimeGetter = S3BasicFileAttributes::creationTime;
