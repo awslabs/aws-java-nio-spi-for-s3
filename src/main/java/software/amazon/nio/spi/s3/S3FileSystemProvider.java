@@ -55,9 +55,6 @@ import java.util.stream.Collectors;
 
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static software.amazon.awssdk.http.HttpStatusCode.FORBIDDEN;
-import static software.amazon.awssdk.http.HttpStatusCode.NOT_FOUND;
-import static software.amazon.awssdk.http.HttpStatusCode.OK;
 import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExceptionOnTimeOut;
@@ -551,19 +548,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
         TimeUnit unit = MINUTES;
 
         try {
-            IOException ioException = (IOException) response.handleAsync((resp, ex) -> {
-                if (resp.sdkHttpResponse().statusCode() == NOT_FOUND)
-                    return new NoSuchFileException(s3Path.toString());
-
-                if (resp.sdkHttpResponse().statusCode() == FORBIDDEN)
-                    return new AccessDeniedException(s3Path.toString());
-
-                if (resp.sdkHttpResponse().statusCode() != OK)
-                    return new IOException(String.format("exception occurred while checking access, response code was '%d'",
-                            resp.sdkHttpResponse().statusCode()));
-
+            IOException ioException = response.handleAsync((resp, ex) -> {
                 if( ex != null){
-                    return ex;
+                    return new IOException(ex);
                 }
 
                 // possible success but ListObjectsV2Responses can be empty so need to check that.
@@ -571,12 +558,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
                     ListObjectsV2Response listResp = (ListObjectsV2Response) resp;
 
                     if (listResp.hasCommonPrefixes() && !listResp.commonPrefixes().isEmpty()) {
-                        logger.debug("checkAccess: access is OK");
+                        logger.debug("checkAccess - common prefixes: access is OK");
                         return null;
                     }
 
                     if (listResp.hasContents() && !listResp.contents().isEmpty()){
-                        logger.debug("checkAccess: access is OK");
+                        logger.debug("checkAccess - contents: access is OK");
                         return null;
                     }
 
