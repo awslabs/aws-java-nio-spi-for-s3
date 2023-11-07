@@ -185,6 +185,12 @@ public class S3BasicFileAttributesTest {
             assertThat(attributes.isSymbolicLink()).isFalse();
         }
 
+        @Test
+        @DisplayName("isOther() should return false")
+        void isOther() {
+            assertThat(attributes.isOther()).isFalse();
+        }
+
         private Stream<Arguments> dateGetters() {
             final Function<S3BasicFileAttributes, FileTime> lastModifiedTimeGetter = S3BasicFileAttributes::lastModifiedTime;
             final Function<S3BasicFileAttributes, FileTime> creationTimeGetter = S3BasicFileAttributes::creationTime;
