@@ -9,7 +9,6 @@ import io.reactivex.rxjava3.core.Flowable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
-import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm;
 import software.amazon.awssdk.services.s3.model.CommonPrefix;
@@ -58,6 +57,7 @@ import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static software.amazon.awssdk.http.HttpStatusCode.FORBIDDEN;
 import static software.amazon.awssdk.http.HttpStatusCode.NOT_FOUND;
+import static software.amazon.awssdk.http.HttpStatusCode.OK;
 import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExceptionOnTimeOut;
@@ -537,42 +537,63 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public void checkAccess(Path path, AccessMode... modes) throws IOException {
-        try {
-            final S3Path s3Path = checkPath(path.toRealPath(NOFOLLOW_LINKS));
-            final CompletableFuture<? extends S3Response> response = getCompletableFutureForHead(s3Path);
-
-            long timeOut = TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
-            TimeUnit unit = MINUTES;
-
-            // todo if path is a directory then we need to call list-objects-v2 to see if we can at least list the prefix
-            // otherwise we can head the object.
-
-            try {
-                SdkHttpResponse httpResponse = response.get(timeOut, unit).sdkHttpResponse();
-                if (httpResponse.isSuccessful()) return;
-
-                //
-                // TODO: it looks like if status is not SUCCESS an ExecutionException
-                // is thrown, therefore the following error handling is never
-                // triggered
-                //
-
-                if (httpResponse.statusCode() == FORBIDDEN)
-                    throw new AccessDeniedException(s3Path.toString());
-
-                if (httpResponse.statusCode() == NOT_FOUND)
-                    throw new NoSuchFileException(s3Path.toString());
-
-                throw new IOException(String.format("exception occurred while checking access, response code was '%d'",
-                        httpResponse.statusCode()));
-
-            } catch (TimeoutException e) {
-                throw logAndGenerateExceptionOnTimeOut(logger, "checkAccess", timeOut, unit);
+        // warn if AccessModes includes WRITE or EXECUTE
+        for (AccessMode mode : modes) {
+            if (mode == AccessMode.WRITE || mode == AccessMode.EXECUTE) {
+                logger.warn("checkAccess: AccessMode '{}' is currently not checked by S3FileSystemProvider", mode);
             }
-        } catch (ExecutionException e) {
-            throw new IOException(e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+        }
+
+        final S3Path s3Path = checkPath(path.toRealPath(NOFOLLOW_LINKS));
+        final CompletableFuture<? extends S3Response> response = getCompletableFutureForHead(s3Path);
+
+        long timeOut = TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
+        TimeUnit unit = MINUTES;
+
+        try {
+            IOException ioException = (IOException) response.handleAsync((resp, ex) -> {
+                if (resp.sdkHttpResponse().statusCode() == NOT_FOUND)
+                    return new NoSuchFileException(s3Path.toString());
+
+                if (resp.sdkHttpResponse().statusCode() == FORBIDDEN)
+                    return new AccessDeniedException(s3Path.toString());
+
+                if (resp.sdkHttpResponse().statusCode() != OK)
+                    return new IOException(String.format("exception occurred while checking access, response code was '%d'",
+                            resp.sdkHttpResponse().statusCode()));
+
+                if( ex != null){
+                    return ex;
+                }
+
+                // possible success but ListObjectsV2Responses can be empty so need to check that.
+                if (resp instanceof ListObjectsV2Response) {
+                    ListObjectsV2Response listResp = (ListObjectsV2Response) resp;
+
+                    if (listResp.hasCommonPrefixes() && !listResp.commonPrefixes().isEmpty()) {
+                        logger.debug("checkAccess: access is OK");
+                        return null;
+                    }
+
+                    if (listResp.hasContents() && !listResp.contents().isEmpty()){
+                        logger.debug("checkAccess: access is OK");
+                        return null;
+                    }
+
+                    return new NoSuchFileException(s3Path.toString());
+                }
+
+                logger.debug("checkAccess: access is OK");
+                return null;
+            }).get(timeOut, unit);
+
+            // if handling the response produced an exception we throw it, access is not OK.
+            if (ioException != null) {
+                throw ioException;
+            }
+        } catch (TimeoutException e) {
+            throw logAndGenerateExceptionOnTimeOut(logger, "checkAccess", timeOut, unit);
+        } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
     }
@@ -585,6 +606,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final CompletableFuture<? extends S3Response> response;
         if (s3Path.equals(s3Path.getRoot())) {
             response = s3Client.headBucket(request -> request.bucket(bucketName));
+        } else if (s3Path.isDirectory()) {
+            response = s3Client.listObjectsV2(req -> req.bucket(bucketName).prefix(s3Path.getKey()));
         } else {
             response = s3Client.headObject(req -> req.bucket(bucketName).key(s3Path.getKey()));
         }
