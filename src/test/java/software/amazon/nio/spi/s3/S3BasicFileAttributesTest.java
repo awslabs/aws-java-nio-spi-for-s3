@@ -4,15 +4,20 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 import java.nio.file.attribute.FileTime;
 import java.nio.file.spi.FileSystemProvider;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
+import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
 
 @DisplayName("S3BasicFileAttributes")
 public class S3BasicFileAttributesTest {
@@ -90,6 +95,43 @@ public class S3BasicFileAttributesTest {
         void isOther() {
             assertThat(directoryAttributes.isOther()).isFalse();
         }
+    }
 
+    @Nested
+    @DisplayName("regular file")
+    class RegularFiles {
+
+        private S3BasicFileAttributes attributes;
+        private final S3AsyncClient mockClient = mock();
+
+        @BeforeEach
+        void configureRegularFile() {
+            S3FileSystem fs = mock();
+
+            FileSystemProvider provider = mock();
+            when(fs.provider()).thenReturn(provider);
+            when(provider.getScheme()).thenReturn("s3");
+
+            when(fs.configuration()).thenReturn(new S3NioSpiConfiguration());
+
+            when(fs.client()).thenReturn(mockClient);
+
+            S3Path file = S3Path.getPath(fs, "s3://somebucket/somefile");
+            attributes = new S3BasicFileAttributes(file);
+            reset(mockClient);
+        }
+
+        @Test
+        @DisplayName("lastModifiedTime() should return the Instant from the head response")
+        void lastModifiedTime() {
+            when(mockClient.headObject(anyConsumer())).thenReturn(
+                    CompletableFuture.supplyAsync(() ->
+                            HeadObjectResponse.builder().lastModified(Instant.parse("2023-11-07T08:29:12.847553Z")).build()
+                    )
+            );
+
+            FileTime expectedLastModifiedTime = FileTime.from(Instant.parse("2023-11-07T08:29:12.847553Z"));
+            assertThat(attributes.lastModifiedTime()).isEqualTo(expectedLastModifiedTime);
+        }
     }
 }
