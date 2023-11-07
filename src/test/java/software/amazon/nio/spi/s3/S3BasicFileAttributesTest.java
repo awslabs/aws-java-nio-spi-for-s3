@@ -167,6 +167,12 @@ public class S3BasicFileAttributesTest {
             assertThat(attributes.fileKey()).isEqualTo("someEtag");
         }
 
+        @Test
+        @DisplayName("isDirectory() should return false")
+        void isDirectory() {
+            assertThat(attributes.isDirectory()).isFalse();
+        }
+
         private Stream<Arguments> dateGetters() {
             final Function<S3BasicFileAttributes, FileTime> lastModifiedTimeGetter = S3BasicFileAttributes::lastModifiedTime;
             final Function<S3BasicFileAttributes, FileTime> creationTimeGetter = S3BasicFileAttributes::creationTime;
