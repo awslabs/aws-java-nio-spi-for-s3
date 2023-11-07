@@ -30,15 +30,14 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 
+import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.SeekableByteChannel;
-import java.nio.file.AccessDeniedException;
 import java.nio.file.AccessMode;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemNotFoundException;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -415,25 +414,19 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void checkAccessWhenAccessDenied() {
-        when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
-                HeadObjectResponse.builder()
-                        .sdkHttpResponse(SdkHttpResponse.builder().statusCode(403).build())
-                        .build()));
+    public void checkAccessWithExceptionHeadObject() throws Exception {
+        when(mockClient.headObject(anyConsumer())).thenReturn(CompletableFuture.failedFuture(new IOException()));
 
         Path foo = fs.getPath("/foo");
-        assertThrows(AccessDeniedException.class, () -> provider.checkAccess(foo));
+        assertThrows(IOException.class, () -> provider.checkAccess(foo, AccessMode.READ));
     }
 
     @Test
-    public void checkAccessWhenNoSuchFile() {
-        when(mockClient.headObject(any(Consumer.class))).thenReturn(CompletableFuture.supplyAsync(() ->
-                HeadObjectResponse.builder()
-                        .sdkHttpResponse(SdkHttpResponse.builder().statusCode(404).build())
-                        .build()));
+    public void checkAccessWithExceptionListObjectsV2() throws Exception {
+        when(mockClient.listObjectsV2(anyConsumer())).thenReturn(CompletableFuture.failedFuture(new IOException()));
 
-        Path foo = fs.getPath("/foo");
-        assertThrows(NoSuchFileException.class, () -> provider.checkAccess(foo));
+        Path foo = fs.getPath("/dir/");
+        assertThrows(IOException.class, () -> provider.checkAccess(foo, AccessMode.READ));
     }
 
     @Test
