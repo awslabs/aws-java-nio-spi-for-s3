@@ -544,6 +544,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
             long timeOut = TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
             TimeUnit unit = MINUTES;
 
+            // todo if path is a directory then we need to call list-objects-v2 to see if we can at least list the prefix
+            // otherwise we can head the object.
+
             try {
                 SdkHttpResponse httpResponse = response.get(timeOut, unit).sdkHttpResponse();
                 if (httpResponse.isSuccessful()) return;
