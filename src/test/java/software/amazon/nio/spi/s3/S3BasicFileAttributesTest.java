@@ -154,7 +154,19 @@ public class S3BasicFileAttributesTest {
 
             assertThat(attributes.size()).isEqualTo(100L);
         }
-        
+
+        @Test
+        @DisplayName("fileKey() should return the etag from head response")
+        void fileKey() {
+            when(mockClient.headObject(anyConsumer())).thenReturn(
+                    CompletableFuture.supplyAsync(() ->
+                            HeadObjectResponse.builder().eTag("someEtag").build()
+                    )
+            );
+
+            assertThat(attributes.fileKey()).isEqualTo("someEtag");
+        }
+
         private Stream<Arguments> dateGetters() {
             final Function<S3BasicFileAttributes, FileTime> lastModifiedTimeGetter = S3BasicFileAttributes::lastModifiedTime;
             final Function<S3BasicFileAttributes, FileTime> creationTimeGetter = S3BasicFileAttributes::creationTime;
