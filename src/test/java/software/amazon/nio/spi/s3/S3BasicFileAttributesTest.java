@@ -143,6 +143,18 @@ public class S3BasicFileAttributesTest {
             assertThat(dateGetter.apply(attributes)).isEqualTo(expectedFileTime);
         }
 
+        @Test
+        @DisplayName("size() should return the contentLength from head response")
+        void size() {
+            when(mockClient.headObject(anyConsumer())).thenReturn(
+                    CompletableFuture.supplyAsync(() ->
+                            HeadObjectResponse.builder().contentLength(100L).build()
+                    )
+            );
+
+            assertThat(attributes.size()).isEqualTo(100L);
+        }
+        
         private Stream<Arguments> dateGetters() {
             final Function<S3BasicFileAttributes, FileTime> lastModifiedTimeGetter = S3BasicFileAttributes::lastModifiedTime;
             final Function<S3BasicFileAttributes, FileTime> creationTimeGetter = S3BasicFileAttributes::creationTime;
@@ -154,6 +166,5 @@ public class S3BasicFileAttributesTest {
             );
         }
     }
-
 
 }
