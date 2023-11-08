@@ -1,6 +1,6 @@
 package software.amazon.nio.spi.s3;
 
-import org.slf4j.Logger;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -19,6 +19,7 @@ import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Objects;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -33,8 +34,6 @@ class S3WritableByteChannel implements WritableByteChannel {
     private final TimeUnit timeUnit;
 
     private boolean open;
-
-    Logger logger = org.slf4j.LoggerFactory.getLogger(S3WritableByteChannel.class);
 
     S3WritableByteChannel(S3Path path, S3AsyncClient client, Set<? extends OpenOption> options, Long timeout, TimeUnit timeUnit) throws IOException {
         Objects.requireNonNull(path);
@@ -74,17 +73,7 @@ class S3WritableByteChannel implements WritableByteChannel {
                 }
             }
 
-            try {
-                options.remove(StandardOpenOption.CREATE_NEW);
-            } catch (UnsupportedOperationException e) {
-                if (options.isEmpty() || !options.contains(StandardOpenOption.CREATE_NEW)) {
-                    // options is immutable but it doesn't matter because the value isn't there anyway.
-                    logger.debug("Could not remove CREATE_NEW option as the operation is unsupported on options", e);
-                } else {
-                    throw e;
-                }
-            }
-            channel = Files.newByteChannel(this.tempFile, options);
+            channel = Files.newByteChannel(this.tempFile, removeCreateNew(options));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException("Could not open the path:" + path, e);
@@ -95,6 +84,12 @@ class S3WritableByteChannel implements WritableByteChannel {
         this.client = client;
         this.path = path;
         this.open = true;
+    }
+
+    private @NonNull Set<? extends OpenOption> removeCreateNew(Set<? extends OpenOption> options) {
+        var auxOptions = new HashSet<>(options);
+        auxOptions.remove(StandardOpenOption.CREATE_NEW);
+        return Set.copyOf(auxOptions);
     }
 
     @Override
