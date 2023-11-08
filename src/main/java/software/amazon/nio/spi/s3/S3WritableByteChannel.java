@@ -79,6 +79,7 @@ class S3WritableByteChannel implements WritableByteChannel {
         channel.close();
 
         s3TransferUtil.uploadLocalFile(path, tempFile);
+        Files.deleteIfExists(tempFile);
 
         open = false;
     }
