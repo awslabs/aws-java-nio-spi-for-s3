@@ -92,7 +92,7 @@ public class S3FileSystem extends FileSystem {
     @Override
     public void close() throws IOException {
         open = false;
-        for (S3SeekableByteChannel channel : openChannels) {
+        for (var channel : openChannels) {
             if(channel.isOpen()) {
                 channel.close();
             }
@@ -449,7 +449,7 @@ public class S3FileSystem extends FileSystem {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        S3FileSystem that = (S3FileSystem) o;
+        var that = (S3FileSystem) o;
         return bucketName.equals(that.bucketName) && provider.getClass().getName().equals(that.provider.getClass().getName());
     }
 

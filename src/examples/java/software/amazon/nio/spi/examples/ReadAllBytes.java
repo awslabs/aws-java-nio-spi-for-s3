@@ -9,11 +9,11 @@ import java.nio.file.Paths;
 
 public class ReadAllBytes {
     public static void main(String[] args) throws IOException {
-        Path filePath = Paths.get(URI.create(args[0]));
+        var filePath = Paths.get(URI.create(args[0]));
 
-        final byte[] bytes = Files.readAllBytes(filePath);
+        final var bytes = Files.readAllBytes(filePath);
         // assumes this is a text file
-        final String data = new String(bytes, StandardCharsets.UTF_8);
+        final var data = new String(bytes, StandardCharsets.UTF_8);
         System.out.println(data);
     }
 }

@@ -50,7 +50,7 @@ public class S3BasicFileAttributesTest {
             when(fs.configuration()).thenReturn(new S3NioSpiConfiguration());
             when(provider.getScheme()).thenReturn("s3");
 
-            S3Path directory = S3Path.getPath(fs, "/somedirectory/");
+            var directory = S3Path.getPath(fs, "/somedirectory/");
             directoryAttributes = new S3BasicFileAttributes(directory, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1));
         }
 
@@ -129,7 +129,7 @@ public class S3BasicFileAttributesTest {
 
             when(fs.client()).thenReturn(mockClient);
 
-            S3Path file = S3Path.getPath(fs, "somefile");
+            var file = S3Path.getPath(fs, "somefile");
             attributes = new S3BasicFileAttributes(file, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1));
         }
 
@@ -148,7 +148,7 @@ public class S3BasicFileAttributesTest {
                     )
             );
 
-            FileTime expectedFileTime = FileTime.from(Instant.parse("2023-11-07T08:29:12.847553Z"));
+            var expectedFileTime = FileTime.from(Instant.parse("2023-11-07T08:29:12.847553Z"));
             assertThat(dateGetter.apply(attributes)).isEqualTo(expectedFileTime);
         }
 

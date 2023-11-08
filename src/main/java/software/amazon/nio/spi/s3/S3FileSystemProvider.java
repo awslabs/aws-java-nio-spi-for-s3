@@ -201,9 +201,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
             options = Collections.emptySet();
         }
 
-        final S3Path s3Path = checkPath(path);
+        final var s3Path = checkPath(path);
         final S3SeekableByteChannel channel;
-        final S3FileSystem fs = s3Path.getFileSystem();
+        final var fs = s3Path.getFileSystem();
 
         channel = new S3SeekableByteChannel(s3Path, fs.client(), options);
         fs.registerOpenChannel(channel);
@@ -224,24 +224,24 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) {
-        S3Path s3Path = checkPath(dir);
+        var s3Path = checkPath(dir);
 
-        String dirName = s3Path.toAbsolutePath().getKey();
+        var dirName = s3Path.toAbsolutePath().getKey();
 
         if (!s3Path.isDirectory()) {
             dirName = dirName + PATH_SEPARATOR;
         }
 
-        final String bucketName = s3Path.bucketName();
-        final S3FileSystem fs = s3Path.getFileSystem();
-        final String finalDirName = dirName;
+        final var bucketName = s3Path.bucketName();
+        final var fs = s3Path.getFileSystem();
+        final var finalDirName = dirName;
 
-        final ListObjectsV2Publisher listObjectsV2Publisher = fs.client().listObjectsV2Paginator(req -> req
+        final var listObjectsV2Publisher = fs.client().listObjectsV2Paginator(req -> req
                 .bucket(bucketName)
                 .prefix(finalDirName)
                 .delimiter(PATH_SEPARATOR));
 
-        final Iterator<Path> iterator = pathIteratorForPublisher(filter, fs, finalDirName, listObjectsV2Publisher);
+        final var iterator = pathIteratorForPublisher(filter, fs, finalDirName, listObjectsV2Publisher);
 
         return new DirectoryStream<>() {
             @Override
@@ -265,20 +265,20 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
-        S3Path s3Directory = checkPath(dir);
+        var s3Directory = checkPath(dir);
         if(s3Directory.toString().equals("/") || s3Directory.toString().isEmpty()) {
             throw new FileAlreadyExistsException("Root directory already exists");
         }
 
-        S3FileSystem fs = s3Directory.getFileSystem();
+        var fs = s3Directory.getFileSystem();
         try {
-            String directoryKey = s3Directory.toRealPath(NOFOLLOW_LINKS).getKey();
+            var directoryKey = s3Directory.toRealPath(NOFOLLOW_LINKS).getKey();
             if (!directoryKey.endsWith(PATH_SEPARATOR) && !directoryKey.isEmpty()) {
                 directoryKey = directoryKey + PATH_SEPARATOR;
             }
 
-            long timeOut = TIMEOUT_TIME_LENGTH_1;
-            final TimeUnit unit = MINUTES;
+            var timeOut = TIMEOUT_TIME_LENGTH_1;
+            final var unit = MINUTES;
             try {
                 fs.client().putObject(PutObjectRequest.builder()
                                         .bucket(fs.bucketName())
@@ -305,20 +305,20 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public void delete(Path path) throws IOException {
-        final S3Path s3Path = checkPath(path);
+        final var s3Path = checkPath(path);
         try {
-            final S3FileSystem fs = s3Path.getFileSystem();
-            final S3AsyncClient s3Client = fs.client();
-            final String bucketName = fs.bucketName();
+            final var fs = s3Path.getFileSystem();
+            final var s3Client = fs.client();
+            final var bucketName = fs.bucketName();
 
-            final String prefix = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
+            final var prefix = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
 
-            long timeOut = TIMEOUT_TIME_LENGTH_1;
-            final TimeUnit unit = MINUTES;
+            var timeOut = TIMEOUT_TIME_LENGTH_1;
+            final var unit = MINUTES;
             try {
-                List<List<ObjectIdentifier>> keys = getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit);
+                var keys = getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit);
 
-                for (List<ObjectIdentifier> keyList : keys) {
+                for (var keyList : keys) {
                     s3Client.deleteObjects(DeleteObjectsRequest.builder()
                                     .bucket(bucketName)
                                     .delete(Delete.builder()
@@ -361,31 +361,31 @@ public class S3FileSystemProvider extends FileSystemProvider {
                 return;
             }
 
-            List<CopyOption> copyOptions = Arrays.asList(options);
+            var copyOptions = Arrays.asList(options);
 
-            S3Path s3SourcePath = checkPath(source);
-            S3Path s3TargetPath = checkPath(target);
+            var s3SourcePath = checkPath(source);
+            var s3TargetPath = checkPath(target);
 
-            final S3FileSystem fs = s3SourcePath.getFileSystem();
-            final S3AsyncClient s3Client = fs.client();
-            final String bucketName = fs.bucketName();
+            final var fs = s3SourcePath.getFileSystem();
+            final var s3Client = fs.client();
+            final var bucketName = fs.bucketName();
 
-            String prefix = s3SourcePath.toRealPath(NOFOLLOW_LINKS).getKey();
+            var prefix = s3SourcePath.toRealPath(NOFOLLOW_LINKS).getKey();
 
-            long timeOut = TIMEOUT_TIME_LENGTH_1;
-            final TimeUnit unit = MINUTES;
+            var timeOut = TIMEOUT_TIME_LENGTH_1;
+            final var unit = MINUTES;
             try {
-                List<List<ObjectIdentifier>> keys = getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit);
+                var keys = getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit);
 
-                for (List<ObjectIdentifier> keyList : keys) {
-                    for (ObjectIdentifier objectIdentifier : keyList) {
-                        S3Path resolvedS3TargetPath = s3TargetPath.resolve(objectIdentifier.key().replaceFirst(prefix + PATH_SEPARATOR, ""));
+                for (var keyList : keys) {
+                    for (var objectIdentifier : keyList) {
+                        var resolvedS3TargetPath = s3TargetPath.resolve(objectIdentifier.key().replaceFirst(prefix + PATH_SEPARATOR, ""));
 
                         if (!copyOptions.contains(StandardCopyOption.REPLACE_EXISTING) && exists(s3Client, resolvedS3TargetPath)) {
                             throw new FileAlreadyExistsException("File already exists at the target key");
                         }
 
-                        try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(s3Client).build()) {
+                        try (var s3TransferManager = S3TransferManager.builder().s3Client(s3Client).build()) {
                             s3TransferManager.copy(CopyRequest.builder()
                                     .copyObjectRequest(CopyObjectRequest.builder()
                                             .checksumAlgorithm(ChecksumAlgorithm.SHA256)
@@ -536,27 +536,27 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public void checkAccess(Path path, AccessMode... modes) throws IOException {
         // warn if AccessModes includes WRITE or EXECUTE
-        for (AccessMode mode : modes) {
+        for (var mode : modes) {
             if (mode == AccessMode.WRITE || mode == AccessMode.EXECUTE) {
                 logger.warn("checkAccess: AccessMode '{}' is currently not checked by S3FileSystemProvider", mode);
             }
         }
 
-        final S3Path s3Path = checkPath(path.toRealPath(NOFOLLOW_LINKS));
-        final CompletableFuture<? extends S3Response> response = getCompletableFutureForHead(s3Path);
+        final var s3Path = checkPath(path.toRealPath(NOFOLLOW_LINKS));
+        final var response = getCompletableFutureForHead(s3Path);
 
-        long timeOut = TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
-        TimeUnit unit = MINUTES;
+        var timeOut = TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
+        var unit = MINUTES;
 
         try {
-            IOException ioException = response.handleAsync((resp, ex) -> {
+            var ioException = response.handleAsync((resp, ex) -> {
                 if( ex != null){
                     return new IOException(ex);
                 }
 
                 // possible success but ListObjectsV2Responses can be empty so need to check that.
                 if (resp instanceof ListObjectsV2Response) {
-                    ListObjectsV2Response listResp = (ListObjectsV2Response) resp;
+                    var listResp = (ListObjectsV2Response) resp;
 
                     if (listResp.hasCommonPrefixes() && !listResp.commonPrefixes().isEmpty()) {
                         logger.debug("checkAccess - common prefixes: access is OK");
@@ -587,9 +587,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     private CompletableFuture<? extends S3Response> getCompletableFutureForHead(S3Path s3Path) {
-        final S3FileSystem fs = s3Path.getFileSystem();
-        final String bucketName = fs.bucketName();
-        final S3AsyncClient s3Client = fs.client();
+        final var fs = s3Path.getFileSystem();
+        final var bucketName = fs.bucketName();
+        final var s3Client = fs.client();
 
         final CompletableFuture<? extends S3Response> response;
         if (s3Path.equals(s3Path.getRoot())) {
@@ -618,10 +618,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
         Objects.requireNonNull(type, "the type of attribute view required cannot be null");
-        S3Path s3Path = checkPath(path);
+        var s3Path = checkPath(path);
 
         if (type.equals(BasicFileAttributeView.class)) {
-            @SuppressWarnings("unchecked") final V v = (V) new S3BasicFileAttributeView(s3Path);
+            @SuppressWarnings("unchecked") final var v = (V) new S3BasicFileAttributeView(s3Path);
             return v;
         } else {
             throw new IllegalArgumentException("type must be BasicFileAttributeView.class");
@@ -642,11 +642,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) {
         Objects.requireNonNull(type);
-        S3Path s3Path = checkPath(path);
+        var s3Path = checkPath(path);
 
         if (type.equals(BasicFileAttributes.class)) {
             @SuppressWarnings("unchecked")
-            A a = (A) new S3BasicFileAttributes(s3Path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1));
+            var a = (A) new S3BasicFileAttributes(s3Path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1));
             return a;
         } else {
             throw new UnsupportedOperationException("cannot read attributes of type: " + type);
@@ -675,7 +675,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) {
         Objects.requireNonNull(attributes);
-        S3Path s3Path = checkPath(path);
+        var s3Path = checkPath(path);
 
         if (s3Path.isDirectory() || attributes.trim().isEmpty())
             return Collections.emptyMap();
@@ -683,7 +683,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         if (attributes.equals("*") || attributes.equals("s3"))
             return new S3BasicFileAttributes(s3Path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1)).asMap();
 
-        final Set<String> attrSet = Arrays.stream(attributes.split(","))
+        final var attrSet = Arrays.stream(attributes.split(","))
                 .map(attr -> attr.replaceAll("^s3:", ""))
                 .collect(Collectors.toSet());
         return ((S3BasicFileAttributes)readAttributes(path, BasicFileAttributes.class, options))
@@ -715,7 +715,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      *                                     permission.
      */
     S3FileSystem getFileSystem(URI uri, boolean create) {
-        S3FileSystemInfo info = fileSystemInfo(uri);
+        var info = fileSystemInfo(uri);
         return cache.computeIfAbsent(info.key(), (key) -> {
             if (!create) {
                 throw new FileSystemNotFoundException("file system not found for '" + info.key() + "'");
@@ -739,7 +739,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
             );
         }
 
-        S3NioSpiConfiguration config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
+        var config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
 
         if (info.accessKey() != null) {
             config.withCredentials(info.accessKey(), info.accessSecret());
@@ -749,7 +749,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     void closeFileSystem(FileSystem fs) {
-        for (String key: cache.keySet()) {
+        for (var key: cache.keySet()) {
             if (fs == cache.get(key)) {
                 try (FileSystem closeable = cache.remove(key)) {
                     closeFileSystemIfOpen(closeable);
@@ -801,7 +801,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
                 .flatMapIterable(response -> {
 
                     //add common prefixes from this page
-                    List<String> items = response
+                    var items = response
                             .commonPrefixes().stream()
                             .map(CommonPrefix::prefix)
                             .collect(Collectors.toList());
@@ -859,17 +859,17 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
     private static List<List<ObjectIdentifier>> getContainedObjectBatches(S3AsyncClient s3Client, String bucketName, String prefix, long timeOut, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         String continuationToken = null;
-        boolean hasMoreItems = true;
+        var hasMoreItems = true;
         List<List<ObjectIdentifier>> keys = new ArrayList<>();
 
         while (hasMoreItems) {
-            String finalContinuationToken = continuationToken;
-            ListObjectsV2Response response = s3Client.listObjectsV2(req -> req
+            var finalContinuationToken = continuationToken;
+            var response = s3Client.listObjectsV2(req -> req
                             .bucket(bucketName)
                             .prefix(prefix)
                             .continuationToken(finalContinuationToken))
                     .get(timeOut, unit);
-            List<ObjectIdentifier> objects = response.contents()
+            var objects = response.contents()
                     .stream()
                     .filter(s3Object -> s3Object.key().equals(prefix) || s3Object.key().startsWith(prefix + PATH_SEPARATOR))
                     .map(s3Object -> ObjectIdentifier.builder().key(s3Object.key()).build())

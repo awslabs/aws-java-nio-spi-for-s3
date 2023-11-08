@@ -60,23 +60,23 @@ class PosixLikePathRepresentation {
 
         if(first == null || first.trim().isEmpty()) return EMPTY_PATH;
 
-        LinkedList<String> allParts = new LinkedList<>();
+        var allParts = new LinkedList<String>();
         allParts.add(first);
 
         allParts.addAll(collectMore(more));
 
         if (allParts.peekLast() == null) throw new RuntimeException("the last element of the path representation is unexpectedly null");
-        boolean endsWithSeparator = hasTrailingSeparatorString(allParts.peekLast());
-        boolean startsWithSeparator = isAbsoluteString(allParts.peekFirst());
+        var endsWithSeparator = hasTrailingSeparatorString(allParts.peekLast());
+        var startsWithSeparator = isAbsoluteString(allParts.peekFirst());
 
-        String path = partsToPathString(allParts, endsWithSeparator, startsWithSeparator);
+        var path = partsToPathString(allParts, endsWithSeparator, startsWithSeparator);
 
         return new PosixLikePathRepresentation(path);
 
     }
 
     private static String partsToPathString(LinkedList<String> allParts, boolean endsWithSeparator, boolean startsWithSeparator) {
-        String path = allParts.stream()
+        var path = allParts.stream()
                 .flatMap(part -> Arrays.stream(part.split("/+")))
                 .filter(p -> !p.isEmpty())
                 .collect(Collectors.joining(PATH_SEPARATOR));
@@ -182,7 +182,7 @@ class PosixLikePathRepresentation {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        PosixLikePathRepresentation that = (PosixLikePathRepresentation) o;
+        var that = (PosixLikePathRepresentation) o;
         return path.equals(that.path);
     }
 

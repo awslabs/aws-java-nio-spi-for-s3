@@ -180,7 +180,7 @@ class S3BasicFileAttributes implements BasicFileAttributes {
                     .key(path.getKey())
             ).get(timeout.toMillis(), MILLISECONDS);
         } catch (ExecutionException e) {
-            String errMsg = format("an '%s' error occurred while obtaining the metadata (for operation %s) of '%s' that was not handled successfully by the S3Client's configured RetryConditions", e.getCause().toString(), forOperation, path.toUri());
+            var errMsg = format("an '%s' error occurred while obtaining the metadata (for operation %s) of '%s' that was not handled successfully by the S3Client's configured RetryConditions", e.getCause().toString(), forOperation, path.toUri());
             logger.error(errMsg);
             throw new RuntimeException(errMsg, e);
         } catch (InterruptedException e) {
@@ -215,7 +215,7 @@ class S3BasicFileAttributes implements BasicFileAttributes {
                         return method.invoke(this);
                     } catch (IllegalAccessException | InvocationTargetException e) {
                         // should not ever happen as these are all public no arg methods
-                        String errorMsg = format(
+                        var errorMsg = format(
                                 "an exception has occurred during a reflection operation on the methods of the file attributes of '%s', check if your Java SecurityManager is configured to allow reflection.", path.toUri());
                         logger.error("{}, caused by {}", errorMsg, e.getCause().getMessage());
                         throw new RuntimeException(errorMsg, e);

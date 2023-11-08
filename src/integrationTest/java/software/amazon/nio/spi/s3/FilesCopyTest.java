@@ -25,8 +25,8 @@ public class FilesCopyTest
     public void fileCopyShouldCopyFileWhenFileFound() throws IOException {
         Containers.createBucket("sink");
         putObject("sink", "files-copy.txt", "some content");
-        final Path path = Paths.get(URI.create(localStackConnectionEndpoint() + "/sink/files-copy.txt"));
-        Path copiedFile = Files.copy(path, tempDir.resolve("sample-file-local.txt"));
+        final var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/sink/files-copy.txt"));
+        var copiedFile = Files.copy(path, tempDir.resolve("sample-file-local.txt"));
         assertThat(copiedFile).hasContent("some content");
     }
 }

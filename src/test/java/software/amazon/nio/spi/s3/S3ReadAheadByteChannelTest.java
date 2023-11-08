@@ -52,9 +52,9 @@ public class S3ReadAheadByteChannelTest {
         // mocking
         lenient().when(delegator.size()).thenReturn(52L);
 
-        final GetObjectResponse response = GetObjectResponse.builder().build();
-        final ResponseBytes<GetObjectResponse> bytes1 = ResponseBytes.fromByteArray(response, "abcdefghijklmnopqrstuvwxyz".getBytes(StandardCharsets.UTF_8));
-        final ResponseBytes<GetObjectResponse> bytes2 = ResponseBytes.fromByteArray(response, "ABCDEFGHIJKLMNOPQRSTUVWXYZ".getBytes(StandardCharsets.UTF_8));
+        final var response = GetObjectResponse.builder().build();
+        final var bytes1 = ResponseBytes.fromByteArray(response, "abcdefghijklmnopqrstuvwxyz".getBytes(StandardCharsets.UTF_8));
+        final var bytes2 = ResponseBytes.fromByteArray(response, "ABCDEFGHIJKLMNOPQRSTUVWXYZ".getBytes(StandardCharsets.UTF_8));
         lenient().when(client.getObject(anyConsumer(), any(ByteArrayAsyncResponseTransformer.class))).thenReturn(CompletableFuture.supplyAsync(() -> bytes1), CompletableFuture.supplyAsync(() -> bytes2));
 
         readAheadByteChannel = new S3ReadAheadByteChannel(path, 26, 2, client, delegator, null, null);
@@ -63,7 +63,7 @@ public class S3ReadAheadByteChannelTest {
     @Test
     public void read6BytesFromPosition0() throws IOException {
         when(delegator.position()).thenReturn(0L);
-        ByteBuffer dst = ByteBuffer.allocate(6);
+        var dst = ByteBuffer.allocate(6);
         readAheadByteChannel.read(dst);
         assertArrayEquals("abcdef".getBytes(StandardCharsets.UTF_8), dst.array());
         assertEquals(1, readAheadByteChannel.numberOfCachedFragments());
@@ -72,8 +72,8 @@ public class S3ReadAheadByteChannelTest {
     @Test
     public void read26BytesFromPosition0() throws IOException {
         when(delegator.position()).thenReturn(0L);
-        ByteBuffer dst = ByteBuffer.allocate(30);
-        final int numBytesRead = readAheadByteChannel.read(dst);
+        var dst = ByteBuffer.allocate(30);
+        final var numBytesRead = readAheadByteChannel.read(dst);
         assertEquals(26, numBytesRead);
         // this should have triggered loading of the next fragment to the cache
         assertEquals(2, readAheadByteChannel.numberOfCachedFragments());
@@ -84,7 +84,7 @@ public class S3ReadAheadByteChannelTest {
     @Test
     public void read6BytesFromPosition1() throws IOException {
         when(delegator.position()).thenReturn(1L);
-        ByteBuffer dst = ByteBuffer.allocate(6);
+        var dst = ByteBuffer.allocate(6);
         readAheadByteChannel.read(dst);
         assertArrayEquals("bcdefg".getBytes(StandardCharsets.UTF_8), dst.array());
         assertEquals(1, readAheadByteChannel.numberOfCachedFragments());
@@ -93,8 +93,8 @@ public class S3ReadAheadByteChannelTest {
     @Test
     public void read25BytesFromPosition1() throws IOException {
         when(delegator.position()).thenReturn(1L);
-        ByteBuffer dst = ByteBuffer.allocate(30);
-        final int numBytesRead = readAheadByteChannel.read(dst);
+        var dst = ByteBuffer.allocate(30);
+        final var numBytesRead = readAheadByteChannel.read(dst);
         assertEquals(25, numBytesRead);
         //should have triggered loading of the next fragment to the cache
         assertEquals(2, readAheadByteChannel.numberOfCachedFragments());
@@ -105,7 +105,7 @@ public class S3ReadAheadByteChannelTest {
     @Test
     public void shouldBeTwoCachedFragments() throws IOException {
         when(delegator.position()).thenReturn(0L, 26L);
-        ByteBuffer dst = ByteBuffer.allocate(6);
+        var dst = ByteBuffer.allocate(6);
         readAheadByteChannel.read(dst);
         assertEquals(1, readAheadByteChannel.numberOfCachedFragments());
 
@@ -118,7 +118,7 @@ public class S3ReadAheadByteChannelTest {
     @Test
     public void shouldBeACacheHit() throws IOException {
         when(delegator.position()).thenReturn(0L, 6L);
-        ByteBuffer dst = ByteBuffer.allocate(6);
+        var dst = ByteBuffer.allocate(6);
         readAheadByteChannel.read(dst);
         assertEquals(1, readAheadByteChannel.numberOfCachedFragments());
 
@@ -131,7 +131,7 @@ public class S3ReadAheadByteChannelTest {
     @Test
     public void shouldSignalFinished() throws IOException {
         when(delegator.position()).thenReturn(52L);
-        ByteBuffer dst = ByteBuffer.allocate(6);
+        var dst = ByteBuffer.allocate(6);
 
         assertEquals(-1, readAheadByteChannel.read(dst));
     }

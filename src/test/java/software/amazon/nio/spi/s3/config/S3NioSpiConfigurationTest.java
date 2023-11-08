@@ -66,7 +66,7 @@ public class S3NioSpiConfigurationTest {
     public void overridesAsMap() {
         Map<String, String> map = new HashMap<>();
         map.put(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, "1212");
-        S3NioSpiConfiguration c = new S3NioSpiConfiguration(map);
+        var c = new S3NioSpiConfiguration(map);
 
         then(c.getMaxFragmentSize()).isEqualTo(1212);
     }
@@ -91,10 +91,10 @@ public class S3NioSpiConfigurationTest {
     public void withAndGetRegion() {
         then(new S3NioSpiConfiguration().getRegion()).isNull();
 
-        Properties env = new Properties();
+        var env = new Properties();
         env.setProperty(AWS_REGION_PROPERTY, "region1");
 
-        final S3NioSpiConfiguration C = new S3NioSpiConfiguration(env);
+        final var C = new S3NioSpiConfiguration(env);
         then(C.getRegion()).isEqualTo("region1");
         then(C.withRegion("\tregion2 ")).isSameAs(C);
         then(C.getRegion()).isEqualTo("region2");
@@ -158,7 +158,7 @@ public class S3NioSpiConfigurationTest {
     public void withAndGetPlainCredentials() {
         then(config.withCredentials("akey", "asecret")).isSameAs(config);
 
-        AwsCredentials credentials = config.getCredentials();
+        var credentials = config.getCredentials();
         then(credentials.accessKeyId()).isEqualTo("akey");
         then(credentials.secretAccessKey()).isEqualTo("asecret");
 
@@ -211,7 +211,7 @@ public class S3NioSpiConfigurationTest {
 
     @Test
     public void convertPropertyNameToEnvVar() {
-        String expected = "FOO_BAA_FIZZ_BUZZ";
+        var expected = "FOO_BAA_FIZZ_BUZZ";
         then(config.convertPropertyNameToEnvVar("foo.baa.fizz-buzz")).isEqualTo(expected);
 
         expected = "";
