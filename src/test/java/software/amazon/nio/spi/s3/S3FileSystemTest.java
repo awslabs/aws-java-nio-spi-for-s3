@@ -18,9 +18,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.FileSystems;
-import java.nio.file.Path;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.BDDAssertions.then;

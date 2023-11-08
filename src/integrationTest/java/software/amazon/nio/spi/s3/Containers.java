@@ -1,6 +1,5 @@
 package software.amazon.nio.spi.s3;
 
-import org.testcontainers.containers.Container;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 

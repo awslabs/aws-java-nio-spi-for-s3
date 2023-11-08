@@ -8,7 +8,6 @@ package software.amazon.nio.spi.s3;
 
 import java.net.URI;
 import java.nio.file.LinkOption;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
