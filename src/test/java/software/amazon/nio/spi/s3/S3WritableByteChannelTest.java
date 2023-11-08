@@ -84,6 +84,21 @@ class S3WritableByteChannelTest {
         }
     }
 
+    @Test
+    @DisplayName("open() should be false after close()")
+    void shouldBeNotOpenAfterClose() throws InterruptedException, TimeoutException, IOException {
+        S3FileSystemProvider provider = mock();
+        when(provider.exists(any(), any())).thenReturn(false);
+
+        S3FileSystem fs = mock();
+        when(fs.provider()).thenReturn(provider);
+
+        S3Path file = S3Path.getPath(fs, "somefile");
+        var channel = new S3WritableByteChannel(file, mock(), mock(), Set.of(CREATE));
+        channel.close();
+        assertThat(channel.isOpen()).isFalse();
+    }
+
     private Stream<Arguments> acceptedFileExistsAndOpenOptions() {
         return Stream.of(
             Arguments.of(false, Set.of(CREATE)),
