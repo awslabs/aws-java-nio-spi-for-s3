@@ -3,13 +3,16 @@ package software.amazon.nio.spi.s3;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
@@ -97,6 +100,31 @@ class S3WritableByteChannelTest {
         var channel = new S3WritableByteChannel(file, mock(), mock(), Set.of(CREATE));
         channel.close();
         assertThat(channel.isOpen()).isFalse();
+    }
+
+    @Test
+    @DisplayName("close() should clean up the temporary file")
+    void tmpFileIsCleanedUpAfterClose(@TempDir Path tempDir) throws InterruptedException, TimeoutException, IOException {
+        S3FileSystemProvider provider = mock();
+        when(provider.exists(any(), any())).thenReturn(false);
+        S3FileSystem fs = mock();
+        when(fs.provider()).thenReturn(provider);
+        S3Path file = S3Path.getPath(fs, "somefile");
+
+        var channel = new S3WritableByteChannel(file, mock(), mock(), Set.of(CREATE));
+
+        var countAfterOpening = countTemporaryFiles(tempDir);
+        channel.close();
+        var countAfterClosing = countTemporaryFiles(tempDir);
+        assertThat(countAfterClosing).isLessThan(countAfterOpening);
+    }
+
+    private long countTemporaryFiles(Path tempDir) throws IOException {
+        try (var list = Files.list(tempDir.getParent())) {
+            return list
+                    .filter((path) -> path.getFileName().toString().contains("aws-s3-nio-"))
+                    .count();
+        }
     }
 
     private Stream<Arguments> acceptedFileExistsAndOpenOptions() {
