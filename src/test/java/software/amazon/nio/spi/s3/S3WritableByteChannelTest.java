@@ -18,6 +18,7 @@ import java.util.stream.Stream;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
 import static java.util.Collections.emptySet;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -66,6 +67,21 @@ class S3WritableByteChannelTest {
 
         var file = S3Path.getPath(fs, "somefile");
         new S3WritableByteChannel(file, mock(), mock(), openOptions).close();
+    }
+
+    @Test
+    @DisplayName("open() should be true before close()")
+    void shouldBeOpenBeforeClose() throws InterruptedException, TimeoutException, IOException {
+        S3FileSystemProvider provider = mock();
+        when(provider.exists(any(), any())).thenReturn(false);
+
+        S3FileSystem fs = mock();
+        when(fs.provider()).thenReturn(provider);
+
+        S3Path file = S3Path.getPath(fs, "somefile");
+        try(var channel = new S3WritableByteChannel(file, mock(), mock(), Set.of(CREATE))){
+            assertThat(channel.isOpen()).isTrue();
+        }
     }
 
     private Stream<Arguments> acceptedFileExistsAndOpenOptions() {

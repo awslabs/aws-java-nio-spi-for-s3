@@ -30,6 +30,7 @@ class S3WritableByteChannel implements WritableByteChannel {
         Objects.requireNonNull(path);
         Objects.requireNonNull(client);
         this.s3TransferUtil = s3TransferUtil;
+        this.path = path;
 
         try {
             var fileSystemProvider = (S3FileSystemProvider) path.getFileSystem().provider();
@@ -54,8 +55,6 @@ class S3WritableByteChannel implements WritableByteChannel {
         } catch (TimeoutException | ExecutionException e) {
             throw new IOException("Could not open the path:" + path, e);
         }
-
-        this.path = path;
         this.open = true;
     }
 
