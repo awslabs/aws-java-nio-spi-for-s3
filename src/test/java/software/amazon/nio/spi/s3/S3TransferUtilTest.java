@@ -10,10 +10,14 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -34,5 +38,31 @@ class S3TransferUtilTest {
         S3TransferUtil util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES);
         Path tmpFile = Files.createTempFile(null, null);
         assertThatCode(() -> util.uploadLocalFile(file, tmpFile)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("IOException is thrown when timeout happens while uploading")
+    void uploadTimeoutYieldsIOException() throws IOException {
+        S3Path file = mock();
+        when(file.bucketName()).thenReturn("a");
+        when(file.getKey()).thenReturn("a");
+
+        final S3AsyncClient client = mock();
+        when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class))).thenReturn(
+            CompletableFuture.supplyAsync(() -> {
+                try {
+                    Thread.sleep(Duration.ofMinutes(1).toMillis());
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                return PutObjectResponse.builder().build();
+            })
+        );
+
+        S3TransferUtil util = new S3TransferUtil(client, 1L, TimeUnit.MILLISECONDS);
+        Path tmpFile = Files.createTempFile(null, null);
+        assertThatThrownBy(() -> util.uploadLocalFile(file, tmpFile))
+                .isInstanceOf(IOException.class)
+                .hasCauseInstanceOf(TimeoutException.class);
     }
 }
