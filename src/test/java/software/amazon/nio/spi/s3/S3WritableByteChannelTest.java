@@ -6,24 +6,18 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import software.amazon.awssdk.core.async.AsyncRequestBody;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.StandardOpenOption;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
 import static java.util.Collections.emptySet;
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -41,8 +35,8 @@ class S3WritableByteChannelTest {
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
 
-        S3Path file = S3Path.getPath(fs, "somefile");
-        assertThatThrownBy(() -> new S3WritableByteChannel(file, mock(), Set.of(CREATE_NEW), 0L, TimeUnit.MINUTES))
+        var file = S3Path.getPath(fs, "somefile");
+        assertThatThrownBy(() -> new S3WritableByteChannel(file, mock(), mock(), Set.of(CREATE_NEW)))
                 .isInstanceOf(FileAlreadyExistsException.class);
     }
 
@@ -55,8 +49,8 @@ class S3WritableByteChannelTest {
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
 
-        S3Path file = S3Path.getPath(fs, "somefile");
-        assertThatThrownBy(() -> new S3WritableByteChannel(file, mock(), emptySet(), 0L, TimeUnit.MINUTES))
+        var file = S3Path.getPath(fs, "somefile");
+        assertThatThrownBy(() -> new S3WritableByteChannel(file, mock(), mock(), emptySet()))
                 .isInstanceOf(NoSuchFileException.class);
     }
 
@@ -70,15 +64,8 @@ class S3WritableByteChannelTest {
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
 
-        S3AsyncClient mockClient = mock();
-
-        if (fileExists) {
-            // Mock client to download the file
-        }
-        when(mockClient.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class))).thenReturn(completedFuture(PutObjectResponse.builder().build()));
-
-        S3Path file = S3Path.getPath(fs, "somefile");
-        new S3WritableByteChannel(file, mockClient, openOptions, 10L, TimeUnit.SECONDS).close();
+        var file = S3Path.getPath(fs, "somefile");
+        new S3WritableByteChannel(file, mock(), mock(), openOptions).close();
     }
 
     private Stream<Arguments> acceptedFileExistsAndOpenOptions() {
