@@ -16,14 +16,16 @@
 
 package software.amazon.nio.spi.s3.util;
 
-import java.net.URI;
 import software.amazon.awssdk.services.s3.internal.BucketUtils;
+
+import java.net.URI;
 
 /**
  * Populates fields with information extracted by the S3 URI provided. This
  * implementation is for standard AWS buckets as described in section
- * "Accessing a bucket using S3://" in https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-bucket-intro.html
- *
+ * "Accessing a bucket using S3://"
+ * <a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-bucket-intro.html">here</a>
+ * <br>
  * It also computes the file system key that can be used to identify a runtime
  * instance of a S3FileSystem (for caching purposes for example). In this
  * implementation the key is the bucket name (which is unique in the AWS S3
@@ -42,7 +44,8 @@ public class S3FileSystemInfo {
 
     /**
      * Creates a new instance and populates it with key and bucket. The name of
-     * the bucket must follow AWS S3 bucket naming rules (https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html)
+     * the bucket must follow AWS S3
+     * <a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html">bucket naming rules</a>)
      *
      * @param uri a S3 URI
      *
