@@ -52,6 +52,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
@@ -680,14 +681,16 @@ public class S3FileSystemProvider extends FileSystemProvider {
         if (s3Path.isDirectory() || attributes.trim().isEmpty())
             return Collections.emptyMap();
 
-        if (attributes.equals("*") || attributes.equals("s3"))
-            return new S3BasicFileAttributes(s3Path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1)).asMap();
-
-        final var attrSet = Arrays.stream(attributes.split(","))
-                .map(attr -> attr.replaceAll("^s3:", ""))
-                .collect(Collectors.toSet());
-        return ((S3BasicFileAttributes)readAttributes(path, BasicFileAttributes.class, options))
-                .asMap(attrSet::contains);
+        Predicate<String> attributesFilter;
+        if (attributes.equals("*") || attributes.equals("s3")) {
+            attributesFilter = x -> true;
+        } else {
+            final var attrSet = Arrays.stream(attributes.split(","))
+                    .map(attr -> attr.replaceAll("^s3:", ""))
+                    .collect(Collectors.toSet());
+            attributesFilter = attrSet::contains;
+        }
+        return new S3BasicFileAttributes(s3Path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1)).asMap(attributesFilter);
     }
 
     /**

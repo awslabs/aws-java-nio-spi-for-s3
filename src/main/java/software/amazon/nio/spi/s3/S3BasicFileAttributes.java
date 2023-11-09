@@ -192,14 +192,6 @@ class S3BasicFileAttributes implements BasicFileAttributes {
     }
 
     /**
-     * Construct a <code>Map</code> representation of this object
-     * @return a map
-     */
-    protected Map<String, Object> asMap(){
-        return asMap(x -> true);
-    }
-
-    /**
      * Construct a <code>Map</code> representation of this object with properties filtered
      * @param attributeFilter a filter to include properties in the resulting Map
      * @return a map filtered to only contain keys that pass the attributeFilter
