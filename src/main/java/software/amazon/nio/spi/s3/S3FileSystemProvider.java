@@ -391,7 +391,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
     private void copyAllKeys(List<List<ObjectIdentifier>> keys, S3Path s3TargetPath, String prefix, List<CopyOption> copyOptions, S3AsyncClient s3Client, String bucketName, long timeOut, TimeUnit unit) throws InterruptedException, TimeoutException, FileAlreadyExistsException, ExecutionException {
         for (var keyList : keys) {
             for (var objectIdentifier : keyList) {
-                var resolvedS3TargetPath = s3TargetPath.resolve(objectIdentifier.key().replaceFirst(prefix + PATH_SEPARATOR, ""));
+                final var objectIdentifierKey = objectIdentifier.key();
+                var resolvedS3TargetPath = s3TargetPath.resolve(objectIdentifierKey.replaceFirst(prefix + PATH_SEPARATOR, ""));
 
                 if (!copyOptions.contains(StandardCopyOption.REPLACE_EXISTING) && exists(s3Client, resolvedS3TargetPath)) {
                     throw new FileAlreadyExistsException("File already exists at the target key");
@@ -402,7 +403,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
                             .copyObjectRequest(CopyObjectRequest.builder()
                                     .checksumAlgorithm(ChecksumAlgorithm.SHA256)
                                     .sourceBucket(bucketName)
-                                    .sourceKey(objectIdentifier.key())
+                                    .sourceKey(objectIdentifierKey)
                                     .destinationBucket(resolvedS3TargetPath.bucketName())
                                     .destinationKey(resolvedS3TargetPath.getKey())
                                     .build())
