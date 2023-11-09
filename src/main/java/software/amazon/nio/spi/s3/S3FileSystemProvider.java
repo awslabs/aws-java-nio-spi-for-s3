@@ -24,6 +24,7 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.model.S3Response;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.awssdk.transfer.s3.model.CompletedCopy;
 import software.amazon.awssdk.transfer.s3.model.CopyRequest;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 import software.amazon.nio.spi.s3.util.S3FileSystemInfo;
@@ -408,12 +409,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
     private void copyAllKeys(List<List<ObjectIdentifier>> sourceKeys, String sourcePrefix, String sourceBucket, S3Path targetPath, S3TransferManager transferManager, Function<S3Path, Boolean> checkIfFileExists, long timeOut, TimeUnit unit) throws InterruptedException, TimeoutException, FileAlreadyExistsException, ExecutionException {
         for (var keyList : sourceKeys) {
             for (var objectIdentifier : keyList) {
-                copyKey(objectIdentifier.key(), sourcePrefix, sourceBucket, targetPath, transferManager, checkIfFileExists, timeOut, unit);
+                copyKey(objectIdentifier.key(), sourcePrefix, sourceBucket, targetPath, transferManager, checkIfFileExists).get(timeOut, unit);
             }
         }
     }
 
-    private void copyKey(String sourceObjectIdentifierKey, String sourcePrefix, String sourceBucket, S3Path targetPath, S3TransferManager transferManager, Function<S3Path, Boolean> fileExistsAndCannotReplaceFn, long timeOut, TimeUnit unit) throws InterruptedException, TimeoutException, FileAlreadyExistsException, ExecutionException {
+    private CompletableFuture<CompletedCopy> copyKey(String sourceObjectIdentifierKey, String sourcePrefix, String sourceBucket, S3Path targetPath, S3TransferManager transferManager, Function<S3Path, Boolean> fileExistsAndCannotReplaceFn) throws FileAlreadyExistsException {
         final var sanitizedIdKey = sourceObjectIdentifierKey.replaceFirst(sourcePrefix, "");
         var resolvedS3TargetPath = targetPath.resolve(sanitizedIdKey);
 
@@ -421,7 +422,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
             throw new FileAlreadyExistsException("File already exists at the target key");
         }
 
-        transferManager.copy(CopyRequest.builder()
+        return transferManager.copy(CopyRequest.builder()
                 .copyObjectRequest(CopyObjectRequest.builder()
                         .checksumAlgorithm(ChecksumAlgorithm.SHA256)
                         .sourceBucket(sourceBucket)
@@ -429,7 +430,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
                         .destinationBucket(resolvedS3TargetPath.bucketName())
                         .destinationKey(resolvedS3TargetPath.getKey())
                         .build())
-                .build()).completionFuture().get(timeOut, unit);
+                .build()).completionFuture();
     }
 
     /**
