@@ -393,7 +393,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
             var keys = getContainedObjectBatches(s3Client, bucketName, sourcePrefix, timeOut, unit);
 
             try (var s3TransferManager = S3TransferManager.builder().s3Client(s3Client).build()) {
-                copyAllKeys(keys, s3TargetPath, sourcePrefix, fileExistsAndCannotReplace, bucketName, timeOut, unit, s3TransferManager);
+                copyAllKeys(keys, s3TargetPath, sourcePrefix + PATH_SEPARATOR, fileExistsAndCannotReplace, bucketName, timeOut, unit, s3TransferManager);
             }
         } catch (TimeoutException e) {
             throw logAndGenerateExceptionOnTimeOut(logger, "copy", timeOut, unit);
@@ -415,7 +415,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
     private void copyKey(S3Path s3TargetPath, String sourcePrefix, Function<S3Path, Boolean> fileExistsAndCannotReplaceFn, String bucketName, long timeOut, TimeUnit unit, S3TransferManager s3TransferManager, ObjectIdentifier objectIdentifier) throws InterruptedException, TimeoutException, FileAlreadyExistsException, ExecutionException {
         final var objectIdentifierKey = objectIdentifier.key();
-        final var sanitizedIdKey = objectIdentifierKey.replaceFirst(sourcePrefix + PATH_SEPARATOR, "");
+        final var sanitizedIdKey = objectIdentifierKey.replaceFirst(sourcePrefix, "");
         var resolvedS3TargetPath = s3TargetPath.resolve(sanitizedIdKey);
 
         if (fileExistsAndCannotReplaceFn.apply(resolvedS3TargetPath)) {
