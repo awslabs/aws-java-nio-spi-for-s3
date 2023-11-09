@@ -48,8 +48,7 @@ public class FilesExistsTest {
         @Test
         @DisplayName("when bucket and file exist")
         public void fileExistsShouldReturnTrueWhenBucketExistsAndFileFound() {
-            putObject("sink", "sample-file.txt");
-            final var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/sink/sample-file.txt"));
+            final var path = putObject("sink", "sample-file.txt");
             then(Files.exists(path)).isTrue();
         }
 

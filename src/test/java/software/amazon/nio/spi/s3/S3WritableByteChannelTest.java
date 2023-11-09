@@ -81,7 +81,7 @@ class S3WritableByteChannelTest {
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
 
-        S3Path file = S3Path.getPath(fs, "somefile");
+        var file = S3Path.getPath(fs, "somefile");
         try(var channel = new S3WritableByteChannel(file, mock(), mock(), Set.of(CREATE))){
             assertThat(channel.isOpen()).isTrue();
         }
@@ -96,7 +96,7 @@ class S3WritableByteChannelTest {
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
 
-        S3Path file = S3Path.getPath(fs, "somefile");
+        var file = S3Path.getPath(fs, "somefile");
         var channel = new S3WritableByteChannel(file, mock(), mock(), Set.of(CREATE));
         channel.close();
         assertThat(channel.isOpen()).isFalse();
@@ -109,7 +109,7 @@ class S3WritableByteChannelTest {
         when(provider.exists(any(), any())).thenReturn(false);
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
-        S3Path file = S3Path.getPath(fs, "somefile");
+        var file = S3Path.getPath(fs, "somefile");
 
         var channel = new S3WritableByteChannel(file, mock(), mock(), Set.of(CREATE));
 

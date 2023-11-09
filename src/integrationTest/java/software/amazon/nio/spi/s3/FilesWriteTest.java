@@ -8,7 +8,6 @@ import org.junit.jupiter.api.TestInstance;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
@@ -18,8 +17,7 @@ import static software.amazon.nio.spi.s3.Containers.putObject;
 
 @DisplayName("Files$write* should write file contents on s3 service")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class FilesWriteTest
-{
+public class FilesWriteTest {
 
     @BeforeAll
     public void createBucket() {
@@ -29,8 +27,7 @@ public class FilesWriteTest
     @Test
     @DisplayName("append to an existing file")
     public void writeToExistingFile() throws IOException {
-        putObject("write-bucket", "existing-file.txt", "some content");
-        final Path path = Paths.get(URI.create(localStackConnectionEndpoint() + "/write-bucket/existing-file.txt"));
+        final var path = putObject("write-bucket", "existing-file.txt", "some content");
 
         Files.writeString(path, " more content", StandardOpenOption.APPEND);
 
@@ -40,7 +37,7 @@ public class FilesWriteTest
     @Test
     @DisplayName("to a new file")
     public void writeToNewFile() throws IOException {
-        final Path path = Paths.get(URI.create(localStackConnectionEndpoint() + "/write-bucket/new-file.txt"));
+        final var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/write-bucket/new-file.txt"));
 
         Files.writeString(path, "content of new file", StandardOpenOption.CREATE_NEW);
 

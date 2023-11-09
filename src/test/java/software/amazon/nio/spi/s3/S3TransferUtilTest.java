@@ -9,7 +9,6 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -35,8 +34,8 @@ class S3TransferUtilTest {
         final S3AsyncClient client = mock();
         when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class))).thenReturn(completedFuture(PutObjectResponse.builder().build()));
 
-        S3TransferUtil util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES);
-        Path tmpFile = Files.createTempFile(null, null);
+        var util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES);
+        var tmpFile = Files.createTempFile(null, null);
         assertThatCode(() -> util.uploadLocalFile(file, tmpFile)).doesNotThrowAnyException();
     }
 
@@ -59,8 +58,8 @@ class S3TransferUtilTest {
             })
         );
 
-        S3TransferUtil util = new S3TransferUtil(client, 1L, TimeUnit.MILLISECONDS);
-        Path tmpFile = Files.createTempFile(null, null);
+        var util = new S3TransferUtil(client, 1L, TimeUnit.MILLISECONDS);
+        var tmpFile = Files.createTempFile(null, null);
         assertThatThrownBy(() -> util.uploadLocalFile(file, tmpFile))
                 .isInstanceOf(IOException.class)
                 .hasCauseInstanceOf(TimeoutException.class);
