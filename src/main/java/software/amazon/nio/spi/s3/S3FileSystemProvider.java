@@ -356,32 +356,30 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public void copy(Path source, Path target, CopyOption... options) throws IOException {
+        // If both paths point to the same object, this is a no-op
+        if (source.equals(target)) {
+            return;
+        }
+
+        var copyOptions = Arrays.asList(options);
+
+        var s3SourcePath = checkPath(source);
+        var s3TargetPath = checkPath(target);
+
+        final var fs = s3SourcePath.getFileSystem();
+        final var s3Client = fs.client();
+        final var bucketName = fs.bucketName();
+
+        var prefix = s3SourcePath.toRealPath(NOFOLLOW_LINKS).getKey();
+
+        var timeOut = TIMEOUT_TIME_LENGTH_1;
+        final var unit = MINUTES;
         try {
-            // If both paths point to the same object, this is a no-op
-            if (source.equals(target)) {
-                return;
-            }
+            var keys = getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit);
 
-            var copyOptions = Arrays.asList(options);
-
-            var s3SourcePath = checkPath(source);
-            var s3TargetPath = checkPath(target);
-
-            final var fs = s3SourcePath.getFileSystem();
-            final var s3Client = fs.client();
-            final var bucketName = fs.bucketName();
-
-            var prefix = s3SourcePath.toRealPath(NOFOLLOW_LINKS).getKey();
-
-            var timeOut = TIMEOUT_TIME_LENGTH_1;
-            final var unit = MINUTES;
-            try {
-                var keys = getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit);
-
-                copyAllKeys(keys, s3TargetPath, prefix, copyOptions, s3Client, bucketName, timeOut, unit);
-            } catch (TimeoutException e) {
-                throw logAndGenerateExceptionOnTimeOut(logger, "copy", timeOut, unit);
-            }
+            copyAllKeys(keys, s3TargetPath, prefix, copyOptions, s3Client, bucketName, timeOut, unit);
+        } catch (TimeoutException e) {
+            throw logAndGenerateExceptionOnTimeOut(logger, "copy", timeOut, unit);
         } catch (ExecutionException e) {
             throw new IOException(e);
         } catch (InterruptedException e) {
