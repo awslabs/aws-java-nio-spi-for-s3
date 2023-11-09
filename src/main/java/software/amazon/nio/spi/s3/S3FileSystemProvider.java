@@ -362,6 +362,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
 
         var copyOptions = Arrays.asList(options);
+        final var checkIfFileExists = !copyOptions.contains(StandardCopyOption.REPLACE_EXISTING);
 
         var s3SourcePath = checkPath(source);
         var s3TargetPath = checkPath(target);
@@ -378,7 +379,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
             var keys = getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit);
 
             try (var s3TransferManager = S3TransferManager.builder().s3Client(s3Client).build()) {
-                copyAllKeys(keys, s3TargetPath, prefix, copyOptions, s3Client, bucketName, timeOut, unit, s3TransferManager);
+                copyAllKeys(keys, s3TargetPath, prefix, checkIfFileExists, s3Client, bucketName, timeOut, unit, s3TransferManager);
             }
         } catch (TimeoutException e) {
             throw logAndGenerateExceptionOnTimeOut(logger, "copy", timeOut, unit);
@@ -390,8 +391,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
     }
 
-    private void copyAllKeys(List<List<ObjectIdentifier>> keys, S3Path s3TargetPath, String prefix, List<CopyOption> copyOptions, S3AsyncClient s3Client, String bucketName, long timeOut, TimeUnit unit, S3TransferManager s3TransferManager) throws InterruptedException, TimeoutException, FileAlreadyExistsException, ExecutionException {
-        final var checkIfFileExists = !copyOptions.contains(StandardCopyOption.REPLACE_EXISTING);
+    private void copyAllKeys(List<List<ObjectIdentifier>> keys, S3Path s3TargetPath, String prefix, boolean checkIfFileExists, S3AsyncClient s3Client, String bucketName, long timeOut, TimeUnit unit, S3TransferManager s3TransferManager) throws InterruptedException, TimeoutException, FileAlreadyExistsException, ExecutionException {
         for (var keyList : keys) {
             for (var objectIdentifier : keyList) {
                 copyKey(s3TargetPath, prefix, checkIfFileExists, s3Client, bucketName, timeOut, unit, s3TransferManager, objectIdentifier);
