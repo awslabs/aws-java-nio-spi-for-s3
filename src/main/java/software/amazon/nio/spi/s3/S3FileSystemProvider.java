@@ -378,27 +378,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
             try {
                 var keys = getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit);
 
-                for (var keyList : keys) {
-                    for (var objectIdentifier : keyList) {
-                        var resolvedS3TargetPath = s3TargetPath.resolve(objectIdentifier.key().replaceFirst(prefix + PATH_SEPARATOR, ""));
-
-                        if (!copyOptions.contains(StandardCopyOption.REPLACE_EXISTING) && exists(s3Client, resolvedS3TargetPath)) {
-                            throw new FileAlreadyExistsException("File already exists at the target key");
-                        }
-
-                        try (var s3TransferManager = S3TransferManager.builder().s3Client(s3Client).build()) {
-                            s3TransferManager.copy(CopyRequest.builder()
-                                    .copyObjectRequest(CopyObjectRequest.builder()
-                                            .checksumAlgorithm(ChecksumAlgorithm.SHA256)
-                                            .sourceBucket(bucketName)
-                                            .sourceKey(objectIdentifier.key())
-                                            .destinationBucket(resolvedS3TargetPath.bucketName())
-                                            .destinationKey(resolvedS3TargetPath.getKey())
-                                            .build())
-                                    .build()).completionFuture().get(timeOut, unit);
-                        }
-                    }
-                }
+                copyAllKeys(keys, s3TargetPath, prefix, copyOptions, s3Client, bucketName, timeOut, unit);
             } catch (TimeoutException e) {
                 throw logAndGenerateExceptionOnTimeOut(logger, "copy", timeOut, unit);
             }
@@ -407,6 +387,30 @@ public class S3FileSystemProvider extends FileSystemProvider {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
+        }
+    }
+
+    private void copyAllKeys(List<List<ObjectIdentifier>> keys, S3Path s3TargetPath, String prefix, List<CopyOption> copyOptions, S3AsyncClient s3Client, String bucketName, long timeOut, TimeUnit unit) throws InterruptedException, TimeoutException, FileAlreadyExistsException, ExecutionException {
+        for (var keyList : keys) {
+            for (var objectIdentifier : keyList) {
+                var resolvedS3TargetPath = s3TargetPath.resolve(objectIdentifier.key().replaceFirst(prefix + PATH_SEPARATOR, ""));
+
+                if (!copyOptions.contains(StandardCopyOption.REPLACE_EXISTING) && exists(s3Client, resolvedS3TargetPath)) {
+                    throw new FileAlreadyExistsException("File already exists at the target key");
+                }
+
+                try (var s3TransferManager = S3TransferManager.builder().s3Client(s3Client).build()) {
+                    s3TransferManager.copy(CopyRequest.builder()
+                            .copyObjectRequest(CopyObjectRequest.builder()
+                                    .checksumAlgorithm(ChecksumAlgorithm.SHA256)
+                                    .sourceBucket(bucketName)
+                                    .sourceKey(objectIdentifier.key())
+                                    .destinationBucket(resolvedS3TargetPath.bucketName())
+                                    .destinationKey(resolvedS3TargetPath.getKey())
+                                    .build())
+                            .build()).completionFuture().get(timeOut, unit);
+                }
+            }
         }
     }
 
