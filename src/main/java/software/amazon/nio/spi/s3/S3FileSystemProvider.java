@@ -363,22 +363,18 @@ public class S3FileSystemProvider extends FileSystemProvider {
             return;
         }
 
-        var copyOptions = Arrays.asList(options);
-        final var checkIfFileExists = !copyOptions.contains(StandardCopyOption.REPLACE_EXISTING);
-
         var s3SourcePath = checkPath(source);
         var s3TargetPath = checkPath(target);
 
-        final var fs = s3SourcePath.getFileSystem();
-        final var s3Client = fs.client();
-        final var sourceBucket = fs.bucketName();
+        final var s3Client = s3SourcePath.getFileSystem().client();
+        final var sourceBucket = s3SourcePath.bucketName();
 
         var sourcePrefix = s3SourcePath.toRealPath(NOFOLLOW_LINKS).getKey();
 
-        var timeOut = TIMEOUT_TIME_LENGTH_1;
+        final var timeOut = TIMEOUT_TIME_LENGTH_1;
         final var unit = MINUTES;
 
-        Function<S3Path, Boolean> fileExistsAndCannotReplace = cannotReplaceAndFileExistsCheck(checkIfFileExists, s3Client);
+        Function<S3Path, Boolean> fileExistsAndCannotReplace = cannotReplaceAndFileExistsCheck(options, s3Client);
 
         try {
             var sourceKeys = getContainedObjectBatches(s3Client, sourceBucket, sourcePrefix, timeOut, unit);
@@ -423,9 +419,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
                 .build()).completionFuture();
     }
 
-    private Function<S3Path, Boolean> cannotReplaceAndFileExistsCheck(boolean checkIfFileExists, S3AsyncClient s3Client) {
+    private Function<S3Path, Boolean> cannotReplaceAndFileExistsCheck(CopyOption[] options, S3AsyncClient s3Client) {
+        final var canReplaceFile = Arrays.asList(options).contains(StandardCopyOption.REPLACE_EXISTING);
+
         return (S3Path destination) -> {
-            if (!checkIfFileExists) return false;
+            if (canReplaceFile) return false;
             try {
                 return exists(s3Client, destination);
             } catch (InterruptedException e) {
