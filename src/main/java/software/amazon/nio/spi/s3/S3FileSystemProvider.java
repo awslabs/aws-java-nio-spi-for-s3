@@ -390,10 +390,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
         };
 
         try {
-            var keys = getContainedObjectBatches(s3Client, sourceBucket, sourcePrefix, timeOut, unit);
+            var sourceKeys = getContainedObjectBatches(s3Client, sourceBucket, sourcePrefix, timeOut, unit);
 
             try (var s3TransferManager = S3TransferManager.builder().s3Client(s3Client).build()) {
-                copyAllKeys(keys, s3TargetPath, sourcePrefix + PATH_SEPARATOR, fileExistsAndCannotReplace, sourceBucket, timeOut, unit, s3TransferManager);
+                copyAllKeys(sourceKeys, sourcePrefix + PATH_SEPARATOR, sourceBucket, s3TargetPath, s3TransferManager, fileExistsAndCannotReplace, timeOut, unit);
             }
         } catch (TimeoutException e) {
             throw logAndGenerateExceptionOnTimeOut(logger, "copy", timeOut, unit);
@@ -405,24 +405,24 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
     }
 
-    private void copyAllKeys(List<List<ObjectIdentifier>> keys, S3Path s3TargetPath, String sourcePrefix, Function<S3Path, Boolean> checkIfFileExists, String sourceBucket, long timeOut, TimeUnit unit, S3TransferManager s3TransferManager) throws InterruptedException, TimeoutException, FileAlreadyExistsException, ExecutionException {
-        for (var keyList : keys) {
+    private void copyAllKeys(List<List<ObjectIdentifier>> sourceKeys, String sourcePrefix, String sourceBucket, S3Path targetPath, S3TransferManager transferManager, Function<S3Path, Boolean> checkIfFileExists, long timeOut, TimeUnit unit) throws InterruptedException, TimeoutException, FileAlreadyExistsException, ExecutionException {
+        for (var keyList : sourceKeys) {
             for (var objectIdentifier : keyList) {
-                copyKey(s3TargetPath, sourcePrefix, checkIfFileExists, sourceBucket, timeOut, unit, s3TransferManager, objectIdentifier);
+                copyKey(objectIdentifier, sourcePrefix, sourceBucket, targetPath, transferManager, checkIfFileExists, timeOut, unit);
             }
         }
     }
 
-    private void copyKey(S3Path s3TargetPath, String sourcePrefix, Function<S3Path, Boolean> fileExistsAndCannotReplaceFn, String sourceBucket, long timeOut, TimeUnit unit, S3TransferManager s3TransferManager, ObjectIdentifier objectIdentifier) throws InterruptedException, TimeoutException, FileAlreadyExistsException, ExecutionException {
-        final var objectIdentifierKey = objectIdentifier.key();
+    private void copyKey(ObjectIdentifier sourceKey, String sourcePrefix, String sourceBucket, S3Path targetPath, S3TransferManager transferManager, Function<S3Path, Boolean> fileExistsAndCannotReplaceFn, long timeOut, TimeUnit unit) throws InterruptedException, TimeoutException, FileAlreadyExistsException, ExecutionException {
+        final var objectIdentifierKey = sourceKey.key();
         final var sanitizedIdKey = objectIdentifierKey.replaceFirst(sourcePrefix, "");
-        var resolvedS3TargetPath = s3TargetPath.resolve(sanitizedIdKey);
+        var resolvedS3TargetPath = targetPath.resolve(sanitizedIdKey);
 
         if (fileExistsAndCannotReplaceFn.apply(resolvedS3TargetPath)) {
             throw new FileAlreadyExistsException("File already exists at the target key");
         }
 
-        s3TransferManager.copy(CopyRequest.builder()
+        transferManager.copy(CopyRequest.builder()
                 .copyObjectRequest(CopyObjectRequest.builder()
                         .checksumAlgorithm(ChecksumAlgorithm.SHA256)
                         .sourceBucket(sourceBucket)
