@@ -378,17 +378,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         var timeOut = TIMEOUT_TIME_LENGTH_1;
         final var unit = MINUTES;
 
-        Function<S3Path, Boolean> fileExistsAndCannotReplace = (S3Path destination) -> {
-            if ( !checkIfFileExists ) return false;
-            try {
-                return exists(s3Client, destination);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException(e);
-            } catch (TimeoutException e) {
-                throw new RuntimeException(e);
-            }
-        };
+        Function<S3Path, Boolean> fileExistsAndCannotReplace = cannotReplaceAndFileExistsCheck(checkIfFileExists, s3Client);
 
         try {
             var sourceKeys = getContainedObjectBatches(s3Client, sourceBucket, sourcePrefix, timeOut, unit);
@@ -431,6 +421,20 @@ public class S3FileSystemProvider extends FileSystemProvider {
                         .destinationKey(resolvedS3TargetPath.getKey())
                         .build())
                 .build()).completionFuture();
+    }
+
+    private Function<S3Path, Boolean> cannotReplaceAndFileExistsCheck(boolean checkIfFileExists, S3AsyncClient s3Client) {
+        return (S3Path destination) -> {
+            if (!checkIfFileExists) return false;
+            try {
+                return exists(s3Client, destination);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+            } catch (TimeoutException e) {
+                throw new RuntimeException(e);
+            }
+        };
     }
 
     /**
