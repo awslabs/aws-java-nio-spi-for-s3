@@ -681,16 +681,18 @@ public class S3FileSystemProvider extends FileSystemProvider {
         if (s3Path.isDirectory() || attributes.trim().isEmpty())
             return Collections.emptyMap();
 
-        Predicate<String> attributesFilter;
-        if (attributes.equals("*") || attributes.equals("s3")) {
-            attributesFilter = x -> true;
-        } else {
-            final var attrSet = Arrays.stream(attributes.split(","))
-                    .map(attr -> attr.replaceAll("^s3:", ""))
-                    .collect(Collectors.toSet());
-            attributesFilter = attrSet::contains;
-        }
+        Predicate<String> attributesFilter = attributesFilterFor(attributes);
         return new S3BasicFileAttributes(s3Path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1)).asMap(attributesFilter);
+    }
+
+    private static Predicate<String> attributesFilterFor(String attributes) {
+        if (attributes.equals("*") || attributes.equals("s3")) {
+            return x -> true;
+        }
+        final var attrSet = Arrays.stream(attributes.split(","))
+                .map(attr -> attr.replaceAll("^s3:", ""))
+                .collect(Collectors.toSet());
+        return attrSet::contains;
     }
 
     /**
