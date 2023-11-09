@@ -22,7 +22,7 @@ There are several ways that this package can be used to provide Java NIO operati
 
 ## Example usage
 
-Assuming that `myExecutatbleJar` is a Java application that has been built to read from `java.nio.file.Path`s and
+Assuming that `myExecutableJar` is a Java application that has been built to read from `java.nio.file.Path`s and
 this library has been exposed by one of the mechanisms above then S3 URIs may be used to identify inputs. For example:
 
 ```
@@ -41,7 +41,7 @@ for all `Path` objects (even local ones).
 ### Using this package as a provider for Java 9 and above
 
 With the introduction of modules in Java 9 the extension mechanism was retired. Providers should now be supplied as java modules.
-For backward compatability we have not yet made this change so to ensure that the provider in this package is recognized
+For backward compatibility we have not yet made this change so to ensure that the provider in this package is recognized
 by the JVM you need to supply the JAR on your classpath using the `-classpath` flag. For example to use this provider with `org.example.myapp.Main` from `myApp.jar`
 you would type the following:
 
@@ -125,14 +125,6 @@ export S3_SPI_ENDPOINT_PROTOCOL=http
 java -Ds3.spi.endpoint-protocol=http
 ```
 
-The same can also be provided when creating a file system:
-
-```
-Map<String, String> env = ...;
-env.put("s3.spi.endpoint-protocol", "http");
-FileSystem fs = FileSystems.newFileSystem("s3x://myendpoint.com:1000/mybucket", env);
-```
-
 ## Reading Files
 
 Bytes from S3 objects can be read using an `S3SeekableByteChannel` which is an implementation of `java.nio.channel.SeekableByteChannel`.
@@ -150,26 +142,12 @@ on I/O, up to the limits of your network connection.
 
 ### Configuration
 
-There are two types of configuration parameters: local and system. Local configuration parameters are set when creating
-a file system calling _FileSystems.newFileSystem(uri, env)_ or directly calling _newFileSystem(uri, env)_ on a
-_S3FileSystemProvider_ or _S3XFileSystemProvider_ instance. System configuration parameters can be set like local paramenters
-or as environment variables or java system properties. Therefore these parameters apply to all file systems created with
-S3 and S3X providers. Some parameters can have both system and local scopes; for these, local values overwrite the system
-values.
+System configuration parameters can be set as environment variables or java system properties.
+Therefore these parameters apply to all file systems created with
+S3 and S3X providers.
 
 If no configuration is supplied the values in `resources/s3-nio-spi.properties` are used. Currently, 50 fragments of 5MB.
 Each fragment is downloaded concurrently on a unique thread.
-
-#### Local parameters
-|parameter|description|
-|---------|-----------|
-|**aws.region**|specifies the default region for API calls|
-|**aws.accessKey**|specifies the key id to use for authentication|
-|**aws.secretAccessKey**|specifies the secret to use for authentication|
-|**s3.spi.read.fragment-number**|buffer asynchronously prefetches `n` sequential fragments from S3 (currently 50)|
-|**s3.spi.read.fragment-size**|size of each fragment (currently 5MB)|
-|**s3.spi.endpoint**|the endpoint to use to access the bucket; this is extracted from the uri by the S3X provider|
-|**s3.spi.force-path-style**|(true\|false) to set if path-style shall be used instead of host style; unless otherwise specified, this is undefined for the S3 provider and set to true when using the S3X provider.|
 
 #### System parameter ####
 |parameter|description|
@@ -204,10 +182,9 @@ java -Djava.ext.dirs=$JAVA_HOME/jre/lib/ext:<location-of-this-spi-jar> -Ds3.spi.
 
 Configurations use the following order of precedence from highest to lowest:
 
-1. Local parameters
-2. Java properties
-3. Environment variables
-4. Default values
+1. Java properties
+2. Environment variables
+3. Default values
 
 #### S3 limits
 
