@@ -45,7 +45,7 @@ final class S3TransferUtil {
         }
     }
 
-    public void uploadLocalFile(S3Path path, Path localFile) throws IOException {
+    void uploadLocalFile(S3Path path, Path localFile) throws IOException {
         try (var s3TransferManager = S3TransferManager.builder().s3Client(client).build()) {
             var uploadCompletableFuture = s3TransferManager.uploadFile(
                     UploadFileRequest.builder()
