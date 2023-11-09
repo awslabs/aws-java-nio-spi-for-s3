@@ -4,7 +4,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 
@@ -15,13 +14,13 @@ public class CopyToS3 {
      * @throws IOException if the temp file cannot be created or a communication problem happens with the S3 service.
      */
     public static void main(String[] args) throws IOException {
-        Path s3Path = Paths.get(URI.create(args[0]));
+        var s3Path = Paths.get(URI.create(args[0]));
 
-        String content = "test";
+        var content = "test";
 
-        final Path tempFile = Files.createTempFile("test", "tmp");
+        final var tempFile = Files.createTempFile("test", "tmp");
         tempFile.toFile().deleteOnExit();
-        try (FileWriter writer = new FileWriter(tempFile.toFile())) {
+        try (var writer = new FileWriter(tempFile.toFile())) {
             writer.write(content);
         }
 
@@ -30,7 +29,7 @@ public class CopyToS3 {
 
 
         // Copy to a local temp file.
-        final Path tempFile2 = Paths.get(URI.create("file:///tmp/temp2.tmp"));
+        final var tempFile2 = Paths.get(URI.create("file:///tmp/temp2.tmp"));
         Files.copy(s3Path, tempFile2);
     }
 }

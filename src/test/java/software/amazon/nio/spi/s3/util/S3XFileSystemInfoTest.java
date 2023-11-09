@@ -18,7 +18,7 @@ public class S3XFileSystemInfoTest {
 
     @Test
     public void construction() {
-        S3XFileSystemInfo info = new S3XFileSystemInfo(URI.create("s3://myendpoint/mybucket/something"));
+        var info = new S3XFileSystemInfo(URI.create("s3://myendpoint/mybucket/something"));
         then(info.key()).isEqualTo("myendpoint/mybucket");
         then(info.bucket()).isEqualTo("mybucket");
         then(info.endpoint()).isEqualTo("myendpoint");
@@ -45,7 +45,7 @@ public class S3XFileSystemInfoTest {
 
     @Test
     public void user_info() {
-        S3XFileSystemInfo info = new S3XFileSystemInfo(URI.create("s3://key@my.service.com:1111/mybucket"));
+        var info = new S3XFileSystemInfo(URI.create("s3://key@my.service.com:1111/mybucket"));
         then(info.key()).isEqualTo("key@my.service.com:1111/mybucket");
         then(info.bucket()).isEqualTo("mybucket");
         then(info.endpoint()).isEqualTo("my.service.com:1111");

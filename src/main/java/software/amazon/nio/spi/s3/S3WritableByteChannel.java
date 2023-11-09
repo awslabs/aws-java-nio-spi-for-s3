@@ -5,8 +5,6 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
-import software.amazon.awssdk.transfer.s3.model.CompletedFileDownload;
-import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
 import software.amazon.awssdk.transfer.s3.model.DownloadFileRequest;
 import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
@@ -22,7 +20,6 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -46,8 +43,8 @@ class S3WritableByteChannel implements WritableByteChannel {
         this.timeUnit = timeUnit;
 
         try {
-            S3FileSystemProvider fileSystemProvider = (S3FileSystemProvider) path.getFileSystem().provider();
-            boolean exists = fileSystemProvider.exists(client, path);
+            var fileSystemProvider = (S3FileSystemProvider) path.getFileSystem().provider();
+            var exists = fileSystemProvider.exists(client, path);
 
             if (exists && options.contains(StandardOpenOption.CREATE_NEW)) {
                 throw new FileAlreadyExistsException("File at path:" + path + " already exists");
@@ -58,8 +55,8 @@ class S3WritableByteChannel implements WritableByteChannel {
 
             tempFile = Files.createTempFile("aws-s3-nio-", ".tmp");
             if (exists) {
-                try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(client).build()) {
-                    CompletableFuture<CompletedFileDownload> downloadCompletableFuture = s3TransferManager.downloadFile(
+                try (var s3TransferManager = S3TransferManager.builder().s3Client(client).build()) {
+                    var downloadCompletableFuture = s3TransferManager.downloadFile(
                             DownloadFileRequest.builder()
                                     .getObjectRequest(GetObjectRequest.builder()
                                             .bucket(path.bucketName())
@@ -114,8 +111,8 @@ class S3WritableByteChannel implements WritableByteChannel {
     public void close() throws IOException {
         channel.close();
 
-        try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(client).build()) {
-            CompletableFuture<CompletedFileUpload> uploadCompletableFuture = s3TransferManager.uploadFile(
+        try (var s3TransferManager = S3TransferManager.builder().s3Client(client).build()) {
+            var uploadCompletableFuture = s3TransferManager.uploadFile(
                     UploadFileRequest.builder()
                             .putObjectRequest(PutObjectRequest.builder()
                                     .bucket(path.bucketName())

@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static org.assertj.core.api.BDDAssertions.then;
@@ -24,7 +23,7 @@ public class FilesExistsTest {
         @Test
         @DisplayName("when bucket does not exist")
         public void fileExistsShouldReturnFalseWhenBucketNotFound() {
-            final Path path = Paths.get(URI.create(localStackConnectionEndpoint() + "/does-not-exist"));
+            final var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/does-not-exist"));
             then(Files.exists(path)).isFalse();
         }
 
@@ -32,7 +31,7 @@ public class FilesExistsTest {
         @DisplayName("when bucket exists but file doesn't")
         public void fileExistsShouldReturnFalseWhenBucketExistsAndFileNotFound() {
             Containers.createBucket("sink");
-            final Path path = Paths.get(URI.create(localStackConnectionEndpoint() + "/sink/missing-file"));
+            final var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/sink/missing-file"));
             then(Files.exists(path)).isFalse();
         }
     }
@@ -50,14 +49,14 @@ public class FilesExistsTest {
         @DisplayName("when bucket and file exist")
         public void fileExistsShouldReturnTrueWhenBucketExistsAndFileFound() {
             putObject("sink", "sample-file.txt");
-            final Path path = Paths.get(URI.create(localStackConnectionEndpoint() + "/sink/sample-file.txt"));
+            final var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/sink/sample-file.txt"));
             then(Files.exists(path)).isTrue();
         }
 
         @Test
         @DisplayName("for bucket path when it exists")
         public void fileExistsShouldReturnTrueWhenBucketExists() {
-            final Path path = Paths.get(URI.create(localStackConnectionEndpoint() + "/sink/"));
+            final var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/sink/"));
             then(Files.exists(path)).isTrue();
         }
     }

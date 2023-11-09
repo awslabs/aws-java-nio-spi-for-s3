@@ -3,11 +3,8 @@ package software.amazon.nio.spi.examples;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.FileSystem;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.stream.Stream;
 
 public class WalkFromRoot {
 
@@ -25,19 +22,19 @@ public class WalkFromRoot {
             System.exit(1);
         }
 
-        String bucketName = args[0];
+        var bucketName = args[0];
         if (!bucketName.startsWith("s3:") && !bucketName.startsWith("s3x:")) {
             bucketName = "s3://" + bucketName;
         }
 
 
-        Path root = Paths.get(URI.create(bucketName));
+        var root = Paths.get(URI.create(bucketName));
         System.err.println("root.getClass() = " + root.getClass());
-        
-        FileSystem s3 = root.getFileSystem();
 
-        for (Path rootDir : s3.getRootDirectories()) {
-            try (Stream<Path> pathStream = Files.walk(rootDir)) {
+        var s3 = root.getFileSystem();
+
+        for (var rootDir : s3.getRootDirectories()) {
+            try (var pathStream = Files.walk(rootDir)) {
                 pathStream.forEach(System.out::println);
             }
         }

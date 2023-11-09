@@ -63,10 +63,10 @@ public class S3XFileSystemInfo extends S3FileSystemInfo {
             throw new IllegalArgumentException("uri can not be null");
         }
 
-        final String userInfo = uri.getUserInfo();
+        final var userInfo = uri.getUserInfo();
 
         if (userInfo != null) {
-            int pos = userInfo.indexOf(':');
+            var pos = userInfo.indexOf(':');
             accessKey = (pos < 0) ? userInfo : userInfo.substring(0, pos);
             accessSecret = (pos < 0) ? null : userInfo.substring(pos+1);
         } else {

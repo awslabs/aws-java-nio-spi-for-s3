@@ -335,7 +335,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * @return the configured value or the default if not overridden
      */
     public String getEndpointProtocol() {
-        String protocol = (String)getOrDefault(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
+        var protocol = (String)getOrDefault(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
         if ("http".equalsIgnoreCase(protocol) || "https".equalsIgnoreCase(protocol)) {
             return protocol;
         }
@@ -408,7 +408,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     }
 
     private int parseIntProperty(String propName, int defaultVal){
-        String propertyVal = (String)get(propName);
+        var propertyVal = (String)get(propName);
         try{
             return Integer.parseInt(propertyVal);
         } catch (NumberFormatException e){
@@ -419,7 +419,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     }
 
     public URI endpointURI() {
-        String endpoint = getEndpoint();
+        var endpoint = getEndpoint();
         if (endpoint.isBlank()) {
             return null;
         }

@@ -8,7 +8,6 @@ package software.amazon.nio.spi.examples;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
@@ -28,10 +27,10 @@ public class Main {
             System.exit(1);
         }
 
-        for (String pathString : args) {
+        for (var pathString : args) {
 
             // if the URI starts with "s3:" then Paths will use the spi to handle the paths and reading
-            final Path path = Paths.get(URI.create(pathString));
+            final var path = Paths.get(URI.create(pathString));
 
             // proves that the correct path type is being used
             assert path.getClass().getName().contains("S3Path");

@@ -13,7 +13,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InOrder;
 import org.mockito.Mock;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.when;
@@ -45,7 +44,7 @@ public class S3ClientProviderTest {
 
     @Test
     public void initialization() {
-        final S3ClientProvider P = new S3ClientProvider(null);
+        final var P = new S3ClientProvider(null);
 
         assertNotNull(P.configuration);
 
@@ -56,7 +55,7 @@ public class S3ClientProviderTest {
         assertNotNull(t);
         assertThat(t).isInstanceOf(S3AsyncClient.class);
 
-        S3NioSpiConfiguration config = new S3NioSpiConfiguration();
+        var config = new S3NioSpiConfiguration();
         assertSame(config, new S3ClientProvider(config).configuration);
     }
 
@@ -64,7 +63,7 @@ public class S3ClientProviderTest {
     public void testGenerateAsyncClientWithNoErrors() {
         when(mockClient.getBucketLocation(anyConsumer()))
                 .thenReturn(GetBucketLocationResponse.builder().locationConstraint("us-west-2").build());
-        final S3AsyncClient s3Client = provider.generateAsyncClient("test-bucket", mockClient, true);
+        final var s3Client = provider.generateAsyncClient("test-bucket", mockClient, true);
         assertNotNull(s3Client);
     }
 
@@ -83,10 +82,10 @@ public class S3ClientProviderTest {
                         .build());
 
         // which should get you a client
-        final S3Client s3Client = provider.generateSyncClient("test-bucket", mockClient);
+        final var s3Client = provider.generateSyncClient("test-bucket", mockClient);
         assertNotNull(s3Client);
 
-        final InOrder inOrder = inOrder(mockClient);
+        final var inOrder = inOrder(mockClient);
         inOrder.verify(mockClient).getBucketLocation(anyConsumer());
         inOrder.verify(mockClient).headBucket(anyConsumer());
         inOrder.verifyNoMoreInteractions();
@@ -107,10 +106,10 @@ public class S3ClientProviderTest {
                         .build());
 
         // which should get you a client
-        final S3AsyncClient s3Client = provider.generateAsyncClient("test-bucket", mockClient, true);
+        final var s3Client = provider.generateAsyncClient("test-bucket", mockClient, true);
         assertNotNull(s3Client);
 
-        final InOrder inOrder = inOrder(mockClient);
+        final var inOrder = inOrder(mockClient);
         inOrder.verify(mockClient).getBucketLocation(anyConsumer());
         inOrder.verify(mockClient).headBucket(anyConsumer());
         inOrder.verifyNoMoreInteractions();
@@ -135,10 +134,10 @@ public class S3ClientProviderTest {
         );
 
         // then you should be able to get a client as long as the error response header contains the region
-        final S3AsyncClient s3Client = provider.generateAsyncClient("test-bucket", mockClient, true);
+        final var s3Client = provider.generateAsyncClient("test-bucket", mockClient, true);
         assertNotNull(s3Client);
 
-        final InOrder inOrder = inOrder(mockClient);
+        final var inOrder = inOrder(mockClient);
         inOrder.verify(mockClient).getBucketLocation(anyConsumer());
         inOrder.verify(mockClient).headBucket(anyConsumer());
         inOrder.verifyNoMoreInteractions();
@@ -164,7 +163,7 @@ public class S3ClientProviderTest {
         // then you should get a NoSuchElement exception when you try to get the header
         assertThrows(NoSuchElementException.class, () -> provider.generateSyncClient("test-bucket", mockClient));
 
-        final InOrder inOrder = inOrder(mockClient);
+        final var inOrder = inOrder(mockClient);
         inOrder.verify(mockClient).getBucketLocation(anyConsumer());
         inOrder.verify(mockClient).headBucket(anyConsumer());
         inOrder.verifyNoMoreInteractions();
@@ -191,7 +190,7 @@ public class S3ClientProviderTest {
         // then you should get a NoSuchElement exception when you try to get the header
         assertThrows(NoSuchElementException.class, () -> provider.generateAsyncClient("test-bucket", mockClient, true));
 
-        final InOrder inOrder = inOrder(mockClient);
+        final var inOrder = inOrder(mockClient);
         inOrder.verify(mockClient).getBucketLocation(anyConsumer());
         inOrder.verify(mockClient).headBucket(anyConsumer());
         inOrder.verifyNoMoreInteractions();
@@ -199,7 +198,7 @@ public class S3ClientProviderTest {
 
     @Test
     public void generateAsyncClientByEndpointBucketCredentials() {
-        final FakeAsyncS3ClientBuilder BUILDER = new FakeAsyncS3ClientBuilder();
+        final var BUILDER = new FakeAsyncS3ClientBuilder();
         provider.asyncClientBuilder = BUILDER;
 
         provider.configuration.withEndpoint("endpoint1:1010");

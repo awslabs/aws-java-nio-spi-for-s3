@@ -92,21 +92,21 @@ class S3ReadAheadByteChannel implements ReadableByteChannel {
     public int read(ByteBuffer dst) throws IOException {
         Objects.requireNonNull(dst);
 
-        long channelPosition = delegator.position();
+        var channelPosition = delegator.position();
         logger.debug("delegator position: {}", channelPosition);
 
         // if the position of the delegator is at the end (>= size) return -1. we're finished reading.
         if (channelPosition >= size) return -1;
 
         //figure out the index of the fragment the bytes would start in
-        Integer fragmentIndex = fragmentIndexForByteNumber(channelPosition);
+        var fragmentIndex = fragmentIndexForByteNumber(channelPosition);
         logger.debug("fragment index: {}", fragmentIndex);
 
-        int fragmentOffset = (int) (channelPosition - (fragmentIndex.longValue() * maxFragmentSize));
+        var fragmentOffset = (int) (channelPosition - (fragmentIndex.longValue() * maxFragmentSize));
         logger.debug("fragment {} offset: {}", fragmentIndex, fragmentOffset);
 
         try {
-            final ByteBuffer fragment = Objects.requireNonNull(readAheadBuffersCache.get(fragmentIndex, this::computeFragmentFuture))
+            final var fragment = Objects.requireNonNull(readAheadBuffersCache.get(fragmentIndex, this::computeFragmentFuture))
                     .get(timeout, timeUnit)
                     .asReadOnlyBuffer();
 
@@ -115,10 +115,10 @@ class S3ReadAheadByteChannel implements ReadableByteChannel {
             logger.debug("dst remaining: {}", dst.remaining());
 
             //put the bytes from fragment from the offset upto the min of fragment remaining or dst remaining
-            int limit = Math.min(fragment.remaining(), dst.remaining());
+            var limit = Math.min(fragment.remaining(), dst.remaining());
             logger.debug("byte limit: {}", limit);
 
-            byte[] copiedBytes = new byte[limit];
+            var copiedBytes = new byte[limit];
             fragment.get(copiedBytes, 0, limit);
             dst.put(copiedBytes);
 
@@ -128,10 +128,10 @@ class S3ReadAheadByteChannel implements ReadableByteChannel {
                 clearPriorFragments(fragmentIndex);
 
                 // until available cache slots are filled or number of fragments in file
-                int maxFragmentsToLoad = Math.min(maxNumberFragments - 1, numFragmentsInObject - fragmentIndex - 1);
+                var maxFragmentsToLoad = Math.min(maxNumberFragments - 1, numFragmentsInObject - fragmentIndex - 1);
 
-                for (int i = 0; i < maxFragmentsToLoad; i++) {
-                    final int idxToLoad = i + fragmentIndex + 1;
+                for (var i = 0; i < maxFragmentsToLoad; i++) {
+                    final var idxToLoad = i + fragmentIndex + 1;
 
                     //  add the index if it's not already there
                     if (readAheadBuffersCache.asMap().containsKey(idxToLoad))
@@ -208,9 +208,9 @@ class S3ReadAheadByteChannel implements ReadableByteChannel {
     }
 
     private CompletableFuture<ByteBuffer> computeFragmentFuture(int fragmentIndex) {
-        long readFrom = (long) fragmentIndex * maxFragmentSize;
-        long readTo = Math.min(readFrom + maxFragmentSize, size) - 1;
-        String range = "bytes=" + readFrom + "-" + readTo;
+        var readFrom = (long) fragmentIndex * maxFragmentSize;
+        var readTo = Math.min(readFrom + maxFragmentSize, size) - 1;
+        var range = "bytes=" + readFrom + "-" + readTo;
         logger.debug("byte range for {} is '{}'", path.getKey(), range);
 
         return client.getObject(

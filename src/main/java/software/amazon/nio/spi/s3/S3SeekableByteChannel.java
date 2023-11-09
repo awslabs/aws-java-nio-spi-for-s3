@@ -56,7 +56,7 @@ class S3SeekableByteChannel implements SeekableByteChannel {
 
         // later we will add a constructor that allows providing delegates for composition
 
-        S3NioSpiConfiguration config = new S3NioSpiConfiguration();
+        var config = new S3NioSpiConfiguration();
         if (options.contains(StandardOpenOption.WRITE)) {
             LOGGER.debug("using S3WritableByteChannel as write delegate for path '{}'", s3Path.toUri());
             readDelegate = null;
@@ -64,7 +64,7 @@ class S3SeekableByteChannel implements SeekableByteChannel {
             position = 0L;
         } else if (options.contains(StandardOpenOption.READ) || options.isEmpty()) {
             LOGGER.debug("using S3ReadAheadByteChannel as read delegate for path '{}'", s3Path.toUri());
-            S3AsyncClient readClient = s3Path.getFileSystem().readClient();
+            var readClient = s3Path.getFileSystem().readClient();
             readDelegate = new S3ReadAheadByteChannel(s3Path, config.getMaxFragmentSize(), config.getMaxFragmentNumber(), readClient, this, timeout, timeUnit);
             writeDelegate = null;
         } else {
@@ -116,7 +116,7 @@ class S3SeekableByteChannel implements SeekableByteChannel {
             throw new NonWritableChannelException();
         }
 
-        int length = src.remaining();
+        var length = src.remaining();
         this.position += length;
 
         return writeDelegate.write(src);

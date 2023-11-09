@@ -41,7 +41,7 @@ public class TimeOutUtils {
      */
     public static String createAndLogTimeOutMessage(Logger logger, String operationName, long length, TimeUnit unit) {
         Objects.requireNonNull(logger);
-        String msg = createTimeOutMessage(operationName, length, unit);
+        var msg = createTimeOutMessage(operationName, length, unit);
         logger.error(msg);
         return msg;
     }
@@ -56,7 +56,7 @@ public class TimeOutUtils {
      */
     public static RuntimeException logAndGenerateExceptionOnTimeOut(Logger logger, String operationName, long length, TimeUnit unit){
         Objects.requireNonNull(logger);
-        String msg = createAndLogTimeOutMessage(logger, operationName, length, unit);
+        var msg = createAndLogTimeOutMessage(logger, operationName, length, unit);
         return new RuntimeException(msg);
     }
 }

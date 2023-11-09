@@ -24,7 +24,7 @@ public class TimeOutUtilsTest {
 
     @Test
     public void createTimeOutMessage() {
-        String timeOutMessage = TimeOutUtils.createTimeOutMessage("foo", TimeOutUtils.TIMEOUT_TIME_LENGTH_1, TimeUnit.MINUTES);
+        var timeOutMessage = TimeOutUtils.createTimeOutMessage("foo", TimeOutUtils.TIMEOUT_TIME_LENGTH_1, TimeUnit.MINUTES);
         assertEquals("the foo operation timed out after 1 minutes, check your network connectivity and status of S3 service", timeOutMessage);
 
         timeOutMessage = TimeOutUtils.createTimeOutMessage("foo", TimeOutUtils.TIMEOUT_TIME_LENGTH_3, TimeUnit.MINUTES);
@@ -37,15 +37,15 @@ public class TimeOutUtilsTest {
 
     @Test
     public void createAndLogTimeOutMessage() {
-        String timeOutMessage = TimeOutUtils.createAndLogTimeOutMessage(spyLogger, "foo", TimeOutUtils.TIMEOUT_TIME_LENGTH_1, TimeUnit.MINUTES);
+        var timeOutMessage = TimeOutUtils.createAndLogTimeOutMessage(spyLogger, "foo", TimeOutUtils.TIMEOUT_TIME_LENGTH_1, TimeUnit.MINUTES);
         assertEquals("the foo operation timed out after 1 minutes, check your network connectivity and status of S3 service", timeOutMessage);
         Mockito.verify(spyLogger).error(timeOutMessage);
     }
 
     @Test
     public void logAndGenerateExceptionOnTimeOut() {
-        final String msg = "the foo operation timed out after 1 minutes, check your network connectivity and status of S3 service";
-        RuntimeException timeOut = TimeOutUtils.logAndGenerateExceptionOnTimeOut(spyLogger, "foo", TimeOutUtils.TIMEOUT_TIME_LENGTH_1, TimeUnit.MINUTES);
+        final var msg = "the foo operation timed out after 1 minutes, check your network connectivity and status of S3 service";
+        var timeOut = TimeOutUtils.logAndGenerateExceptionOnTimeOut(spyLogger, "foo", TimeOutUtils.TIMEOUT_TIME_LENGTH_1, TimeUnit.MINUTES);
         assertEquals(msg, timeOut.getMessage());
         Mockito.verify(spyLogger).error(msg);
     }

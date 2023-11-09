@@ -7,7 +7,6 @@ package software.amazon.nio.spi.s3;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.awscore.AwsClient;
 import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
 import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
@@ -26,7 +25,6 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
-import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
@@ -78,14 +76,14 @@ public class S3ClientProvider {
     final RetryCondition retryCondition;
 
     {
-        final Set<Integer> RETRYABLE_STATUS_CODES = Set.of(
+        final var RETRYABLE_STATUS_CODES = Set.of(
                 HttpStatusCode.INTERNAL_SERVER_ERROR,
                 HttpStatusCode.BAD_GATEWAY,
                 HttpStatusCode.SERVICE_UNAVAILABLE,
                 HttpStatusCode.GATEWAY_TIMEOUT
         );
 
-        final Set<Class<? extends Exception>> RETRYABLE_EXCEPTIONS = Set.of(
+        final var RETRYABLE_EXCEPTIONS = Set.of(
                 RetryableException.class,
                 IOException.class,
                 ApiCallAttemptTimeoutException.class,
@@ -182,7 +180,7 @@ public class S3ClientProvider {
 
         if (configuration.endpointURI() == null) {
             // we try to locate a bucket only if no endpoint is provided, which means we are dealing with AWS S3 buckets
-            String bucketLocation = determineBucketLocation(bucketName, locationClient);
+            var bucketLocation = determineBucketLocation(bucketName, locationClient);
 
             if ( bucketLocation != null) {
                 bucketSpecificClient = getClientForRegion.apply(bucketLocation);
@@ -218,7 +216,7 @@ public class S3ClientProvider {
     private String getBucketLocationFromHead(String bucketName, S3Client locationClient) {
         try {
             logger.debug("Cannot determine location of '{}' bucket directly. Attempting to obtain bucket location with headBucket operation", bucketName);
-            final HeadBucketResponse headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
+            final var headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
             return getBucketRegionFromResponse(headBucketResponse.sdkHttpResponse());
         } catch (S3Exception e) {
             if (isRedirect(e)) {
@@ -253,7 +251,7 @@ public class S3ClientProvider {
             String regionName,
             S3BaseClientBuilder<ActualBuilder, ActualClient> builder)
     {
-        Region region = getRegionFromRegionName(regionName);
+        var region = getRegionFromRegionName(regionName);
         logger.debug("bucket region is: '{}'", region.id());
 
         builder
@@ -265,12 +263,12 @@ public class S3ClientProvider {
                         )
                 );
 
-        URI endpointUri = configuration.endpointURI();
+        var endpointUri = configuration.endpointURI();
         if (endpointUri != null) {
             builder.endpointOverride(endpointUri);
         }
 
-        AwsCredentials credentials = configuration.getCredentials();
+        var credentials = configuration.getCredentials();
         if (credentials != null) {
             builder.credentialsProvider(() -> credentials);
         }
@@ -279,15 +277,15 @@ public class S3ClientProvider {
     }
 
     private S3AsyncClient configureCrtClientForRegion(String regionName) {
-        Region region = getRegionFromRegionName(regionName);
+        var region = getRegionFromRegionName(regionName);
         logger.debug("bucket region is: '{}'", region.id());
 
-        URI endpointUri = configuration.endpointURI();
+        var endpointUri = configuration.endpointURI();
         if (endpointUri != null) {
             asyncClientBuilder.endpointOverride(endpointUri);
         }
 
-        AwsCredentials credentials = configuration.getCredentials();
+        var credentials = configuration.getCredentials();
         if (credentials != null) {
             asyncClientBuilder.credentialsProvider(() -> credentials);
         }

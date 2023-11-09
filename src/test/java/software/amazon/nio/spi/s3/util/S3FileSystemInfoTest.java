@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 public class S3FileSystemInfoTest {
     @Test
     public void construction() {
-        S3FileSystemInfo info = new S3FileSystemInfo(URI.create("s3://abucket/something"));
+        var info = new S3FileSystemInfo(URI.create("s3://abucket/something"));
         then(info.key()).isEqualTo("abucket");
         then(info.bucket()).isEqualTo("abucket");
         then(info.endpoint()).isNull();

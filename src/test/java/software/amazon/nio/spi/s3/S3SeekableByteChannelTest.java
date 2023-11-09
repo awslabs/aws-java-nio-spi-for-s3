@@ -58,7 +58,7 @@ public class S3SeekableByteChannelTest {
                         GetObjectResponse.builder().contentLength(6L).build(),
                         bytes)));
 
-        S3FileSystemProvider provider = new S3FileSystemProvider();
+        var provider = new S3FileSystemProvider();
         fs = provider.getFileSystem(URI.create("s3://test-bucket"), true);
         fs.clientProvider(new FixedS3ClientProvider(mockClient));
         path = (S3Path) fs.getPath("/object");
@@ -71,15 +71,15 @@ public class S3SeekableByteChannelTest {
 
     @Test
     public void readDelegateConstructedByDefault() throws IOException {
-        try(S3SeekableByteChannel channel = seekableByteChannelForRead()) {
+        try(var channel = seekableByteChannelForRead()) {
             assertNotNull(channel.getReadDelegate());
         }
     }
 
     @Test
     public void read() throws IOException {
-        try(S3SeekableByteChannel channel = seekableByteChannelForRead()) {
-            ByteBuffer dst = ByteBuffer.allocate(6);
+        try(var channel = seekableByteChannelForRead()) {
+            var dst = ByteBuffer.allocate(6);
             channel.read(dst);
             assertArrayEquals(bytes, dst.array());
             assertEquals(6L, channel.position());
@@ -94,21 +94,21 @@ public class S3SeekableByteChannelTest {
         Set<OpenOption> options = new HashSet<>();
         options.add(StandardOpenOption.CREATE);
         options.add(StandardOpenOption.WRITE);
-        S3SeekableByteChannel channel = new S3SeekableByteChannel(path, mockClient, options);
+        var channel = new S3SeekableByteChannel(path, mockClient, options);
         channel.write(ByteBuffer.allocate(1));
         channel.close();
     }
 
     @Test
     public void position() throws IOException {
-        try(S3SeekableByteChannel channel = seekableByteChannelForRead()) {
+        try(var channel = seekableByteChannelForRead()) {
             assertEquals(0L, channel.position());
         }
     }
 
     @Test
     public void testPosition() throws IOException {
-        try(S3SeekableByteChannel channel = seekableByteChannelForRead()) {
+        try(var channel = seekableByteChannelForRead()) {
             channel.position(1L);
             assertEquals(1L, channel.position());
         }
@@ -116,28 +116,28 @@ public class S3SeekableByteChannelTest {
 
     @Test
     public void size() throws IOException {
-        try(S3SeekableByteChannel channel = seekableByteChannelForRead()) {
+        try(var channel = seekableByteChannelForRead()) {
             assertEquals(100L, channel.size());
         }
     }
 
     @Test
     public void truncate() throws IOException {
-        try(S3SeekableByteChannel channel = seekableByteChannelForRead()) {
+        try(var channel = seekableByteChannelForRead()) {
             assertThrows(UnsupportedOperationException.class, () -> channel.truncate(0L));
         }
     }
 
     @Test
     public void isOpen() throws IOException {
-        try(S3SeekableByteChannel channel = seekableByteChannelForRead()) {
+        try(var channel = seekableByteChannelForRead()) {
             assertTrue(channel.isOpen());
         }
     }
 
     @Test
     public void close() throws IOException {
-        S3SeekableByteChannel channel = seekableByteChannelForRead();
+        var channel = seekableByteChannelForRead();
         channel.close();
         assertFalse(channel.isOpen());
     }

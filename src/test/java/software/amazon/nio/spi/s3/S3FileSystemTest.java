@@ -18,9 +18,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.FileSystems;
-import java.nio.file.Path;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.BDDAssertions.then;
@@ -84,18 +82,18 @@ public class S3FileSystemTest {
 
     @Test
     public void getAndSetClientProvider() {
-        final S3ClientProvider P1 = new S3ClientProvider(null);
-        final S3ClientProvider P2 = new S3ClientProvider(null);
+        final var P1 = new S3ClientProvider(null);
+        final var P2 = new S3ClientProvider(null);
         s3FileSystem.clientProvider(P1); then(s3FileSystem.clientProvider()).isSameAs(P1);
         s3FileSystem.clientProvider(P2); then(s3FileSystem.clientProvider()).isSameAs(P2);
     }
 
     @Test
     public void getRootDirectories() {
-        final Iterable<Path> rootDirectories = s3FileSystem.getRootDirectories();
+        final var rootDirectories = s3FileSystem.getRootDirectories();
         assertNotNull(rootDirectories);
 
-        final Iterator<Path> rootDirectoriesIterator = rootDirectories.iterator();
+        final var rootDirectoriesIterator = rootDirectories.iterator();
 
         assertTrue(rootDirectoriesIterator.hasNext());
         assertEquals(PATH_SEPARATOR, rootDirectoriesIterator.next().toString());
