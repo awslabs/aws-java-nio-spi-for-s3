@@ -408,14 +408,13 @@ public class S3FileSystemProvider extends FileSystemProvider {
     private void copyAllKeys(List<List<ObjectIdentifier>> sourceKeys, String sourcePrefix, String sourceBucket, S3Path targetPath, S3TransferManager transferManager, Function<S3Path, Boolean> checkIfFileExists, long timeOut, TimeUnit unit) throws InterruptedException, TimeoutException, FileAlreadyExistsException, ExecutionException {
         for (var keyList : sourceKeys) {
             for (var objectIdentifier : keyList) {
-                copyKey(objectIdentifier, sourcePrefix, sourceBucket, targetPath, transferManager, checkIfFileExists, timeOut, unit);
+                copyKey(objectIdentifier.key(), sourcePrefix, sourceBucket, targetPath, transferManager, checkIfFileExists, timeOut, unit);
             }
         }
     }
 
-    private void copyKey(ObjectIdentifier sourceKey, String sourcePrefix, String sourceBucket, S3Path targetPath, S3TransferManager transferManager, Function<S3Path, Boolean> fileExistsAndCannotReplaceFn, long timeOut, TimeUnit unit) throws InterruptedException, TimeoutException, FileAlreadyExistsException, ExecutionException {
-        final var objectIdentifierKey = sourceKey.key();
-        final var sanitizedIdKey = objectIdentifierKey.replaceFirst(sourcePrefix, "");
+    private void copyKey(String sourceObjectIdentifierKey, String sourcePrefix, String sourceBucket, S3Path targetPath, S3TransferManager transferManager, Function<S3Path, Boolean> fileExistsAndCannotReplaceFn, long timeOut, TimeUnit unit) throws InterruptedException, TimeoutException, FileAlreadyExistsException, ExecutionException {
+        final var sanitizedIdKey = sourceObjectIdentifierKey.replaceFirst(sourcePrefix, "");
         var resolvedS3TargetPath = targetPath.resolve(sanitizedIdKey);
 
         if (fileExistsAndCannotReplaceFn.apply(resolvedS3TargetPath)) {
@@ -426,7 +425,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
                 .copyObjectRequest(CopyObjectRequest.builder()
                         .checksumAlgorithm(ChecksumAlgorithm.SHA256)
                         .sourceBucket(sourceBucket)
-                        .sourceKey(objectIdentifierKey)
+                        .sourceKey(sourceObjectIdentifierKey)
                         .destinationBucket(resolvedS3TargetPath.bucketName())
                         .destinationKey(resolvedS3TargetPath.getKey())
                         .build())
