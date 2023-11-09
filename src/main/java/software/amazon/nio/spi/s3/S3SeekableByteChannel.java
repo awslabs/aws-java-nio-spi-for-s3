@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
+import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -20,6 +21,7 @@ import java.nio.channels.SeekableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
+import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -197,7 +199,7 @@ class S3SeekableByteChannel implements SeekableByteChannel {
 
     private void fetchSize() {
         synchronized (this) {
-            this.size = new S3BasicFileAttributes(path).size();
+            this.size = new S3BasicFileAttributes(path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1)).size();
             LOGGER.debug("size of '{}' is '{}'", path.toUri(), this.size);
         }
     }
