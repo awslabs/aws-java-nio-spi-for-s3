@@ -391,19 +391,21 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     private void copyAllKeys(List<List<ObjectIdentifier>> keys, S3Path s3TargetPath, String prefix, List<CopyOption> copyOptions, S3AsyncClient s3Client, String bucketName, long timeOut, TimeUnit unit, S3TransferManager s3TransferManager) throws InterruptedException, TimeoutException, FileAlreadyExistsException, ExecutionException {
+        final var checkIfFileExists = !copyOptions.contains(StandardCopyOption.REPLACE_EXISTING);
         for (var keyList : keys) {
             for (var objectIdentifier : keyList) {
-                copyKey(s3TargetPath, prefix, copyOptions, s3Client, bucketName, timeOut, unit, s3TransferManager, objectIdentifier);
+                copyKey(s3TargetPath, prefix, checkIfFileExists, s3Client, bucketName, timeOut, unit, s3TransferManager, objectIdentifier);
             }
         }
     }
 
-    private void copyKey(S3Path s3TargetPath, String prefix, List<CopyOption> copyOptions, S3AsyncClient s3Client, String bucketName, long timeOut, TimeUnit unit, S3TransferManager s3TransferManager, ObjectIdentifier objectIdentifier) throws InterruptedException, TimeoutException, FileAlreadyExistsException, ExecutionException {
+    private void copyKey(S3Path s3TargetPath, String prefix, boolean checkIfFileExists, S3AsyncClient s3Client, String bucketName, long timeOut, TimeUnit unit, S3TransferManager s3TransferManager, ObjectIdentifier objectIdentifier) throws InterruptedException, TimeoutException, FileAlreadyExistsException, ExecutionException {
         final var objectIdentifierKey = objectIdentifier.key();
         final var sanitizedIdKey = objectIdentifierKey.replaceFirst(prefix + PATH_SEPARATOR, "");
         var resolvedS3TargetPath = s3TargetPath.resolve(sanitizedIdKey);
 
-        if (!copyOptions.contains(StandardCopyOption.REPLACE_EXISTING) && exists(s3Client, resolvedS3TargetPath)) {
+
+        if (checkIfFileExists && exists(s3Client, resolvedS3TargetPath)) {
             throw new FileAlreadyExistsException("File already exists at the target key");
         }
 
