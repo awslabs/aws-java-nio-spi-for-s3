@@ -786,7 +786,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
                 .map(fs::getPath)
                 .filter(path -> tryAccept(filter, path))
                 .blockingStream()
-                .map(Path.class::cast) // upcast to Path from S3Path
                 .iterator();
     }
 
