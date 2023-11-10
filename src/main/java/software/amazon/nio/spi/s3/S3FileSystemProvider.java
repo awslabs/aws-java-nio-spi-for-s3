@@ -245,16 +245,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         final var iterator = pathIteratorForPublisher(filter, fs, finalDirName, listObjectsV2Publisher);
 
-        return new DirectoryStream<>() {
-            @Override
-            public void close() {
-            }
-
-            @Override
-            public Iterator<Path> iterator() {
-                return Objects.requireNonNull(iterator);
-            }
-        };
+        return new S3DirectoryStream(iterator);
     }
 
     /**
