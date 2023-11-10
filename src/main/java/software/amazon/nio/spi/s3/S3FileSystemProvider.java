@@ -782,14 +782,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return Flowable.fromPublisher(listObjectsV2Publisher)
                 .flatMapIterable(response -> {
                     //add common prefixes from this page
-                    final var commonPrefixes = response
-                            .commonPrefixes().stream()
-                            .map(CommonPrefix::prefix);
+                    final var commonPrefixes = response.commonPrefixes().stream().map(CommonPrefix::prefix);
 
                     //add s3 objects from this page
-                    final var objectKeys = response
-                            .contents().stream()
-                            .map(S3Object::key);
+                    final var objectKeys = response.contents().stream().map(S3Object::key);
 
                     // convert to S3Path and apply directory stream filter
                     return Stream.concat(commonPrefixes, objectKeys)
