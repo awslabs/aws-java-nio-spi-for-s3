@@ -225,15 +225,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
         var s3Path = checkPath(dir);
 
         var dirName = s3Path.toAbsolutePath().getKey();
-
         if (!s3Path.isDirectory()) {
             dirName = dirName + PATH_SEPARATOR;
         }
 
-        final var fs = s3Path.getFileSystem();
-        final var finalDirName = dirName;
-
-        return new S3DirectoryStream(fs, s3Path.bucketName(), finalDirName, filter);
+        return new S3DirectoryStream(s3Path.getFileSystem(), s3Path.bucketName(), dirName, filter);
     }
 
     /**
