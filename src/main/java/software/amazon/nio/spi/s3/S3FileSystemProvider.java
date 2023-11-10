@@ -795,20 +795,23 @@ public class S3FileSystemProvider extends FileSystemProvider {
                     return Stream.concat(commonPrefixes, objectKeys)
                             .filter(p -> !((S3Path)fs.getPath(p)).getKey().equals(finalDirName))  // including the parent will induce loops
                             .map(fs::getPath)
-                            .filter(path -> {
-                                try {
-                                    return filter.accept(path);
-                                } catch (IOException e) {
-                                    logger.warn("An IOException was thrown while filtering the path: {}." +
-                                            " Set log level to debug to show stack trace", path);
-                                    logger.debug(e.getMessage(), e);
-                                    return false;
-                                }
-                            }).collect(Collectors.toList());
+                            .filter(path -> tryAccept(filter, path))
+                            .collect(Collectors.toList());
                 })
                 .blockingStream()
                 .map(Path.class::cast) // upcast to Path from S3Path
                 .iterator();
+    }
+
+    private boolean tryAccept(DirectoryStream.Filter<? super Path> filter, Path path) {
+        try {
+            return filter.accept(path);
+        } catch (IOException e) {
+            logger.warn("An IOException was thrown while filtering the path: {}." +
+                    " Set log level to debug to show stack trace", path);
+            logger.debug(e.getMessage(), e);
+            return false;
+        }
     }
 
     /**
