@@ -5,13 +5,11 @@
 
 package software.amazon.nio.spi.s3;
 
-import io.reactivex.rxjava3.core.Flowable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm;
-import software.amazon.awssdk.services.s3.model.CommonPrefix;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
@@ -21,9 +19,7 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.model.S3Response;
-import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.CompletedCopy;
 import software.amazon.awssdk.transfer.s3.model.CopyRequest;
@@ -45,7 +41,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -238,14 +233,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final var fs = s3Path.getFileSystem();
         final var finalDirName = dirName;
 
-        final var listObjectsV2Publisher = fs.client().listObjectsV2Paginator(req -> req
-                .bucket(s3Path.bucketName())
-                .prefix(finalDirName)
-                .delimiter(PATH_SEPARATOR));
-
-        final var iterator = pathIteratorForPublisher(filter, fs, finalDirName, listObjectsV2Publisher);
-
-        return new S3DirectoryStream(iterator);
+        return new S3DirectoryStream(fs, s3Path.bucketName(), finalDirName, filter);
     }
 
     /**
@@ -751,45 +739,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
             return true;
         } catch (ExecutionException | NoSuchKeyException e) {
             logger.debug("Could not retrieve object head information", e);
-            return false;
-        }
-    }
-
-    /**
-     * Get an iterator for a {@code ListObjectsV2Publisher}. This method is protected level access only for testing
-     * purposes. It is not intended to be used by any other code outside of this class.
-     * @param filter a filter to apply to returned Paths. Only accepted paths will be included.
-     * @param fs the Filesystem.
-     * @param finalDirName the directory name that will be streamed.
-     * @param listObjectsV2Publisher the publisher that returns objects and common prefixes that are iterated on.
-     * @return an iterator for {@code Path}s constructed from the {@code ListObjectsV2Publisher}s responses.
-     */
-    private Iterator<Path> pathIteratorForPublisher(
-            final DirectoryStream.Filter<? super Path> filter,
-            final FileSystem fs, String finalDirName,
-            final ListObjectsV2Publisher listObjectsV2Publisher) {
-        final var prefixPublisher = listObjectsV2Publisher.commonPrefixes().map(CommonPrefix::prefix);
-        final var keysPublisher = listObjectsV2Publisher.contents().map(S3Object::key);
-
-        return Flowable.concat(prefixPublisher, keysPublisher)
-                .map(fs::getPath)
-                .filter(path -> !isEqualToParent(finalDirName, path))  // including the parent will induce loops
-                .filter(path -> tryAccept(filter, path))
-                .blockingStream()
-                .iterator();
-    }
-
-    private static boolean isEqualToParent(String finalDirName, Path p) {
-        return ((S3Path) p).getKey().equals(finalDirName);
-    }
-
-    private boolean tryAccept(DirectoryStream.Filter<? super Path> filter, Path path) {
-        try {
-            return filter.accept(path);
-        } catch (IOException e) {
-            logger.warn("An IOException was thrown while filtering the path: {}." +
-                    " Set log level to debug to show stack trace", path);
-            logger.debug(e.getMessage(), e);
             return false;
         }
     }
