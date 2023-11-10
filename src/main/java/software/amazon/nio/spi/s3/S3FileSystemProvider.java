@@ -281,30 +281,27 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public void delete(Path path) throws IOException {
         final var s3Path = checkPath(path);
+        final var prefix = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
+        final var bucketName = s3Path.bucketName();
+
+        final var s3Client = s3Path.getFileSystem().client();
+
+        var timeOut = TIMEOUT_TIME_LENGTH_1;
+        final var unit = MINUTES;
         try {
-            final var fs = s3Path.getFileSystem();
-            final var s3Client = fs.client();
-            final var bucketName = fs.bucketName();
+            var keys = getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit);
 
-            final var prefix = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
-
-            var timeOut = TIMEOUT_TIME_LENGTH_1;
-            final var unit = MINUTES;
-            try {
-                var keys = getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit);
-
-                for (var keyList : keys) {
-                    s3Client.deleteObjects(DeleteObjectsRequest.builder()
-                                    .bucket(bucketName)
-                                    .delete(Delete.builder()
-                                            .objects(keyList)
-                                            .build())
-                                    .build())
-                            .get(timeOut, unit);
-                }
-            } catch (TimeoutException e) {
-                throw logAndGenerateExceptionOnTimeOut(logger, "delete", timeOut, unit);
+            for (var keyList : keys) {
+                s3Client.deleteObjects(DeleteObjectsRequest.builder()
+                                .bucket(bucketName)
+                                .delete(Delete.builder()
+                                        .objects(keyList)
+                                        .build())
+                                .build())
+                        .get(timeOut, unit);
             }
+        } catch (TimeoutException e) {
+            throw logAndGenerateExceptionOnTimeOut(logger, "delete", timeOut, unit);
         } catch (ExecutionException e) {
             throw new IOException(e);
         } catch (InterruptedException e) {
