@@ -277,7 +277,7 @@ public class S3FileSystemProviderTest {
     public void delete() throws Exception {
         var object1 = S3Object.builder().key("dir/key1").build();
         var object2 = S3Object.builder().key("dir/subdir/key2").build();
-        when(mockClient.listObjectsV2(anyConsumer())).thenReturn(CompletableFuture.supplyAsync(() ->
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2).isTruncated(false).nextContinuationToken(null).build()));
         when(mockClient.deleteObjects(any(DeleteObjectsRequest.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 DeleteObjectsResponse.builder().build()));
@@ -298,7 +298,7 @@ public class S3FileSystemProviderTest {
     public void copy() throws Exception {
         var object1 = S3Object.builder().key("dir1/key1").build();
         var object2 = S3Object.builder().key("dir1/subdir/key2").build();
-        when(mockClient.listObjectsV2(anyConsumer())).thenReturn(CompletableFuture.supplyAsync(() ->
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2).isTruncated(false).nextContinuationToken(null).build()));
         var headObjectRequest1 = HeadObjectRequest.builder().bucket("foo").key("dir2/key1").build();
         when(mockClient.headObject(headObjectRequest1)).thenReturn(CompletableFuture.supplyAsync(() ->
@@ -328,7 +328,7 @@ public class S3FileSystemProviderTest {
     public void move() throws Exception {
         var object1 = S3Object.builder().key("dir1/key1").build();
         var object2 = S3Object.builder().key("dir1/subdir/key2").build();
-        when(mockClient.listObjectsV2(anyConsumer())).thenReturn(CompletableFuture.supplyAsync(() ->
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2).isTruncated(false).nextContinuationToken(null).build()));
         var headObjectRequest1 = HeadObjectRequest.builder().bucket("foo").key("dir2/key1").build();
         when(mockClient.headObject(headObjectRequest1)).thenReturn(CompletableFuture.supplyAsync(() ->

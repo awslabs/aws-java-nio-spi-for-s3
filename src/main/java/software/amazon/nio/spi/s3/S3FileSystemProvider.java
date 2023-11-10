@@ -16,6 +16,7 @@ import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
@@ -832,14 +833,13 @@ public class S3FileSystemProvider extends FileSystemProvider {
         String continuationToken = null;
         var hasMoreItems = true;
         List<List<ObjectIdentifier>> keys = new ArrayList<>();
+        final var requestBuilder = ListObjectsV2Request.builder().bucket(bucketName).prefix(prefix);
 
         while (hasMoreItems) {
             var finalContinuationToken = continuationToken;
-            var response = s3Client.listObjectsV2(req -> req
-                            .bucket(bucketName)
-                            .prefix(prefix)
-                            .continuationToken(finalContinuationToken))
-                    .get(timeOut, unit);
+            var response = s3Client.listObjectsV2(
+                requestBuilder.continuationToken(finalContinuationToken).build()
+            ).get(timeOut, unit);
             var objects = response.contents()
                     .stream()
                     .filter(s3Object -> s3Object.key().equals(prefix) || s3Object.key().startsWith(prefix + PATH_SEPARATOR))
