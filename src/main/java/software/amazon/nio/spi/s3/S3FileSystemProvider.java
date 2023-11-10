@@ -670,32 +670,13 @@ public class S3FileSystemProvider extends FileSystemProvider {
             if (!create) {
                 throw new FileSystemNotFoundException("file system not found for '" + info.key() + "'");
             }
-            return forUri(uri, info);
+
+            var config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
+            if (info.accessKey() != null) {
+                config.withCredentials(info.accessKey(), info.accessSecret());
+            }
+            return new S3FileSystem(this, config);
         });
-    }
-
-    S3FileSystem forUri(URI uri, S3FileSystemInfo info){
-        if (uri == null) {
-            throw new IllegalArgumentException("uri can not be null");
-        }
-        if (uri.getScheme() == null) {
-            throw new IllegalArgumentException(
-                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri)
-            );
-        }
-        if (uri.getAuthority() == null) {
-            throw new IllegalArgumentException(
-                    String.format("invalid uri '%s', please provide an uri as s3://bucket", uri)
-            );
-        }
-
-        var config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
-
-        if (info.accessKey() != null) {
-            config.withCredentials(info.accessKey(), info.accessSecret());
-        }
-
-        return new S3FileSystem(this, config);
     }
 
     void closeFileSystem(FileSystem fs) {
