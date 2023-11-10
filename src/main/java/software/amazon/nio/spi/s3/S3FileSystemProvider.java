@@ -396,41 +396,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
     }
 
-    private CompletableFuture<CompletedCopy> copyKey(String sourceObjectIdentifierKey, String sourcePrefix, String sourceBucket, S3Path targetPath, S3TransferManager transferManager, Function<S3Path, Boolean> fileExistsAndCannotReplaceFn) throws FileAlreadyExistsException {
-        final var sanitizedIdKey = sourceObjectIdentifierKey.replaceFirst(sourcePrefix, "");
-        var resolvedS3TargetPath = targetPath.resolve(sanitizedIdKey);
-
-        if (fileExistsAndCannotReplaceFn.apply(resolvedS3TargetPath)) {
-            throw new FileAlreadyExistsException("File already exists at the target key");
-        }
-
-        return transferManager.copy(CopyRequest.builder()
-                .copyObjectRequest(CopyObjectRequest.builder()
-                        .checksumAlgorithm(ChecksumAlgorithm.SHA256)
-                        .sourceBucket(sourceBucket)
-                        .sourceKey(sourceObjectIdentifierKey)
-                        .destinationBucket(resolvedS3TargetPath.bucketName())
-                        .destinationKey(resolvedS3TargetPath.getKey())
-                        .build())
-                .build()).completionFuture();
-    }
-
-    private Function<S3Path, Boolean> cannotReplaceAndFileExistsCheck(CopyOption[] options, S3AsyncClient s3Client) {
-        final var canReplaceFile = Arrays.asList(options).contains(StandardCopyOption.REPLACE_EXISTING);
-
-        return (S3Path destination) -> {
-            if (canReplaceFile) return false;
-            try {
-                return exists(s3Client, destination);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException(e);
-            } catch (TimeoutException e) {
-                throw new RuntimeException(e);
-            }
-        };
-    }
-
     /**
      * Move or rename a file to a target file. This method works in exactly the
      * manner specified by the {@link Files#move} method except that both the
@@ -706,16 +671,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return new S3BasicFileAttributes(s3Path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1)).asMap(attributesFilter);
     }
 
-    private static Predicate<String> attributesFilterFor(String attributes) {
-        if (attributes.equals("*") || attributes.equals("s3")) {
-            return x -> true;
-        }
-        final var attrSet = Arrays.stream(attributes.split(","))
-                .map(attr -> attr.replaceAll("^s3:", ""))
-                .collect(Collectors.toSet());
-        return attrSet::contains;
-    }
-
     /**
      * File attributes of S3 objects cannot be set other than by creating a new object
      *
@@ -907,6 +862,51 @@ public class S3FileSystemProvider extends FileSystemProvider {
             continuationToken = response.nextContinuationToken();
         }
         return keys;
+    }
+
+    private static Predicate<String> attributesFilterFor(String attributes) {
+        if (attributes.equals("*") || attributes.equals("s3")) {
+            return x -> true;
+        }
+        final var attrSet = Arrays.stream(attributes.split(","))
+                .map(attr -> attr.replaceAll("^s3:", ""))
+                .collect(Collectors.toSet());
+        return attrSet::contains;
+    }
+
+    private CompletableFuture<CompletedCopy> copyKey(String sourceObjectIdentifierKey, String sourcePrefix, String sourceBucket, S3Path targetPath, S3TransferManager transferManager, Function<S3Path, Boolean> fileExistsAndCannotReplaceFn) throws FileAlreadyExistsException {
+        final var sanitizedIdKey = sourceObjectIdentifierKey.replaceFirst(sourcePrefix, "");
+        var resolvedS3TargetPath = targetPath.resolve(sanitizedIdKey);
+
+        if (fileExistsAndCannotReplaceFn.apply(resolvedS3TargetPath)) {
+            throw new FileAlreadyExistsException("File already exists at the target key");
+        }
+
+        return transferManager.copy(CopyRequest.builder()
+                .copyObjectRequest(CopyObjectRequest.builder()
+                        .checksumAlgorithm(ChecksumAlgorithm.SHA256)
+                        .sourceBucket(sourceBucket)
+                        .sourceKey(sourceObjectIdentifierKey)
+                        .destinationBucket(resolvedS3TargetPath.bucketName())
+                        .destinationKey(resolvedS3TargetPath.getKey())
+                        .build())
+                .build()).completionFuture();
+    }
+
+    private Function<S3Path, Boolean> cannotReplaceAndFileExistsCheck(CopyOption[] options, S3AsyncClient s3Client) {
+        final var canReplaceFile = Arrays.asList(options).contains(StandardCopyOption.REPLACE_EXISTING);
+
+        return (S3Path destination) -> {
+            if (canReplaceFile) return false;
+            try {
+                return exists(s3Client, destination);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+            } catch (TimeoutException e) {
+                throw new RuntimeException(e);
+            }
+        };
     }
 
     static S3Path checkPath(Path obj) {
