@@ -793,7 +793,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
                     // convert to S3Path and apply directory stream filter
                     return Stream.concat(commonPrefixes, objectKeys)
-                            .filter(p -> !((S3Path)fs.getPath(p)).getKey().equals(finalDirName))  // including the parent will induce loops
+                            .filter(p -> !isEqualToParent(fs, finalDirName, p))  // including the parent will induce loops
                             .map(fs::getPath)
                             .filter(path -> tryAccept(filter, path))
                             .collect(Collectors.toList());
@@ -801,6 +801,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
                 .blockingStream()
                 .map(Path.class::cast) // upcast to Path from S3Path
                 .iterator();
+    }
+
+    private static boolean isEqualToParent(FileSystem fs, String finalDirName, String p) {
+        return ((S3Path) fs.getPath(p)).getKey().equals(finalDirName);
     }
 
     private boolean tryAccept(DirectoryStream.Filter<? super Path> filter, Path path) {
