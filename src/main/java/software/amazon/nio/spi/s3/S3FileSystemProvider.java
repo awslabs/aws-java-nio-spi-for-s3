@@ -56,6 +56,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -780,21 +781,18 @@ public class S3FileSystemProvider extends FileSystemProvider {
             final ListObjectsV2Publisher listObjectsV2Publisher) {
         return Flowable.fromPublisher(listObjectsV2Publisher)
                 .flatMapIterable(response -> {
-
                     //add common prefixes from this page
-                    var items = response
+                    final var commonPrefixes = response
                             .commonPrefixes().stream()
-                            .map(CommonPrefix::prefix)
-                            .collect(Collectors.toList());
+                            .map(CommonPrefix::prefix);
 
                     //add s3 objects from this page
-                    items.addAll(response
+                    final var objectKeys = response
                             .contents().stream()
-                            .map(S3Object::key)
-                            .collect(Collectors.toList()));
+                            .map(S3Object::key);
 
                     // convert to S3Path and apply directory stream filter
-                    return items.stream()
+                    return Stream.concat(commonPrefixes, objectKeys)
                             .filter(p -> !((S3Path)fs.getPath(p)).getKey().equals(finalDirName))  // including the parent will induce loops
                             .map(fs::getPath)
                             .filter(path -> {
