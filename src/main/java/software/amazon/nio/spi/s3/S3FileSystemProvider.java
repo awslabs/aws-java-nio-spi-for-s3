@@ -781,15 +781,15 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final var keysPublisher = listObjectsV2Publisher.contents().map(S3Object::key);
 
         return Flowable.concat(prefixPublisher, keysPublisher)
-                .filter(p -> !isEqualToParent(fs, finalDirName, p))  // including the parent will induce loops
                 .map(fs::getPath)
+                .filter(p -> !isEqualToParent(finalDirName, p))  // including the parent will induce loops
                 .filter(path -> tryAccept(filter, path))
                 .blockingStream()
                 .iterator();
     }
 
-    private static boolean isEqualToParent(FileSystem fs, String finalDirName, String p) {
-        return ((S3Path) fs.getPath(p)).getKey().equals(finalDirName);
+    private static boolean isEqualToParent(String finalDirName, Path p) {
+        return ((S3Path) p).getKey().equals(finalDirName);
     }
 
     private boolean tryAccept(DirectoryStream.Filter<? super Path> filter, Path path) {
