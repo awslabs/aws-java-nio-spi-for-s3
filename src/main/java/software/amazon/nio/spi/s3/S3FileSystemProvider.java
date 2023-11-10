@@ -235,12 +235,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
             dirName = dirName + PATH_SEPARATOR;
         }
 
-        final var bucketName = s3Path.bucketName();
         final var fs = s3Path.getFileSystem();
         final var finalDirName = dirName;
 
         final var listObjectsV2Publisher = fs.client().listObjectsV2Paginator(req -> req
-                .bucket(bucketName)
+                .bucket(s3Path.bucketName())
                 .prefix(finalDirName)
                 .delimiter(PATH_SEPARATOR));
 
