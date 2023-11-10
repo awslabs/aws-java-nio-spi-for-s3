@@ -247,25 +247,24 @@ public class S3FileSystemProvider extends FileSystemProvider {
             throw new FileAlreadyExistsException("Root directory already exists");
         }
 
-        var fs = s3Directory.getFileSystem();
+        var timeOut = TIMEOUT_TIME_LENGTH_1;
+        final var unit = MINUTES;
+
         try {
             var directoryKey = s3Directory.toRealPath(NOFOLLOW_LINKS).getKey();
             if (!directoryKey.endsWith(PATH_SEPARATOR) && !directoryKey.isEmpty()) {
                 directoryKey = directoryKey + PATH_SEPARATOR;
             }
 
-            var timeOut = TIMEOUT_TIME_LENGTH_1;
-            final var unit = MINUTES;
-            try {
-                fs.client().putObject(PutObjectRequest.builder()
-                                        .bucket(fs.bucketName())
-                                        .key(directoryKey)
-                                        .build(),
-                                AsyncRequestBody.empty())
-                        .get(timeOut, unit);
-            } catch (TimeoutException e) {
-                throw logAndGenerateExceptionOnTimeOut(logger, "createDirectory", timeOut, unit);
-            }
+            s3Directory.getFileSystem().client().putObject(
+                    PutObjectRequest.builder()
+                            .bucket(s3Directory.bucketName())
+                            .key(directoryKey)
+                            .build(),
+                    AsyncRequestBody.empty()
+            ).get(timeOut, unit);
+        } catch (TimeoutException e) {
+            throw logAndGenerateExceptionOnTimeOut(logger, "createDirectory", timeOut, unit);
         } catch (ExecutionException e) {
             throw new IOException(e);
         } catch (InterruptedException e) {
