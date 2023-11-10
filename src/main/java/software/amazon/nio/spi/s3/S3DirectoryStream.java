@@ -16,11 +16,11 @@ import java.util.Iterator;
 
 import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
 
-public class S3DirectoryStream implements DirectoryStream<Path> {
+class S3DirectoryStream implements DirectoryStream<Path> {
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
     private final Iterator<Path> iterator;
 
-    public S3DirectoryStream(S3FileSystem fs, String bucketName, String finalDirName, Filter<? super Path> filter) {
+    S3DirectoryStream(S3FileSystem fs, String bucketName, String finalDirName, Filter<? super Path> filter) {
         final var listObjectsV2Publisher = fs.client().listObjectsV2Paginator(req -> req
                 .bucket(bucketName)
                 .prefix(finalDirName)
