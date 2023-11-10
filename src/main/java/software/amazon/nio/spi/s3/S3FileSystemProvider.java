@@ -246,16 +246,15 @@ public class S3FileSystemProvider extends FileSystemProvider {
         if(s3Directory.toString().equals("/") || s3Directory.toString().isEmpty()) {
             throw new FileAlreadyExistsException("Root directory already exists");
         }
+        var directoryKey = s3Directory.toRealPath(NOFOLLOW_LINKS).getKey();
+        if (!directoryKey.endsWith(PATH_SEPARATOR) && !directoryKey.isEmpty()) {
+            directoryKey = directoryKey + PATH_SEPARATOR;
+        }
 
         var timeOut = TIMEOUT_TIME_LENGTH_1;
         final var unit = MINUTES;
 
         try {
-            var directoryKey = s3Directory.toRealPath(NOFOLLOW_LINKS).getKey();
-            if (!directoryKey.endsWith(PATH_SEPARATOR) && !directoryKey.isEmpty()) {
-                directoryKey = directoryKey + PATH_SEPARATOR;
-            }
-
             s3Directory.getFileSystem().client().putObject(
                     PutObjectRequest.builder()
                             .bucket(s3Directory.bucketName())
