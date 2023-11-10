@@ -780,7 +780,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
             final FileSystem fs, String finalDirName,
             final ListObjectsV2Publisher listObjectsV2Publisher) {
         return Flowable.fromPublisher(listObjectsV2Publisher)
-                .flatMapIterable(response -> {
+                .flatMapStream(response -> {
                     //add common prefixes from this page
                     final var commonPrefixes = response.commonPrefixes().stream().map(CommonPrefix::prefix);
 
@@ -791,8 +791,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
                     return Stream.concat(commonPrefixes, objectKeys)
                             .filter(p -> !isEqualToParent(fs, finalDirName, p))  // including the parent will induce loops
                             .map(fs::getPath)
-                            .filter(path -> tryAccept(filter, path))
-                            .collect(Collectors.toList());
+                            .filter(path -> tryAccept(filter, path));
                 })
                 .blockingStream()
                 .map(Path.class::cast) // upcast to Path from S3Path
