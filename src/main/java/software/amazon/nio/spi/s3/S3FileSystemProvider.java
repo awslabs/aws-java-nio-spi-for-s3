@@ -56,7 +56,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -779,20 +778,13 @@ public class S3FileSystemProvider extends FileSystemProvider {
             final DirectoryStream.Filter<? super Path> filter,
             final FileSystem fs, String finalDirName,
             final ListObjectsV2Publisher listObjectsV2Publisher) {
-        return Flowable.fromPublisher(listObjectsV2Publisher)
-                .flatMapStream(response -> {
-                    //add common prefixes from this page
-                    final var commonPrefixes = response.commonPrefixes().stream().map(CommonPrefix::prefix);
+        final var prefixPublisher = listObjectsV2Publisher.commonPrefixes().map(CommonPrefix::prefix);
+        final var keysPublisher = listObjectsV2Publisher.contents().map(S3Object::key);
 
-                    //add s3 objects from this page
-                    final var objectKeys = response.contents().stream().map(S3Object::key);
-
-                    // convert to S3Path and apply directory stream filter
-                    return Stream.concat(commonPrefixes, objectKeys)
-                            .filter(p -> !isEqualToParent(fs, finalDirName, p))  // including the parent will induce loops
-                            .map(fs::getPath)
-                            .filter(path -> tryAccept(filter, path));
-                })
+        return Flowable.concat(prefixPublisher, keysPublisher)
+                .filter(p -> !isEqualToParent(fs, finalDirName, p))  // including the parent will induce loops
+                .map(fs::getPath)
+                .filter(path -> tryAccept(filter, path))
                 .blockingStream()
                 .map(Path.class::cast) // upcast to Path from S3Path
                 .iterator();
