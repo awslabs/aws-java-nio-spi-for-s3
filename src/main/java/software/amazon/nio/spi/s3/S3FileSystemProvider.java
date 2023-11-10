@@ -782,7 +782,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         return Flowable.concat(prefixPublisher, keysPublisher)
                 .map(fs::getPath)
-                .filter(p -> !isEqualToParent(finalDirName, p))  // including the parent will induce loops
+                .filter(path -> !isEqualToParent(finalDirName, path))  // including the parent will induce loops
                 .filter(path -> tryAccept(filter, path))
                 .blockingStream()
                 .iterator();
