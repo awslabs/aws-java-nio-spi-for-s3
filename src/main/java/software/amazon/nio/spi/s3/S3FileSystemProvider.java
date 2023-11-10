@@ -206,10 +206,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
 
         final var s3Path = checkPath(path);
-        final S3SeekableByteChannel channel;
         final var fs = s3Path.getFileSystem();
+        final S3SeekableByteChannel channel = new S3SeekableByteChannel(s3Path, fs.client(), options);
 
-        channel = new S3SeekableByteChannel(s3Path, fs.client(), options);
         fs.registerOpenChannel(channel);
 
         return channel;
