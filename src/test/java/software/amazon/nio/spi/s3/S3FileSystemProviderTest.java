@@ -46,8 +46,6 @@ import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -193,8 +191,9 @@ public class S3FileSystemProviderTest {
         var object1 = S3Object.builder().key(pathUri+"/key1").build();
         var object2 = S3Object.builder().key(pathUri+"/key2").build();
         var object3 = S3Object.builder().key(pathUri+"/").build();
-        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
-                ListObjectsV2Response.builder().contents(object1, object2, object3).build()));
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
+            completedFuture(ListObjectsV2Response.builder().contents(object1, object2, object3).build())
+        );
 
         final var expectedItems = Stream.of(object1, object2).map(obj -> fs.getPath(obj.key())).collect(Collectors.toList());
         try(var stream = provider.newDirectoryStream(fs.getPath(pathUri + "/"), path -> true)){
@@ -203,30 +202,22 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void pathIteratorForPublisher_appliesFilter() {
-        final var publisher = new ListObjectsV2Publisher(mockClient,
-                ListObjectsV2Request.builder()
-                        .bucket(fs.bucketName())
-                        .prefix(pathUri + "/")
-                        .build());
+    public void newDirectoryStreamFilters() throws IOException {
+        final var publisher = new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build());
+        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(publisher);
+
         var object1 = S3Object.builder().key(pathUri+"/key1").build();
         var object2 = S3Object.builder().key(pathUri+"/key2").build();
         var object3 = S3Object.builder().key(pathUri+"/").build();
-
-        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(publisher);
-        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
-                ListObjectsV2Response.builder().contents(object1, object2, object3).build()));
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
+            completedFuture(ListObjectsV2Response.builder().contents(object1, object2, object3).build())
+        );
 
         DirectoryStream.Filter<? super Path> filter = path -> path.toString().endsWith("key2");
 
-        var pathIterator =
-            provider.newDirectoryStream(Paths.get(URI.create(pathUri+"/")), filter).iterator();
-
-        assertNotNull(pathIterator);
-        assertTrue(pathIterator.hasNext());
-        assertEquals(fs.getPath(object2.key()), pathIterator.next());
-        // object3 and object1 should not be present
-        assertFalse(pathIterator.hasNext());
+        try(var stream = provider.newDirectoryStream(fs.getPath(pathUri + "/"), filter)){
+            assertThat(stream.iterator()).toIterable().containsExactly(fs.getPath(object2.key()));
+        }
     }
 
     private int countDirStreamItems(DirectoryStream<Path> stream) {
