@@ -167,15 +167,11 @@ public class S3FileSystemProviderTest {
 
     @Test
     public void newDirectoryStream() {
-
         var object1 = S3Object.builder().key(pathUri+"/key1").build();
         var object2 = S3Object.builder().key(pathUri+"/key2").build();
 
-        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(new ListObjectsV2Publisher(mockClient,
-                ListObjectsV2Request.builder()
-                        .bucket(fs.bucketName())
-                        .prefix(pathUri + "/")
-                        .build())
+        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(
+                new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build())
         );
 
         when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
