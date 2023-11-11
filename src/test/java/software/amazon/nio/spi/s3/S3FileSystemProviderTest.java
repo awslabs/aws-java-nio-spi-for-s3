@@ -51,6 +51,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -168,13 +169,14 @@ public class S3FileSystemProviderTest {
     @Test
     public void newDirectoryStream() {
         when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(
-                new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build())
+            new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build())
         );
 
         var object1 = S3Object.builder().key(pathUri+"/key1").build();
         var object2 = S3Object.builder().key(pathUri+"/key2").build();
-        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
-                ListObjectsV2Response.builder().contents(object1, object2).build()));
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
+            completedFuture(ListObjectsV2Response.builder().contents(object1, object2).build())
+        );
 
         final var stream = provider.newDirectoryStream(fs.getPath(pathUri+"/"), entry -> true);
         assertThat(stream).hasSize(2);
@@ -454,7 +456,7 @@ public class S3FileSystemProviderTest {
         var foo = fs.getPath("/foo");
         var fooDir = fs.getPath("/foo/");
 
-        when(mockClient.headObject(anyConsumer())).thenReturn(CompletableFuture.completedFuture(
+        when(mockClient.headObject(anyConsumer())).thenReturn(completedFuture(
                 HeadObjectResponse.builder()
                         .lastModified(Instant.EPOCH)
                         .contentLength(100L)
