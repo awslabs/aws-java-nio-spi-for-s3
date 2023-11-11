@@ -181,9 +181,9 @@ public class S3FileSystemProviderTest {
         final var stream = provider.newDirectoryStream(fs.getPath(pathUri+"/"), entry -> true);
         assertThat(stream).hasSize(2);
     }
-
+//pathIteratorForPublisher_withPagination
     @Test
-    public void pathIteratorForPublisher_withPagination() {
+    public void newDirectoryStreamFiltersSelf() {
         final var publisher = new ListObjectsV2Publisher(mockClient,
                 ListObjectsV2Request.builder()
                         .bucket(fs.bucketName())
