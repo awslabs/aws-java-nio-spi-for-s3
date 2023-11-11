@@ -178,8 +178,7 @@ public class S3FileSystemProviderTest {
                 ListObjectsV2Response.builder().contents(object1, object2).build()));
 
         final var stream = provider.newDirectoryStream(fs.getPath(pathUri+"/"), entry -> true);
-        assertNotNull(stream);
-        assertEquals(2, countDirStreamItems(stream));
+        assertThat(stream).hasSize(2);
     }
 
     @Test
