@@ -46,10 +46,13 @@ import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -181,32 +184,22 @@ public class S3FileSystemProviderTest {
         final var stream = provider.newDirectoryStream(fs.getPath(pathUri+"/"), entry -> true);
         assertThat(stream).hasSize(2);
     }
-//pathIteratorForPublisher_withPagination
+
     @Test
-    public void newDirectoryStreamFiltersSelf() {
-        final var publisher = new ListObjectsV2Publisher(mockClient,
-                ListObjectsV2Request.builder()
-                        .bucket(fs.bucketName())
-                        .prefix(pathUri + "/")
-                        .build());
+    public void newDirectoryStreamFiltersSelf() throws IOException {
+        final var publisher = new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build());
+        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(publisher);
+
         var object1 = S3Object.builder().key(pathUri+"/key1").build();
         var object2 = S3Object.builder().key(pathUri+"/key2").build();
         var object3 = S3Object.builder().key(pathUri+"/").build();
-
-        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(publisher);
         when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2, object3).build()));
 
-        var pathIterator =
-            provider.newDirectoryStream(fs.getPath(pathUri + "/"), path -> true).iterator();
-
-        assertNotNull(pathIterator);
-        assertTrue(pathIterator.hasNext());
-        assertEquals(fs.getPath(object1.key()), pathIterator.next());
-        assertTrue(pathIterator.hasNext());
-        assertEquals(fs.getPath(object2.key()), pathIterator.next());
-        // object3 should not be present
-        assertFalse(pathIterator.hasNext());
+        final var expectedItems = Stream.of(object1, object2).map(obj -> fs.getPath(obj.key())).collect(Collectors.toList());
+        try(var stream = provider.newDirectoryStream(fs.getPath(pathUri + "/"), path -> true)){
+            assertThat(stream.iterator()).toIterable().containsExactlyElementsOf(expectedItems);
+        }
     }
 
     @Test
