@@ -3,26 +3,24 @@ package software.amazon.nio.spi.s3;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import static org.assertj.core.api.BDDAssertions.then;
-import static software.amazon.nio.spi.s3.Containers.localStackConnectionEndpoint;
 import static software.amazon.nio.spi.s3.Containers.putObject;
 
 @DisplayName("Files$read* should load file contents from localstack")
-public class FilesReadTest
-{
-    private final Path path = Paths.get(URI.create(localStackConnectionEndpoint() + "/sink/files-read.txt"));
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+public class FilesReadTest {
+    private Path path;
 
     @BeforeAll
-    public static void createBucketAndFile(){
+    public void createBucketAndFile(){
         Containers.createBucket("sink");
-        putObject("sink", "files-read.txt", "some content");
+        path = putObject("sink", "files-read.txt", "some content");
     }
 
     @Test

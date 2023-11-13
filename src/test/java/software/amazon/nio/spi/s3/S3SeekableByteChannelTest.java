@@ -17,12 +17,14 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.OpenOption;
-import java.nio.file.StandardOpenOption;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterEach;
+
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.READ;
+import static java.nio.file.StandardOpenOption.WRITE;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -91,12 +93,9 @@ public class S3SeekableByteChannelTest {
         when(mockClient.headObject(any(HeadObjectRequest.class))).thenThrow(NoSuchKeyException.class);
         when(mockClient.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 PutObjectResponse.builder().build()));
-        Set<OpenOption> options = new HashSet<>();
-        options.add(StandardOpenOption.CREATE);
-        options.add(StandardOpenOption.WRITE);
-        var channel = new S3SeekableByteChannel(path, mockClient, options);
-        channel.write(ByteBuffer.allocate(1));
-        channel.close();
+        try(var channel = new S3SeekableByteChannel(path, mockClient, Set.<OpenOption>of(CREATE, WRITE))){
+            channel.write(ByteBuffer.allocate(1));
+        }
     }
 
     @Test
@@ -143,7 +142,7 @@ public class S3SeekableByteChannelTest {
     }
 
     private S3SeekableByteChannel seekableByteChannelForRead() throws IOException {
-        return new S3SeekableByteChannel(path, mockClient, Collections.singleton(StandardOpenOption.READ));
+        return new S3SeekableByteChannel(path, mockClient, Collections.singleton(READ));
     }
 
 }

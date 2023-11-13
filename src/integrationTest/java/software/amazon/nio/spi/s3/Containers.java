@@ -3,6 +3,10 @@ package software.amazon.nio.spi.s3;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.S3;
@@ -28,15 +32,16 @@ abstract class Containers {
          .doesNotThrowAnyException();
     }
 
-    public static void putObject(String bucket, String key) {
+    public static Path putObject(String bucket, String key) {
         assertThatCode(() -> {
             var execResult = LOCAL_STACK_CONTAINER.execInContainer(("awslocal s3api put-object --bucket " + bucket + " --key " + key).split(" "));
             assertThat(execResult.getExitCode()).isZero();
         }).as("Failed to put object '%s' in bucket '%s'", key, bucket)
          .doesNotThrowAnyException();
+        return Paths.get(URI.create(String.format("%s/%s/%s", localStackConnectionEndpoint(), bucket, key)));
     }
 
-    public static void putObject(String bucket, String key, String content) {
+    public static Path putObject(String bucket, String key, String content) {
         assertThatCode(() -> {
             var execResultCreateFile = LOCAL_STACK_CONTAINER.execInContainer("sh", "-c", "echo -n '" + content + "' > " + key);
             var execResultPut = LOCAL_STACK_CONTAINER.execInContainer(("awslocal s3api put-object --bucket " + bucket + " --key " + key + " --body " + key).split(" "));
@@ -45,6 +50,7 @@ abstract class Containers {
             assertThat(execResultPut.getExitCode()).withFailMessage("Failed put: %s ", execResultPut.getStderr()).isZero();
         }).as("Failed to put object '%s' in bucket '%s'", key, bucket)
                 .doesNotThrowAnyException();
+        return Paths.get(URI.create(String.format("%s/%s/%s", localStackConnectionEndpoint(), bucket, key)));
     }
 
     public static String localStackConnectionEndpoint() {
