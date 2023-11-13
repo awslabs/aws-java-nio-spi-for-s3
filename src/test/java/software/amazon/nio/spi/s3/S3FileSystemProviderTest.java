@@ -168,7 +168,7 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void newDirectoryStream() {
+    public void newDirectoryStream() throws IOException {
         when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(
             new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build())
         );

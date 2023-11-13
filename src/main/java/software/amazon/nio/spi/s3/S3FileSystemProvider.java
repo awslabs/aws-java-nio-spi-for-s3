@@ -16,6 +16,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -46,6 +47,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -221,7 +223,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @return a new and open {@code DirectoryStream} object
      */
     @Override
-    public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) {
+    public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
         var s3Path = checkPath(dir);
 
         var dirName = s3Path.toAbsolutePath().getKey();
@@ -229,7 +231,14 @@ public class S3FileSystemProvider extends FileSystemProvider {
             dirName = dirName + PATH_SEPARATOR;
         }
 
-        return new S3DirectoryStream(s3Path.getFileSystem(), s3Path.bucketName(), dirName, filter);
+        try {
+            return new S3DirectoryStream(s3Path.getFileSystem(), s3Path.bucketName(), dirName, filter);
+        } catch (CompletionException e) {
+            if (e.getCause() instanceof NoSuchBucketException ) {
+                throw  new NoSuchFileException("Bucket '" + s3Path.bucketName() + "' not found", s3Path.toString(), e.getMessage());
+            }
+            throw e;
+        }
     }
 
     /**

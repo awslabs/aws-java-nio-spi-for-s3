@@ -19,11 +19,12 @@ public class FilesDirectoryStreamTest {
     @DisplayName("should throw")
     class DirectoryDoesNotExist {
 
-        @Test
         @DisplayName("when bucket does not exist")
+        @Test
+        @SuppressWarnings("resource")
         public void whenBucketNotFound() {
             final var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/does-not-exist/some-directory"));
-            assertThatThrownBy(() -> Files.newDirectoryStream(path, p -> true).iterator().hasNext())
+            assertThatThrownBy(() -> Files.newDirectoryStream(path, p -> true))
                 .isInstanceOf(NoSuchFileException.class);
         }
     }

@@ -27,6 +27,8 @@ class S3DirectoryStream implements DirectoryStream<Path> {
                 .delimiter(PATH_SEPARATOR));
 
         iterator = pathIteratorForPublisher(filter, fs, finalDirName, listObjectsV2Publisher);
+        //noinspection ResultOfMethodCallIgnored
+        iterator.hasNext();
     }
 
     @Override
