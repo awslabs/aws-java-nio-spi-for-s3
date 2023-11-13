@@ -361,7 +361,22 @@ jar to use. Don't put both jars on your classpath or extension path, you will ob
 
 ## Testing
 
+### Unit Tests
+
+We use [JUnit 5](https://junit.org/junit5/), [AssertJ](https://assertj.github.io/doc/) and [Mockito](https://site.mockito.org/)
+for unit testing.
+
+When contributing code for bug fixes or feature improvements, matching tests should also be provided. Tests must not
+rely on specific S3 bucket access or credentials. To this end, S3 clients and other artifacts should be mocked as
+necessary. Remember, you are testing this library, not the behavior of S3. If you wish to do that you may want to write
+an integration test.
+
 Run unit tests with `./gradlew test`
+
+### Integration Tests
+
+Integration tests emulate S3 behavior using [localstack](https://github.com/localstack/localstack). 
+Running tests requires a container runtime such as Docker or Podman.
 
 Run integration tests with `./gradlew integrationTest`
 
@@ -385,11 +400,3 @@ We encourage community contributions via pull requests. Please refer to our [cod
 
 Code must compile to JDK 11 compatible bytecode. Matching unit tests are required for new features and fixes.
 
-### Contributing Unit Tests
-
-We use [JUnit 5](https://junit.org/junit5/), [AssertJ](https://assertj.github.io/doc/) and [Mockito](https://site.mockito.org/) 
-for unit testing.
-
-When contributing code for bug fixes or feature improvements, matching tests should also be provided. Tests must not
-rely on specific S3 bucket access or credentials. To this end, S3 clients and other artifacts should be mocked as
-necessary. Remember, you are testing this library, not the behavior of S3.
