@@ -41,8 +41,7 @@ class S3DirectoryStream implements DirectoryStream<Path> {
     public void close() {}
 
     /**
-     * Get an iterator for a {@code ListObjectsV2Publisher}. This method is protected level access only for testing
-     * purposes. It is not intended to be used by any other code outside of this class.
+     * Get an iterator for a {@code ListObjectsV2Publisher}
      * @param filter a filter to apply to returned Paths. Only accepted paths will be included.
      * @param fs the Filesystem.
      * @param finalDirName the directory name that will be streamed.
