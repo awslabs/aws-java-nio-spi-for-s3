@@ -204,7 +204,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         final var s3Path = checkPath(path);
         final var fs = s3Path.getFileSystem();
-        final S3SeekableByteChannel channel = new S3SeekableByteChannel(s3Path, fs.client(), options);
+        final var channel = new S3SeekableByteChannel(s3Path, fs.client(), options);
 
         fs.registerOpenChannel(channel);
 
@@ -352,7 +352,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final var timeOut = TIMEOUT_TIME_LENGTH_1;
         final var unit = MINUTES;
 
-        Function<S3Path, Boolean> fileExistsAndCannotReplace = cannotReplaceAndFileExistsCheck(options, s3Client);
+        var fileExistsAndCannotReplace = cannotReplaceAndFileExistsCheck(options, s3Client);
 
         try {
             var sourceKeys = getContainedObjectBatches(s3Client, sourceBucket, sourcePrefix, timeOut, unit);
@@ -645,7 +645,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         if (s3Path.isDirectory() || attributes.trim().isEmpty())
             return Collections.emptyMap();
 
-        Predicate<String> attributesFilter = attributesFilterFor(attributes);
+        var attributesFilter = attributesFilterFor(attributes);
         return new S3BasicFileAttributes(s3Path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1)).asMap(attributesFilter);
     }
 
