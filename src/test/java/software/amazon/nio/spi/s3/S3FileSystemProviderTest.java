@@ -50,7 +50,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -166,78 +168,56 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void newDirectoryStream() {
-
-        var object1 = S3Object.builder().key(pathUri+"/key1").build();
-        var object2 = S3Object.builder().key(pathUri+"/key2").build();
-
-        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(new ListObjectsV2Publisher(mockClient,
-                ListObjectsV2Request.builder()
-                        .bucket(fs.bucketName())
-                        .prefix(pathUri + "/")
-                        .build())
+    public void newDirectoryStream() throws IOException {
+        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(
+            new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build())
         );
 
-        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
-                ListObjectsV2Response.builder().contents(object1, object2).build()));
+        var object1 = S3Object.builder().key(pathUri+"/key1").build();
+        var object2 = S3Object.builder().key(pathUri+"/key2").build();
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
+            completedFuture(ListObjectsV2Response.builder().contents(object1, object2).build())
+        );
 
         final var stream = provider.newDirectoryStream(fs.getPath(pathUri+"/"), entry -> true);
-        assertNotNull(stream);
-        assertEquals(2, countDirStreamItems(stream));
+        assertThat(stream).hasSize(2);
     }
 
     @Test
-    public void pathIteratorForPublisher_withPagination() {
-        final var publisher = new ListObjectsV2Publisher(mockClient,
-                ListObjectsV2Request.builder()
-                        .bucket(fs.bucketName())
-                        .prefix(pathUri + "/")
-                        .build());
+    public void newDirectoryStreamFiltersSelf() throws IOException {
+        final var publisher = new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build());
+        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(publisher);
+
         var object1 = S3Object.builder().key(pathUri+"/key1").build();
         var object2 = S3Object.builder().key(pathUri+"/key2").build();
         var object3 = S3Object.builder().key(pathUri+"/").build();
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
+            completedFuture(ListObjectsV2Response.builder().contents(object1, object2, object3).build())
+        );
 
-        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(publisher);
-        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
-                ListObjectsV2Response.builder().contents(object1, object2, object3).build()));
-
-        var pathIterator =
-            provider.newDirectoryStream(fs.getPath(pathUri + "/"), path -> true).iterator();
-
-        assertNotNull(pathIterator);
-        assertTrue(pathIterator.hasNext());
-        assertEquals(fs.getPath(object1.key()), pathIterator.next());
-        assertTrue(pathIterator.hasNext());
-        assertEquals(fs.getPath(object2.key()), pathIterator.next());
-        // object3 should not be present
-        assertFalse(pathIterator.hasNext());
+        final var expectedItems = Stream.of(object1, object2).map(obj -> fs.getPath(obj.key())).collect(Collectors.toList());
+        try(var stream = provider.newDirectoryStream(fs.getPath(pathUri + "/"), path -> true)){
+            assertThat(stream.iterator()).toIterable().containsExactlyElementsOf(expectedItems);
+        }
     }
 
     @Test
-    public void pathIteratorForPublisher_appliesFilter() {
-        final var publisher = new ListObjectsV2Publisher(mockClient,
-                ListObjectsV2Request.builder()
-                        .bucket(fs.bucketName())
-                        .prefix(pathUri + "/")
-                        .build());
+    public void newDirectoryStreamFilters() throws IOException {
+        final var publisher = new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build());
+        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(publisher);
+
         var object1 = S3Object.builder().key(pathUri+"/key1").build();
         var object2 = S3Object.builder().key(pathUri+"/key2").build();
         var object3 = S3Object.builder().key(pathUri+"/").build();
-
-        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(publisher);
-        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
-                ListObjectsV2Response.builder().contents(object1, object2, object3).build()));
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
+            completedFuture(ListObjectsV2Response.builder().contents(object1, object2, object3).build())
+        );
 
         DirectoryStream.Filter<? super Path> filter = path -> path.toString().endsWith("key2");
 
-        var pathIterator =
-            provider.newDirectoryStream(Paths.get(URI.create(pathUri+"/")), filter).iterator();
-
-        assertNotNull(pathIterator);
-        assertTrue(pathIterator.hasNext());
-        assertEquals(fs.getPath(object2.key()), pathIterator.next());
-        // object3 and object1 should not be present
-        assertFalse(pathIterator.hasNext());
+        try(var stream = provider.newDirectoryStream(fs.getPath(pathUri + "/"), filter)){
+            assertThat(stream.iterator()).toIterable().containsExactly(fs.getPath(object2.key()));
+        }
     }
 
     private int countDirStreamItems(DirectoryStream<Path> stream) {
@@ -277,7 +257,7 @@ public class S3FileSystemProviderTest {
     public void delete() throws Exception {
         var object1 = S3Object.builder().key("dir/key1").build();
         var object2 = S3Object.builder().key("dir/subdir/key2").build();
-        when(mockClient.listObjectsV2(anyConsumer())).thenReturn(CompletableFuture.supplyAsync(() ->
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2).isTruncated(false).nextContinuationToken(null).build()));
         when(mockClient.deleteObjects(any(DeleteObjectsRequest.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 DeleteObjectsResponse.builder().build()));
@@ -298,7 +278,7 @@ public class S3FileSystemProviderTest {
     public void copy() throws Exception {
         var object1 = S3Object.builder().key("dir1/key1").build();
         var object2 = S3Object.builder().key("dir1/subdir/key2").build();
-        when(mockClient.listObjectsV2(anyConsumer())).thenReturn(CompletableFuture.supplyAsync(() ->
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2).isTruncated(false).nextContinuationToken(null).build()));
         var headObjectRequest1 = HeadObjectRequest.builder().bucket("foo").key("dir2/key1").build();
         when(mockClient.headObject(headObjectRequest1)).thenReturn(CompletableFuture.supplyAsync(() ->
@@ -328,7 +308,7 @@ public class S3FileSystemProviderTest {
     public void move() throws Exception {
         var object1 = S3Object.builder().key("dir1/key1").build();
         var object2 = S3Object.builder().key("dir1/subdir/key2").build();
-        when(mockClient.listObjectsV2(anyConsumer())).thenReturn(CompletableFuture.supplyAsync(() ->
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 ListObjectsV2Response.builder().contents(object1, object2).isTruncated(false).nextContinuationToken(null).build()));
         var headObjectRequest1 = HeadObjectRequest.builder().bucket("foo").key("dir2/key1").build();
         when(mockClient.headObject(headObjectRequest1)).thenReturn(CompletableFuture.supplyAsync(() ->
@@ -460,7 +440,7 @@ public class S3FileSystemProviderTest {
         var foo = fs.getPath("/foo");
         var fooDir = fs.getPath("/foo/");
 
-        when(mockClient.headObject(anyConsumer())).thenReturn(CompletableFuture.completedFuture(
+        when(mockClient.headObject(anyConsumer())).thenReturn(completedFuture(
                 HeadObjectResponse.builder()
                         .lastModified(Instant.EPOCH)
                         .contentLength(100L)
