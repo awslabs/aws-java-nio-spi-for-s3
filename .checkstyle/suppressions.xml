@@ -21,7 +21,7 @@
 <suppressions>
     <!-- ignore all checks for test classes except for the NoIgnoreAnnotationsCheck -->
     <suppress checks="^((?!NoIgnoreAnnotationsCheck).)*$"
-              files=".*[\\/](test|it)[\\/]java[\\/].+\.java$"/>
+              files=".*[\\/](test|integrationTest)[\\/]java[\\/].+\.java$"/>
 
     <!-- ignore missing annotation checks under test/codegen directory -->
     <suppress checks="MissingSdkAnnotationCheck"
