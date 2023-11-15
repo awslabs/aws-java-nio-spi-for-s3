@@ -5,13 +5,12 @@
 
 package software.amazon.nio.spi.s3.util;
 
-import org.slf4j.Logger;
+import static java.lang.String.format;
 
 import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-
-import static java.lang.String.format;
+import org.slf4j.Logger;
 
 public class TimeOutUtils {
 
