@@ -5,23 +5,20 @@
 
 package software.amazon.nio.spi.s3.config;
 
-
 import java.net.URI;
 import java.util.HashMap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.regex.Pattern;
-import software.amazon.awssdk.utils.Pair;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.services.s3.internal.BucketUtils;
+import software.amazon.awssdk.utils.Pair;
 
 /**
  * Object to hold configuration of the S3 NIO SPI
