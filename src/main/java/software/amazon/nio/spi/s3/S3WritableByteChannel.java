@@ -5,8 +5,6 @@
 
 package software.amazon.nio.spi.s3;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
@@ -17,11 +15,13 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.Objects;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 class S3WritableByteChannel implements WritableByteChannel {
     private final S3Path path;
