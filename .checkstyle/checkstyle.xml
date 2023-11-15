@@ -237,13 +237,6 @@
                      value="Method name ''{0}'' must match pattern ''{1}''."/>
         </module>
 
-        <!-- Should not use kotlin function name as public method name -->
-        <module name="software.amazon.awssdk.buildtools.checkstyle.SdkPublicMethodNameCheck">
-            <property name="format" value="^(?!(?:apply|let|run|also|with)$).*$"/>
-            <message key="name.invalidPattern"
-                     value="Method name ''{0}'' conflicts with kotlin function name"/>
-        </module>
-
         <!-- Finalizers must not be overridden. -->
         <module name="NoFinalizer"/>
 
@@ -398,52 +391,11 @@
             <property name="ignoreComments" value="true"/>
         </module>
 
-        <!-- Checks that we don't use the @Ignore annotation on tests -->
-        <module name="software.amazon.awssdk.buildtools.checkstyle.NoIgnoreAnnotationsCheck">
-        </module>
-
-        <!-- Checks that we don't use plural enum names -->
-        <module name="software.amazon.awssdk.buildtools.checkstyle.PluralEnumNames"/>
-
         <!-- Checks for redundant public modifier on interfaces and other redundant modifiers -->
         <module name="RedundantModifier" />
 
         <!-- Checks for utility and constants classes to have private constructor-->
         <module name="HideUtilityClassConstructor"/>
-
-        <!-- Checks that every class is marked with Sdk Annotation -->
-        <module name="software.amazon.awssdk.buildtools.checkstyle.MissingSdkAnnotationCheck" />
-
-        <!-- Checks that no 'final' are added on local variables -->
-        <module name="software.amazon.awssdk.buildtools.checkstyle.UnnecessaryFinalOnLocalVariableCheck" />
-
-        <module name="software.amazon.awssdk.buildtools.checkstyle.SdkIllegalImportCheck">
-            <property name="classNameToCheck" value="StaticTableSchema"/>
-            <property name="illegalPkgs" value="java.lang.reflect.*"/>
-        </module>
-
-        <module name="software.amazon.awssdk.buildtools.checkstyle.SdkIllegalImportCheck">
-            <property name="classNameToCheck" value="StaticImmutableTableSchema"/>
-            <property name="illegalPkgs" value="java.lang.reflect.*"/>
-        </module>
-
-        <module name="software.amazon.awssdk.buildtools.checkstyle.SdkIllegalImportCheck">
-            <property name="classNameToCheck" value=".*"/>
-            <property name="packageToCheck" value="software.amazon.awssdk.http.nio.netty" />
-            <property name="illegalPkgs" value="software.amazon.awssdk.utils.Logger,org.slf4j.Logger"/>
-        </module>
-
-        <module name="software.amazon.awssdk.buildtools.checkstyle.NonJavaBaseModuleCheck">
-            <!--
-            codegen: Allowed to use classes from java.compiler, because poet requires them.
-            aws-query-protocol: Allowed to use classes from java.xml for XML parsing.
-            protocol-tests-core: Allows to use classes from java.xml for XML assertions.
-            dynamodb-enhanced: Allowed to use classes from java.beans for bean processing.
-            release-scripts: Allowed to use classes from java.xml for XML writing.
-            sdk-benchmarks: Allowed to use classes from javax.servlet.http for benchmark servlets.
-            -->
-            <property name="legalPackages" value="software.amazon.awssdk.codegen:javax.lang.model, software.amazon.awssdk.codegen:javax.lang.model.element, software.amazon.awssdk.codegen:javax.lang.model.type, software.amazon.awssdk.protocols.query:javax.xml.stream, software.amazon.awssdk.protocols.query:javax.xml.stream.events, software.amazon.awssdk.protocol.asserts.marshalling:javax.xml, software.amazon.awssdk.protocol.asserts.marshalling:javax.xml.parsers, software.amazon.awssdk.protocol.asserts.marshalling:javax.xml.transform, software.amazon.awssdk.protocol.asserts.marshalling:javax.xml.transform.dom, software.amazon.awssdk.protocol.asserts.marshalling:javax.xml.transform.stream, software.amazon.awssdk.enhanced.dynamodb:java.beans, software.amazon.awssdk.release:javax.xml, software.amazon.awssdk.release:javax.xml.parsers, software.amazon.awssdk.release:javax.xml.transform, software.amazon.awssdk.release:javax.xml.xpath, software.amazon.awssdk.release:javax.xml.transform.dom, software.amazon.awssdk.release:javax.xml.transform.stream, software.amazon.awssdk.benchmark:javax.servlet.http"/>
-        </module>
     </module>
 
     <!-- Enforce maximum line lengths. -->

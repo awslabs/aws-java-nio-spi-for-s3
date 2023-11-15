@@ -27,18 +27,6 @@
     <suppress checks="MissingSdkAnnotationCheck"
               files=".(codegen|test|release)[\\/].+\.java$"/>
 
-    <!-- TODO want to contribute this back to Netty -->
-    <suppress checks=".*"
-              files=".*BetterFixedChannelPool\.java$"/>
-
-    <!-- TODO want to contribute this back to Netty -->
-    <suppress checks=".*"
-              files=".*[\\/]io[\\/]netty[\\/]handler[\\/]codec[\\/]http2[\\/].*\.java$"/>
-
-    <!-- Assumes getter/setter match JSON property -->
-    <suppress checks="AbbreviationAsWordInName"
-              files=".*[\\/]software[\\/]amazon[\\/]awssdk[\\/]services[\\/]s3[\\/]event[\\/]S3EventNotification.java$"/>
-
     <!-- Ignore usage of Thread.currentThread().getContextClassLoader for ClassLoaderHelper.!-->
     <suppress checks="Regexp"
               files=".*ClassLoaderHelper\.java$"/>
@@ -46,9 +34,6 @@
     <!-- Ignore usage of sslContext.newHandler for NettyUtils.!-->
     <suppress checks="Regexp"
               files=".*NettyUtils\.java$"/>
-
-    <!-- Allow non-java.base usage in tests -->
-    <suppress checks="software.amazon.awssdk.buildtools.checkstyle.NonJavaBaseModuleCheck" files=".*testutils.*"/>
 
     <!-- Allow private field declaration before public, to have correct initialization order -->
     <suppress checks="DeclarationOrder"
