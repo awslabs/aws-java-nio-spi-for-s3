@@ -5,9 +5,8 @@
 
 package software.amazon.nio.spi.s3.util;
 
-import software.amazon.awssdk.services.s3.internal.BucketUtils;
-
 import java.net.URI;
+import software.amazon.awssdk.services.s3.internal.BucketUtils;
 
 /**
  * Populates fields with information extracted by the S3 URI provided. This
