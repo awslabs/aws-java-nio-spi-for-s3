@@ -14,6 +14,7 @@ plugins {
     id 'jacoco'
     id 'jvm-test-suite'
     id 'jacoco-report-aggregation'
+    id 'checkstyle'
     id 'com.github.johnrengelman.shadow' version '7.1.2'
     id 'com.palantir.revapi' version '1.7.0'
 }
@@ -164,4 +165,9 @@ jacocoTestReport {
         xml.required = true
         xml.outputLocation = file("build/reports/coverage.xml")
     }
+}
+
+checkstyle {
+    toolVersion = '10.12.5'
+    configDirectory.set(new File(projectDir, ".checkstyle"))
 }
