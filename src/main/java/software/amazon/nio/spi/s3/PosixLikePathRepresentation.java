@@ -5,14 +5,14 @@
 
 package software.amazon.nio.spi.s3;
 
+import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
 
 /**
  * A class to hold a string representation of a Posix like path pointing to an S3 object or "directory". Provide methods
