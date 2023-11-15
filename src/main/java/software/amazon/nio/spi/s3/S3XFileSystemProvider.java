@@ -5,10 +5,9 @@
 
 package software.amazon.nio.spi.s3;
 
+import java.net.URI;
 import software.amazon.nio.spi.s3.util.S3FileSystemInfo;
 import software.amazon.nio.spi.s3.util.S3XFileSystemInfo;
-
-import java.net.URI;
 
 public class S3XFileSystemProvider extends S3FileSystemProvider {
 
