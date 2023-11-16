@@ -90,7 +90,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * Constant for the S3 scheme "s3"
      */
     static final String SCHEME = "s3";
-    private static final Map<String, S3FileSystem> cache = new HashMap<>();
+    private static final Map<String, S3FileSystem> FS_CACHE = new HashMap<>();
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
@@ -697,7 +697,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     S3FileSystem getFileSystem(URI uri, boolean create) {
         var info = fileSystemInfo(uri);
-        return cache.computeIfAbsent(info.key(), (key) -> {
+        return FS_CACHE.computeIfAbsent(info.key(), (key) -> {
             if (!create) {
                 throw new FileSystemNotFoundException("file system not found for '" + info.key() + "'");
             }
@@ -711,9 +711,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     void closeFileSystem(FileSystem fs) {
-        for (var key : cache.keySet()) {
-            if (fs == cache.get(key)) {
-                try (FileSystem closeable = cache.remove(key)) {
+        for (var key : FS_CACHE.keySet()) {
+            if (fs == FS_CACHE.get(key)) {
+                try (FileSystem closeable = FS_CACHE.remove(key)) {
                     closeFileSystemIfOpen(closeable);
                     return;
                 } catch (IOException e) {

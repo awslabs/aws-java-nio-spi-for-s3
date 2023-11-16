@@ -44,7 +44,7 @@ public class S3FileSystem extends FileSystem {
      */
     static final String BASIC_FILE_ATTRIBUTE_VIEW = "basic";
 
-    private static final Set<String> supportedFileAttributeViews =
+    private static final Set<String> SUPPORTED_FILE_ATTRIBUTE_VIEWS =
         Collections.singleton(BASIC_FILE_ATTRIBUTE_VIEW);
 
     S3ClientProvider clientProvider;
@@ -202,7 +202,7 @@ public class S3FileSystem extends FileSystem {
      */
     @Override
     public Set<String> supportedFileAttributeViews() {
-        return supportedFileAttributeViews;
+        return SUPPORTED_FILE_ATTRIBUTE_VIEWS;
     }
 
     /**

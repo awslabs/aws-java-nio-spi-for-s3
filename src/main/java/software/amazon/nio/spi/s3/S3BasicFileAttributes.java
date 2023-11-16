@@ -33,7 +33,7 @@ import software.amazon.nio.spi.s3.util.TimeOutUtils;
  */
 class S3BasicFileAttributes implements BasicFileAttributes {
 
-    private static final Set<String> methodNamesToFilterOut =
+    private static final Set<String> METHOD_NAMES_TO_FILTER_OUT =
         Set.of("wait", "toString", "hashCode", "getClass", "notify", "notifyAll");
 
     private static final Logger logger = LoggerFactory.getLogger(S3BasicFileAttributes.class.getName());
@@ -206,7 +206,7 @@ class S3BasicFileAttributes implements BasicFileAttributes {
     protected Map<String, Object> asMap(Predicate<String> attributeFilter) {
         return Arrays.stream(this.getClass().getMethods())
             .filter(method -> method.getParameterCount() == 0)
-            .filter(method -> !methodNamesToFilterOut.contains(method.getName()))
+            .filter(method -> !METHOD_NAMES_TO_FILTER_OUT.contains(method.getName()))
             .filter(method -> attributeFilter.test(method.getName()))
             .collect(Collectors.toMap(Method::getName, (method -> {
                 logger.debug("method name: '{}'", method.getName());
