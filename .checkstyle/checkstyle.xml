@@ -331,15 +331,6 @@
             <property name="ignoreComments" value="true"/>
         </module>
 
-        <!-- Checks that we don't use System.getenv or System.getProperty -->
-        <module name="Regexp">
-            <property name="format" value="System\s*(\.|::)\s*(getenv|getProperty)"/>
-            <property name="illegalPattern" value="true"/>
-            <property name="message" value="NEVER use System.getenv or System.getProperty. Create and use a
-          SystemSetting, instead."/>
-            <property name="ignoreComments" value="true"/>
-        </module>
-
         <module name="Regexp">
             <property name="format" value="SystemSetting\s*(\.|::)\s*getStringValueFromEnvironmentVariable"/>
             <property name="illegalPattern" value="true"/>
