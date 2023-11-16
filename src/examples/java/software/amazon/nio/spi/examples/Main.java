@@ -17,12 +17,13 @@ import java.nio.file.Paths;
 public class Main {
     /**
      * Demo main method
+     *
      * @param args one or more S3 URIs to read
      * @throws IOException if something goes wrong
      */
     public static void main(String[] args) throws IOException {
 
-        if(args.length == 0){
+        if (args.length == 0) {
             System.err.println("Provide one or more S3 URIs to read from.");
             System.exit(1);
         }
@@ -35,9 +36,9 @@ public class Main {
             // proves that the correct path type is being used
             assert path.getClass().getName().contains("S3Path");
 
-            System.err.println("*** READING FROM "+path.toUri()+" ***");
+            System.err.println("*** READING FROM " + path.toUri() + " ***");
             Files.readAllLines(path)
-                    .forEach(System.out::println);
+                .forEach(System.out::println);
             System.err.println("*** FINISHED READING OBJECT ***\n");
         }
     }

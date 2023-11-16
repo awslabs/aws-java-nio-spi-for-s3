@@ -22,7 +22,7 @@ public class WalkFromRoot {
      */
     public static void main(String[] args) throws IOException {
 
-        if (args.length < 1){
+        if (args.length < 1) {
             System.err.println("Provide a bucket name to walk");
             System.exit(1);
         }
