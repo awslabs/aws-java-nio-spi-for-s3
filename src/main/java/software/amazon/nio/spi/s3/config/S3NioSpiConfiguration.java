@@ -418,7 +418,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         }
     }
 
-    public URI endpointURI() {
+    public URI endpointUri() {
         var endpoint = getEndpoint();
         if (endpoint.isBlank()) {
             return null;

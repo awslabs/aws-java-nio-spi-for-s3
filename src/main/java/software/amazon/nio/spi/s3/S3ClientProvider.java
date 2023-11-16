@@ -77,22 +77,22 @@ public class S3ClientProvider {
         .build();
 
     {
-        final var RETRYABLE_STATUS_CODES = Set.of(
+        final var retryableStatusCodes = Set.of(
             HttpStatusCode.INTERNAL_SERVER_ERROR,
             HttpStatusCode.BAD_GATEWAY,
             HttpStatusCode.SERVICE_UNAVAILABLE,
             HttpStatusCode.GATEWAY_TIMEOUT
         );
 
-        final var RETRYABLE_EXCEPTIONS = Set.of(
+        final var retryableExceptions = Set.of(
             RetryableException.class,
             IOException.class,
             ApiCallAttemptTimeoutException.class,
             ApiCallTimeoutException.class);
 
         retryCondition = OrRetryCondition.create(
-            RetryOnStatusCodeCondition.create(RETRYABLE_STATUS_CODES),
-            RetryOnExceptionsCondition.create(RETRYABLE_EXCEPTIONS),
+            RetryOnStatusCodeCondition.create(retryableStatusCodes),
+            RetryOnExceptionsCondition.create(retryableExceptions),
             RetryOnClockSkewCondition.create(),
             RetryOnThrottlingCondition.create()
         );
@@ -177,7 +177,7 @@ public class S3ClientProvider {
         logger.debug("generating client for bucket: '{}'", bucketName);
         T bucketSpecificClient = null;
 
-        if (configuration.endpointURI() == null) {
+        if (configuration.endpointUri() == null) {
             // we try to locate a bucket only if no endpoint is provided, which means we are dealing with AWS S3 buckets
             var bucketLocation = determineBucketLocation(bucketName, locationClient);
 
@@ -269,7 +269,7 @@ public class S3ClientProvider {
                 )
             );
 
-        var endpointUri = configuration.endpointURI();
+        var endpointUri = configuration.endpointUri();
         if (endpointUri != null) {
             builder.endpointOverride(endpointUri);
         }
@@ -286,7 +286,7 @@ public class S3ClientProvider {
         var region = getRegionFromRegionName(regionName);
         logger.debug("bucket region is: '{}'", region.id());
 
-        var endpointUri = configuration.endpointURI();
+        var endpointUri = configuration.endpointUri();
         if (endpointUri != null) {
             asyncClientBuilder.endpointOverride(endpointUri);
         }
