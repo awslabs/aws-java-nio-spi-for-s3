@@ -470,6 +470,8 @@ public class S3FileSystem extends FileSystem {
 
     @Override
     public int hashCode() {
+        //CHECKSTYLE:OFF - There is no hashCode for multiple values
         return Objects.hash(bucketName, provider.getClass().getName());
+        //CHECKSTYLE:ON
     }
 }

@@ -209,7 +209,7 @@ class PosixLikePathRepresentation {
 
     @Override
     public int hashCode() {
-        return Objects.hash(path);
+        return Objects.hashCode(path);
     }
 }
 
