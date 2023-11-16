@@ -253,9 +253,9 @@ public class S3ClientProvider {
         return configureCrtClientForRegion(regionName);
     }
 
-    private <TClient extends AwsClient, TBuilder extends S3BaseClientBuilder<TBuilder, TClient>> TClient configureClientForRegion(
+    private <ClientT extends AwsClient, BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>> ClientT configureClientForRegion(
         String regionName,
-        S3BaseClientBuilder<TBuilder, TClient> builder
+        S3BaseClientBuilder<BuilderT, ClientT> builder
     ) {
         var region = getRegionFromRegionName(regionName);
         logger.debug("bucket region is: '{}'", region.id());
