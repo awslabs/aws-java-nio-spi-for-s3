@@ -41,15 +41,7 @@ import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
  */
 public class S3ClientProvider {
 
-    /**
-     * Default S3CrtAsyncClientBuilder
-     */
-    protected S3CrtAsyncClientBuilder asyncClientBuilder = S3AsyncClient.crtBuilder();
-
-    /**
-     * Configuration
-     */
-    final protected S3NioSpiConfiguration configuration;
+    private static final Logger logger = LoggerFactory.getLogger(S3ClientProvider.class);
 
     /**
      * Default client using the "<a href="https://s3.us-east-1.amazonaws.com">...</a>" endpoint
@@ -67,12 +59,22 @@ public class S3ClientProvider {
         .region(Region.US_EAST_1)
         .build();
 
+    /**
+     * Configuration
+     */
+    protected final S3NioSpiConfiguration configuration;
+
+    /**
+     * Default S3CrtAsyncClientBuilder
+     */
+    protected S3CrtAsyncClientBuilder asyncClientBuilder = S3AsyncClient.crtBuilder();
+
+    final RetryCondition retryCondition;
+
     private final EqualJitterBackoffStrategy backoffStrategy = EqualJitterBackoffStrategy.builder()
         .baseDelay(Duration.ofMillis(200L))
         .maxBackoffTime(Duration.ofSeconds(5L))
         .build();
-
-    final RetryCondition retryCondition;
 
     {
         final var RETRYABLE_STATUS_CODES = Set.of(
@@ -95,8 +97,6 @@ public class S3ClientProvider {
             RetryOnThrottlingCondition.create()
         );
     }
-
-    static private final Logger logger = LoggerFactory.getLogger(S3ClientProvider.class);
 
     public S3ClientProvider(S3NioSpiConfiguration c) {
         this.configuration = (c == null) ? new S3NioSpiConfiguration() : c;

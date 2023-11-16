@@ -33,15 +33,15 @@ import software.amazon.nio.spi.s3.util.TimeOutUtils;
  */
 class S3BasicFileAttributes implements BasicFileAttributes {
 
-    private final S3Path path;
-    private final S3AsyncClient client;
-    private final String bucketName;
-    private final Duration timeout;
-
     private static final Set<String> methodNamesToFilterOut =
         Set.of("wait", "toString", "hashCode", "getClass", "notify", "notifyAll");
 
     private static final Logger logger = LoggerFactory.getLogger(S3BasicFileAttributes.class.getName());
+
+    private final S3Path path;
+    private final S3AsyncClient client;
+    private final String bucketName;
+    private final Duration timeout;
 
     /**
      * Constructor for the attributes of a path

@@ -746,7 +746,8 @@ class S3Path implements Path {
         WatchEvent.Modifier... modifiers
     ) throws UnsupportedOperationException {
         throw new UnsupportedOperationException(
-            "This method is not yet supported. Please raise a feature request describing your use case");
+            "This method is not yet supported. Please raise a feature request describing your use case"
+        );
     }
 
     /**
@@ -757,7 +758,8 @@ class S3Path implements Path {
     @Override
     public WatchKey register(WatchService watcher, WatchEvent.Kind<?>... events) throws UnsupportedOperationException {
         throw new UnsupportedOperationException(
-            "This method is not yet supported. Please raise a feature request describing your use case");
+            "This method is not yet supported. Please raise a feature request describing your use case"
+        );
     }
 
     /**
@@ -887,10 +889,10 @@ class S3Path implements Path {
     }
 
     private final class S3PathIterator implements Iterator<Path> {
-        private final Iterator<String> delegate;
-        boolean first;
         final boolean isAbsolute;
         final boolean hasTrailingSeparator;
+        boolean first;
+        private final Iterator<String> delegate;
 
         private S3PathIterator(Iterator<String> delegate, boolean isAbsolute, boolean hasTrailingSeparator) {
             this.delegate = delegate;

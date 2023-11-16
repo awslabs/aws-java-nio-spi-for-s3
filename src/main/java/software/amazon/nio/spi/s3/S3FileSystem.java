@@ -44,6 +44,9 @@ public class S3FileSystem extends FileSystem {
      */
     static final String BASIC_FILE_ATTRIBUTE_VIEW = "basic";
 
+    private static final Set<String> supportedFileAttributeViews =
+        Collections.singleton(BASIC_FILE_ATTRIBUTE_VIEW);
+
     S3ClientProvider clientProvider;
 
     private final String bucketName;
@@ -188,9 +191,6 @@ public class S3FileSystem extends FileSystem {
     public Iterable<FileStore> getFileStores() {
         return Collections.EMPTY_SET;
     }
-
-    private static final Set<String> supportedFileAttributeViews =
-        Collections.singleton(BASIC_FILE_ATTRIBUTE_VIEW);
 
     /**
      * Returns the set of the file attribute views supported by this {@code FileSystem}.

@@ -24,7 +24,6 @@ import software.amazon.awssdk.utils.Pair;
  * Object to hold configuration of the S3 NIO SPI
  */
 public class S3NioSpiConfiguration extends HashMap<String, Object> {
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public static final String AWS_REGION_PROPERTY = "aws.region";
     public static final String AWS_ACCESS_KEY_PROPERTY = "aws.accessKey";
@@ -72,6 +71,8 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     public static final String S3_SPI_CREDENTIALS_PROPERTY = "s3.spi.credentials";
 
     private final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
+
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private String bucketName;
 

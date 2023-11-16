@@ -90,10 +90,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * Constant for the S3 scheme "s3"
      */
     static final String SCHEME = "s3";
+    private static final Map<String, S3FileSystem> cache = new HashMap<>();
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
-    private static final Map<String, S3FileSystem> cache = new HashMap<>();
 
     /**
      * Returns the URI scheme that identifies this provider.

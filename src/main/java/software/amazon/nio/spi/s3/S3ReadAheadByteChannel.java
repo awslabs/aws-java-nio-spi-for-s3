@@ -36,6 +36,7 @@ import software.amazon.nio.spi.s3.util.TimeOutUtils;
  */
 class S3ReadAheadByteChannel implements ReadableByteChannel {
 
+    private static final Logger logger = LoggerFactory.getLogger(S3ReadAheadByteChannel.class);
     private final S3AsyncClient client;
     private final S3Path path;
     private final S3SeekableByteChannel delegator;
@@ -48,7 +49,6 @@ class S3ReadAheadByteChannel implements ReadableByteChannel {
     private boolean open;
     private final Cache<Integer, CompletableFuture<ByteBuffer>> readAheadBuffersCache;
 
-    private static final Logger logger = LoggerFactory.getLogger(S3ReadAheadByteChannel.class);
 
 
     /**
