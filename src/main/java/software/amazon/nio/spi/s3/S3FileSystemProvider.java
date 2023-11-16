@@ -179,8 +179,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @SuppressWarnings("NullableProblems")
     @Override
-    public Path getPath(URI uri)
-        throws IllegalArgumentException, FileSystemNotFoundException, SecurityException {
+    public Path getPath(URI uri) throws IllegalArgumentException, FileSystemNotFoundException, SecurityException {
         Objects.requireNonNull(uri);
         return getFileSystem(uri, true).getPath(uri.getScheme() + ":/" + uri.getPath());
     }
@@ -213,8 +212,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
      *                                       {@code DELETE_ON_CLOSE} option.
      */
     @Override
-    public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs)
-        throws IOException {
+    public SeekableByteChannel newByteChannel(
+        Path path,
+        Set<? extends OpenOption> options,
+        FileAttribute<?>... attrs
+    ) throws IOException {
         if (Objects.isNull(options)) {
             options = Collections.emptySet();
         }
@@ -677,7 +679,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options)
-        throws UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException("s3 file attributes cannot be modified by this class");
     }
 
@@ -768,9 +770,13 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return new S3FileSystemInfo(uri);
     }
 
-    private static List<List<ObjectIdentifier>> getContainedObjectBatches(S3AsyncClient s3Client, String bucketName,
-                                                                          String prefix, long timeOut, TimeUnit unit)
-        throws InterruptedException, ExecutionException, TimeoutException {
+    private static List<List<ObjectIdentifier>> getContainedObjectBatches(
+        S3AsyncClient s3Client,
+        String bucketName,
+        String prefix,
+        long timeOut,
+        TimeUnit unit
+    ) throws InterruptedException, ExecutionException, TimeoutException {
         String continuationToken = null;
         var hasMoreItems = true;
         List<List<ObjectIdentifier>> keys = new ArrayList<>();
@@ -805,10 +811,14 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return attrSet::contains;
     }
 
-    private CompletableFuture<CompletedCopy> copyKey(String sourceObjectIdentifierKey, String sourcePrefix, String sourceBucket,
-                                                     S3Path targetPath, S3TransferManager transferManager,
-                                                     Function<S3Path, Boolean> fileExistsAndCannotReplaceFn)
-        throws FileAlreadyExistsException {
+    private CompletableFuture<CompletedCopy> copyKey(
+        String sourceObjectIdentifierKey,
+        String sourcePrefix,
+        String sourceBucket,
+        S3Path targetPath,
+        S3TransferManager transferManager,
+        Function<S3Path, Boolean> fileExistsAndCannotReplaceFn
+    ) throws FileAlreadyExistsException {
         final var sanitizedIdKey = sourceObjectIdentifierKey.replaceFirst(sourcePrefix, "");
         var resolvedS3TargetPath = targetPath.resolve(sanitizedIdKey);
 

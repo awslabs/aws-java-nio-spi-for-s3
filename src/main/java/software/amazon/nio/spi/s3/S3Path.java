@@ -740,8 +740,11 @@ class S3Path implements Path {
      * @throws UnsupportedOperationException always
      */
     @Override
-    public WatchKey register(WatchService watcher, WatchEvent.Kind<?>[] events, WatchEvent.Modifier... modifiers)
-        throws UnsupportedOperationException {
+    public WatchKey register(
+        WatchService watcher,
+        WatchEvent.Kind<?>[] events,
+        WatchEvent.Modifier... modifiers
+    ) throws UnsupportedOperationException {
         throw new UnsupportedOperationException(
             "This method is not yet supported. Please raise a feature request describing your use case");
     }
