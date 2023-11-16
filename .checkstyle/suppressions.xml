@@ -19,8 +19,8 @@
         "-//Puppy Crawl//DTD Suppressions 1.2//EN"
         "http://www.puppycrawl.com/dtds/suppressions_1_2.dtd">
 <suppressions>
-    <!-- ignore all checks for test classes -->
-    <suppress checks="^.*$"
+    <!-- ignore all checks for test classes except for the Header -->
+    <suppress checks="^((?!Header).)*$"
               files=".*[\\/](test|integrationTest)[\\/]java[\\/].+\.java$"/>
 
     <suppress checks="HideUtilityClassConstructor"
