@@ -19,26 +19,11 @@
         "-//Puppy Crawl//DTD Suppressions 1.2//EN"
         "http://www.puppycrawl.com/dtds/suppressions_1_2.dtd">
 <suppressions>
-    <!-- ignore all checks for test classes except for the NoIgnoreAnnotationsCheck -->
-    <suppress checks="^((?!NoIgnoreAnnotationsCheck).)*$"
+    <!-- ignore all checks for test classes -->
+    <suppress checks="^.*$"
               files=".*[\\/](test|integrationTest)[\\/]java[\\/].+\.java$"/>
 
     <suppress checks="HideUtilityClassConstructor"
               files=".*[\\/](examples)[\\/]java[\\/].+\.java$"/>
 
-    <!-- ignore missing annotation checks under test/codegen directory -->
-    <suppress checks="MissingSdkAnnotationCheck"
-              files=".(codegen|test|release)[\\/].+\.java$"/>
-
-    <!-- Ignore usage of Thread.currentThread().getContextClassLoader for ClassLoaderHelper.!-->
-    <suppress checks="Regexp"
-              files=".*ClassLoaderHelper\.java$"/>
-
-    <!-- Ignore usage of sslContext.newHandler for NettyUtils.!-->
-    <suppress checks="Regexp"
-              files=".*NettyUtils\.java$"/>
-
-    <!-- Allow private field declaration before public, to have correct initialization order -->
-    <suppress checks="DeclarationOrder"
-              files=".*SdkAdvancedClientOption\.java$"/>
 </suppressions>
