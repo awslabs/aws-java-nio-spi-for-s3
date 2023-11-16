@@ -74,18 +74,18 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     private final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
 
     private String bucketName;
-    
+
 
     /**
      * Create a new, empty configuration
      */
-    public S3NioSpiConfiguration(){
+    public S3NioSpiConfiguration() {
         this(new HashMap<>());
     }
 
     /**
      * Create a new, empty configuration
-     * 
+     *
      * @param overrides configuration to override default values
      */
     public S3NioSpiConfiguration(Map<String, ?> overrides) {
@@ -108,9 +108,9 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
 
         //add env var overrides if present
         keySet().stream()
-                .map(key -> Pair.of(key,
-                        Optional.ofNullable(System.getenv().get(this.convertPropertyNameToEnvVar(key)))))
-                .forEach(pair -> pair.right().ifPresent(val -> put(pair.left(), val)));
+            .map(key -> Pair.of(key,
+                Optional.ofNullable(System.getenv().get(this.convertPropertyNameToEnvVar(key)))))
+            .forEach(pair -> pair.right().ifPresent(val -> put(pair.left(), val)));
 
         //add System props as overrides if present
         keySet().forEach(
@@ -122,6 +122,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
 
     /**
      * Create a new configuration with overrides
+     *
      * @param overrides the overrides
      */
     protected S3NioSpiConfiguration(Properties overrides) {
@@ -134,7 +135,6 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * Fluently sets the value of maximum fragment number
      *
      * @param maxFragmentNumber the maximum fragment number
-     *
      * @return this instance
      */
     public S3NioSpiConfiguration withMaxFragmentNumber(int maxFragmentNumber) {
@@ -149,7 +149,6 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * Fluently sets the value of maximum fragment size
      *
      * @param maxFragmentSize the maximum fragment size
-     *
      * @return this instance
      */
     public S3NioSpiConfiguration withMaxFragmentSize(int maxFragmentSize) {
@@ -164,7 +163,6 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * Fluently sets the value of the endpoint
      *
      * @param endpoint the endpoint
-     *
      * @return this instance
      */
     public S3NioSpiConfiguration withEndpoint(String endpoint) {
@@ -180,14 +178,14 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
             );
         }
 
-        put(S3_SPI_ENDPOINT_PROPERTY, endpoint); return this;
+        put(S3_SPI_ENDPOINT_PROPERTY, endpoint);
+        return this;
     }
 
     /**
      * Fluently sets the value of the endpoint's protocol
      *
      * @param protocol the endpoint's protcol
-     *
      * @return this instance
      */
     public S3NioSpiConfiguration withEndpointProtocol(String protocol) {
@@ -197,14 +195,14 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         if (!"http".equals(protocol) && !"https".equals(protocol)) {
             throw new IllegalArgumentException("endpoint prococol must be one of ('http', 'https')");
         }
-        put(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, protocol); return this;
+        put(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, protocol);
+        return this;
     }
 
     /**
      * Fluently sets the value of the region
      *
      * @param region the region; if null or blank the property is removed
-     *
      * @return this instance
      */
     public S3NioSpiConfiguration withRegion(String region) {
@@ -221,36 +219,36 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * Fluently sets the value of bucketName
      *
      * @param bucketName the bucket name
-     *
-     * @throws IllegalArgumentException if bucketName is not compliant with
-     *         https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html
-     *
      * @return this instance
+     * @throws IllegalArgumentException if bucketName is not compliant with
+     *                                  https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html
      */
     public S3NioSpiConfiguration withBucketName(String bucketName) {
         if (bucketName != null) {
             BucketUtils.isValidDnsBucketName(bucketName, true);
         }
-        this.bucketName = bucketName; return this;
+        this.bucketName = bucketName;
+        return this;
     }
 
-     /**
+    /**
      * Fluently sets the value of accessKey and secretAccessKey
      *
-     * @param accessKey the accesskey; if null, credentials are removed
+     * @param accessKey       the accesskey; if null, credentials are removed
      * @param secretAccessKey the secretAccesskey; if accessKey is not null, it can not be null
-     *
      * @return this instance
      */
     public S3NioSpiConfiguration withCredentials(String accessKey, String secretAccessKey) {
         AwsCredentials credentials = null;
         if (accessKey == null) {
-            remove(AWS_ACCESS_KEY_PROPERTY); remove(AWS_SECRET_ACCESS_KEY_PROPERTY);
+            remove(AWS_ACCESS_KEY_PROPERTY);
+            remove(AWS_SECRET_ACCESS_KEY_PROPERTY);
         } else {
             if (secretAccessKey == null) {
                 throw new IllegalArgumentException("secretAccessKey can not be null");
             }
-            put(AWS_ACCESS_KEY_PROPERTY, accessKey); put(AWS_SECRET_ACCESS_KEY_PROPERTY, secretAccessKey);
+            put(AWS_ACCESS_KEY_PROPERTY, accessKey);
+            put(AWS_SECRET_ACCESS_KEY_PROPERTY, secretAccessKey);
             credentials = AwsBasicCredentials.create(accessKey, secretAccessKey);
         }
         withCredentials(credentials);
@@ -263,7 +261,6 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * {@code AwsCredentials} object.
      *
      * @param credentials the credentials; if null, credentials are removed
-     *
      * @return this instance
      */
     public S3NioSpiConfiguration withCredentials(AwsCredentials credentials) {
@@ -274,32 +271,32 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         }
         return this;
     }
-    
+
     /**
-     * Fluently sets the value of {@code forcePathStyle} and adds 
+     * Fluently sets the value of {@code forcePathStyle} and adds
      * {@code S3_SPI_FORCE_PATH_STYLE_PROPERTY} to the map unless the given
      * value is null. If null, {@code S3_SPI_FORCE_PATH_STYLE_PROPERTY} is
      * removed from the map.
      *
      * @param forcePathStyle the new value; can be null
-     *
      * @return this instance
      */
     public S3NioSpiConfiguration withForcePathStyle(Boolean forcePathStyle) {
         if (forcePathStyle == null) {
             remove(S3_SPI_FORCE_PATH_STYLE_PROPERTY);
         } else {
-            put(S3_SPI_FORCE_PATH_STYLE_PROPERTY, forcePathStyle); 
+            put(S3_SPI_FORCE_PATH_STYLE_PROPERTY, forcePathStyle);
         }
-        
+
         return this;
-    }  
-    
+    }
+
     /**
      * Get the value of the Maximum Fragment Size
+     *
      * @return the configured value or the default if not overridden
      */
-    public int getMaxFragmentSize(){
+    public int getMaxFragmentSize() {
         return parseIntProperty(
             S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY,
             S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT
@@ -308,9 +305,10 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
 
     /**
      * Get the value of the Maximum Fragment Number
+     *
      * @return the configured value or the default if not overridden
      */
-    public int getMaxFragmentNumber(){
+    public int getMaxFragmentNumber() {
         return parseIntProperty(
             S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY,
             S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT
@@ -324,30 +322,31 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * @return the configured value or the default ("") if not overridden
      */
     public String getEndpoint() {
-        return (String)getOrDefault(S3_SPI_ENDPOINT_PROPERTY, S3_SPI_ENDPOINT_DEFAULT);
+        return (String) getOrDefault(S3_SPI_ENDPOINT_PROPERTY, S3_SPI_ENDPOINT_DEFAULT);
     }
 
     /**
      * Get the value of the endpoint protocol
+     *
      * @return the configured value or the default if not overridden
      */
     public String getEndpointProtocol() {
-        var protocol = (String)getOrDefault(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
+        var protocol = (String) getOrDefault(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
         if ("http".equalsIgnoreCase(protocol) || "https".equalsIgnoreCase(protocol)) {
             return protocol;
         }
         logger.warn("the value of '{}' for '{}' is not 'http'|'https', using default value of '{}'",
-                    protocol, S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
+            protocol, S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
         return S3_SPI_ENDPOINT_PROTOCOL_DEFAULT;
     }
 
     /**
      * Get the configured credentials. Note that credentials can be provided in
      * two ways:
-     *
+     * <p>
      * 1. {@code withCredentials(String accessKey, String secretAcccessKey)}
      * 2. {@code withCredentials(AwsCredentials credentials)}
-     *
+     * <p>
      * The latter takes the priority, so if both are used, {@code getCredentials()}
      * returns the most complete object, which is the value of the property
      * {@code S3_SPI_CREDENTIALS_PROPERTY}
@@ -356,13 +355,13 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      */
     public AwsCredentials getCredentials() {
         if (containsKey(S3_SPI_CREDENTIALS_PROPERTY)) {
-            return (AwsCredentials)get(S3_SPI_CREDENTIALS_PROPERTY);
+            return (AwsCredentials) get(S3_SPI_CREDENTIALS_PROPERTY);
         }
         if (containsKey(AWS_ACCESS_KEY_PROPERTY)) {
             return AwsBasicCredentials.create(
-                (String)get(AWS_ACCESS_KEY_PROPERTY),
-                (String)get(AWS_SECRET_ACCESS_KEY_PROPERTY)
-           );
+                (String) get(AWS_ACCESS_KEY_PROPERTY),
+                (String) get(AWS_SECRET_ACCESS_KEY_PROPERTY)
+            );
         }
 
         return null;
@@ -374,7 +373,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * @return the configured value or null if not provided
      */
     public String getRegion() {
-        return (String)get(AWS_REGION_PROPERTY);
+        return (String) get(AWS_REGION_PROPERTY);
     }
 
     /**
@@ -385,32 +384,35 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     public String getBucketName() {
         return bucketName;
     }
-    
+
     public boolean getForcePathStyle() {
-        return (boolean)getOrDefault(S3_SPI_FORCE_PATH_STYLE_PROPERTY, false);
+        return (boolean) getOrDefault(S3_SPI_FORCE_PATH_STYLE_PROPERTY, false);
     }
 
     /**
      * Generates an environment variable name from a property name. E.g 'some.property' becomes 'SOME_PROPERTY'
+     *
      * @param propertyName the name to convert
      * @return the converted name
      */
-    protected String convertPropertyNameToEnvVar(String propertyName){
-        if(propertyName == null || propertyName.trim().isEmpty()) return "";
+    protected String convertPropertyNameToEnvVar(String propertyName) {
+        if (propertyName == null || propertyName.trim().isEmpty()) {
+            return "";
+        }
 
         return propertyName
-                .trim()
-                .replace('.', '_').replace('-', '_')
-                .toUpperCase(Locale.ROOT);
+            .trim()
+            .replace('.', '_').replace('-', '_')
+            .toUpperCase(Locale.ROOT);
     }
 
-    private int parseIntProperty(String propName, int defaultVal){
-        var propertyVal = (String)get(propName);
-        try{
+    private int parseIntProperty(String propName, int defaultVal) {
+        var propertyVal = (String) get(propName);
+        try {
             return Integer.parseInt(propertyVal);
-        } catch (NumberFormatException e){
+        } catch (NumberFormatException e) {
             logger.warn("the value of '{}' for '{}' is not an integer, using default value of '{}'",
-                    propertyVal, propName, defaultVal);
+                propertyVal, propName, defaultVal);
             return defaultVal;
         }
     }

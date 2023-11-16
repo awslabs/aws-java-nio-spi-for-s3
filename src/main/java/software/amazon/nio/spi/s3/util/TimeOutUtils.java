@@ -20,22 +20,24 @@ public class TimeOutUtils {
 
     /**
      * Generate a time-out message string.
+     *
      * @param operationName the name of the operation that timed out
-     * @param length the length of time
-     * @param unit the unit of time
+     * @param length        the length of time
+     * @param unit          the unit of time
      * @return the message
      */
     public static String createTimeOutMessage(String operationName, long length, TimeUnit unit) {
         return format("the %s operation timed out after %d %s, check your network connectivity and status of S3 service",
-                  operationName, length, unit.toString().toLowerCase(Locale.ROOT));
+            operationName, length, unit.toString().toLowerCase(Locale.ROOT));
     }
 
     /**
      * Creates a time-out message and logs the same to the <code>logger</code>
-     * @param logger to which the message is logged
+     *
+     * @param logger        to which the message is logged
      * @param operationName the name of the operation that timed out
-     * @param length the length of time
-     * @param unit the unit of time
+     * @param length        the length of time
+     * @param unit          the unit of time
      * @return the message logged
      */
     public static String createAndLogTimeOutMessage(Logger logger, String operationName, long length, TimeUnit unit) {
@@ -47,13 +49,15 @@ public class TimeOutUtils {
 
     /**
      * Generate a RuntimeException representing the time-out and log the message containerd in the exception
-     * @param logger to which the message is logged
+     *
+     * @param logger        to which the message is logged
      * @param operationName the name of the operation that timed out
-     * @param length the length of time
-     * @param unit the unit of time
+     * @param length        the length of time
+     * @param unit          the unit of time
      * @return the exception generated, ready to throw.
      */
-    public static RuntimeException logAndGenerateExceptionOnTimeOut(Logger logger, String operationName, long length, TimeUnit unit){
+    public static RuntimeException logAndGenerateExceptionOnTimeOut(Logger logger, String operationName, long length,
+                                                                    TimeUnit unit) {
         Objects.requireNonNull(logger);
         var msg = createAndLogTimeOutMessage(logger, operationName, length, unit);
         return new RuntimeException(msg);

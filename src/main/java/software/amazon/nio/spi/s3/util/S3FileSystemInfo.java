@@ -18,7 +18,6 @@ import software.amazon.awssdk.services.s3.internal.BucketUtils;
  * instance of a S3FileSystem (for caching purposes for example). In this
  * implementation the key is the bucket name (which is unique in the AWS S3
  * namespace).
- *
  */
 public class S3FileSystemInfo {
 
@@ -28,7 +27,8 @@ public class S3FileSystemInfo {
     protected String accessKey;
     protected String accessSecret;
 
-    protected S3FileSystemInfo() {}
+    protected S3FileSystemInfo() {
+    }
 
     /**
      * Creates a new instance and populates it with key and bucket. The name of
@@ -36,9 +36,8 @@ public class S3FileSystemInfo {
      * <a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html">bucket naming rules</a>)
      *
      * @param uri a S3 URI
-     *
      * @throws IllegalArgumentException if URI contains invalid components
-     *         (e.g. an invalid bucket name)
+     *                                  (e.g. an invalid bucket name)
      */
     public S3FileSystemInfo(URI uri) throws IllegalArgumentException {
         if (uri == null) {
@@ -51,9 +50,23 @@ public class S3FileSystemInfo {
         BucketUtils.isValidDnsBucketName(bucket, true);
     }
 
-    public String key() { return key; }
-    public String endpoint() { return endpoint; }
-    public String bucket() { return bucket; }
-    public String accessKey() { return accessKey; }
-    public String accessSecret() { return accessSecret; }
+    public String key() {
+        return key;
+    }
+
+    public String endpoint() {
+        return endpoint;
+    }
+
+    public String bucket() {
+        return bucket;
+    }
+
+    public String accessKey() {
+        return accessKey;
+    }
+
+    public String accessSecret() {
+        return accessSecret;
+    }
 }
