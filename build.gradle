@@ -65,6 +65,7 @@ dependencies {
     implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
 
     examplesImplementation project
+    examplesImplementation 'org.slf4j:slf4j-api:2.0.9'
 }
 
 publishing {

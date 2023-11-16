@@ -10,8 +10,12 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class WalkFromRoot {
+
+    private static final Logger logger = LoggerFactory.getLogger(WalkFromRoot.class);
 
     /**
      * Walks a bucket from the root listing all directories and files. Internally uses the {@code S3FileSystemProvider}'s
@@ -23,7 +27,7 @@ public class WalkFromRoot {
     public static void main(String[] args) throws IOException {
 
         if (args.length < 1) {
-            System.err.println("Provide a bucket name to walk");
+            logger.error("Provide a bucket name to walk");
             System.exit(1);
         }
 
@@ -34,13 +38,13 @@ public class WalkFromRoot {
 
 
         var root = Paths.get(URI.create(bucketName));
-        System.err.println("root.getClass() = " + root.getClass());
+        logger.info("root.getClass() = {}", root.getClass());
 
         var s3 = root.getFileSystem();
 
         for (var rootDir : s3.getRootDirectories()) {
             try (var pathStream = Files.walk(rootDir)) {
-                pathStream.forEach(System.out::println);
+                pathStream.forEach((p) -> logger.info(p.toString()));
             }
         }
 
