@@ -5,12 +5,6 @@
 
 package software.amazon.nio.spi.s3;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
-import software.amazon.nio.spi.s3.util.TimeOutUtils;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
@@ -24,6 +18,11 @@ import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
+import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
 class S3SeekableByteChannel implements SeekableByteChannel {
 
@@ -41,7 +40,8 @@ class S3SeekableByteChannel implements SeekableByteChannel {
         this(s3Path, s3Client, 0L, options, null, null);
     }
 
-    private S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, long startAt, Set<? extends OpenOption> options, Long timeout, TimeUnit timeUnit) throws IOException {
+    private S3SeekableByteChannel(S3Path s3Path, S3AsyncClient s3Client, long startAt, Set<? extends OpenOption> options,
+                                  Long timeout, TimeUnit timeUnit) throws IOException {
         position = startAt;
         path = s3Path;
         closed = false;
@@ -66,7 +66,9 @@ class S3SeekableByteChannel implements SeekableByteChannel {
         } else if (options.contains(StandardOpenOption.READ) || options.isEmpty()) {
             LOGGER.debug("using S3ReadAheadByteChannel as read delegate for path '{}'", s3Path.toUri());
             var readClient = s3Path.getFileSystem().readClient();
-            readDelegate = new S3ReadAheadByteChannel(s3Path, config.getMaxFragmentSize(), config.getMaxFragmentNumber(), readClient, this, timeout, timeUnit);
+            readDelegate =
+                new S3ReadAheadByteChannel(s3Path, config.getMaxFragmentSize(), config.getMaxFragmentNumber(), readClient, this,
+                    timeout, timeUnit);
             writeDelegate = null;
         } else {
             throw new IOException("Invalid channel mode");
@@ -164,8 +166,9 @@ class S3SeekableByteChannel implements SeekableByteChannel {
      */
     @Override
     public SeekableByteChannel position(long newPosition) throws IOException {
-        if (newPosition < 0)
+        if (newPosition < 0) {
             throw new IllegalArgumentException("newPosition cannot be < 0");
+        }
 
         if (!isOpen()) {
             throw new ClosedChannelException();
@@ -276,6 +279,7 @@ class S3SeekableByteChannel implements SeekableByteChannel {
 
     /**
      * Access the underlying {@code ReadableByteChannel} used for reading
+     *
      * @return the channel. May be null if opened for writing only
      */
     ReadableByteChannel getReadDelegate() {
@@ -284,6 +288,7 @@ class S3SeekableByteChannel implements SeekableByteChannel {
 
     /**
      * Access the underlying {@code WritableByteChannel} used for writing
+     *
      * @return the channel. May be null if opened for reading only
      */
     WritableByteChannel getWriteDelegate() {
