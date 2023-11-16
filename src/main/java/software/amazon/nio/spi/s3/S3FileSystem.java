@@ -55,7 +55,7 @@ public class S3FileSystem extends FileSystem {
     private final Set<S3SeekableByteChannel> openChannels = new HashSet<>();
 
     private S3AsyncClient client;
-    final private S3NioSpiConfiguration configuration;
+    private final S3NioSpiConfiguration configuration;
 
     /**
      * Create a filesystem that represents the bucket specified by the URI
