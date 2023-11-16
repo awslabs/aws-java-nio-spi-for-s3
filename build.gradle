@@ -53,7 +53,7 @@ sourceSets {
 dependencies {
     implementation 'io.reactivex.rxjava3:rxjava:3.1.8'
 
-    implementation platform('software.amazon.awssdk:bom:2.21.20')
+    implementation platform('software.amazon.awssdk:bom:2.21.24')
 
     implementation 'software.amazon.awssdk:s3'
     implementation 'software.amazon.awssdk:s3-transfer-manager'
