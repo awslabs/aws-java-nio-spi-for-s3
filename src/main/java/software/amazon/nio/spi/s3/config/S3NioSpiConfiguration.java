@@ -70,7 +70,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      */
     public static final String S3_SPI_CREDENTIALS_PROPERTY = "s3.spi.credentials";
 
-    private final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
+    private static final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
