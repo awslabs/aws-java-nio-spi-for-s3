@@ -5,8 +5,6 @@
 
 package software.amazon.nio.spi.s3.util;
 
-import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
-
 import java.net.URI;
 import software.amazon.awssdk.services.s3.internal.BucketUtils;
 
@@ -21,6 +19,8 @@ import software.amazon.awssdk.services.s3.internal.BucketUtils;
  * namespace).
  */
 public class S3XFileSystemInfo extends S3FileSystemInfo {
+
+    private static final String URI_PATH_SEPARATOR = "/";
 
     /**
      * Creates a new instance and populates it with the information extracted
@@ -61,7 +61,7 @@ public class S3XFileSystemInfo extends S3FileSystemInfo {
         if (uri.getPort() > 0) {
             endpoint += ":" + uri.getPort();
         }
-        bucket = uri.getPath().split(PATH_SEPARATOR)[1];
+        bucket = uri.getPath().split(URI_PATH_SEPARATOR)[1];
 
         BucketUtils.isValidDnsBucketName(bucket, true);
 

@@ -18,6 +18,10 @@ public class TimeOutUtils {
     public static long TIMEOUT_TIME_LENGTH_3 = 3L;
     public static final long TIMEOUT_TIME_LENGTH_5 = 5L;
 
+    private TimeOutUtils() {
+        
+    }
+
     /**
      * Generate a time-out message string.
      *
