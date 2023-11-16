@@ -53,7 +53,8 @@ class PosixLikePathRepresentation {
      * <p>When {@code first} is the only element and it ends with "/" then a directory is assumed. Likewise if {@code more}
      * is present and the last item of {@code more} ends with "/" then a directory is assumed.</p>
      *
-     * @param first the first element of the path, or the whole path if {@code more} is not defined. May not be null or empty unless {@code more} is also undefined.
+     * @param first the first element of the path, or the whole path if {@code more} is not defined.
+     *              May not be null or empty unless {@code more} is also undefined.
      * @param more  zero or more path elements, {@code EMPTY_PATH} if {@code first} is null or empty
      * @return the representation of the path constructed from the arguments with non-redundant separators.
      */

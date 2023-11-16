@@ -201,6 +201,7 @@ public class S3ClientProvider {
             return getBucketLocation(bucketName, locationClient);
         } catch (S3Exception e) {
             if (isForbidden(e)) {
+                logger.debug("Cannot determine location of '{}' bucket directly", bucketName);
                 return getBucketLocationFromHead(bucketName, locationClient);
             } else {
                 throw e;
@@ -215,9 +216,7 @@ public class S3ClientProvider {
 
     private String getBucketLocationFromHead(String bucketName, S3Client locationClient) {
         try {
-            logger.debug(
-                "Cannot determine location of '{}' bucket directly. Attempting to obtain bucket location with headBucket operation",
-                bucketName);
+            logger.debug("Attempting to obtain bucket '{}' location with headBucket operation", bucketName);
             final var headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
             return getBucketRegionFromResponse(headBucketResponse.sdkHttpResponse());
         } catch (S3Exception e) {
@@ -254,9 +253,10 @@ public class S3ClientProvider {
         return configureCrtClientForRegion(regionName);
     }
 
-    private <ActualClient extends AwsClient, ActualBuilder extends S3BaseClientBuilder<ActualBuilder, ActualClient>> ActualClient configureClientForRegion(
+    private <TClient extends AwsClient, TBuilder extends S3BaseClientBuilder<TBuilder, TClient>> TClient configureClientForRegion(
         String regionName,
-        S3BaseClientBuilder<ActualBuilder, ActualClient> builder) {
+        S3BaseClientBuilder<TBuilder, TClient> builder
+    ) {
         var region = getRegionFromRegionName(regionName);
         logger.debug("bucket region is: '{}'", region.id());
 

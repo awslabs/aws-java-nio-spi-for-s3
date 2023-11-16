@@ -31,7 +31,12 @@ class S3WritableByteChannel implements WritableByteChannel {
 
     private boolean open;
 
-    S3WritableByteChannel(S3Path path, S3AsyncClient client, S3TransferUtil s3TransferUtil, Set<? extends OpenOption> options) throws IOException {
+    S3WritableByteChannel(
+        S3Path path,
+        S3AsyncClient client,
+        S3TransferUtil s3TransferUtil,
+        Set<? extends OpenOption> options
+    ) throws IOException {
         Objects.requireNonNull(path);
         Objects.requireNonNull(client);
         this.s3TransferUtil = s3TransferUtil;

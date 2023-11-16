@@ -61,7 +61,8 @@ class S3Path implements Path {
      * unreachable through this API due to the special meaning of the .. directory alias in POSIX.</p>
      *
      * @param fsForBucket the filesystem for the bucket that holds this path
-     * @param first       the path string or initial part of the path string, may not be null. It may not be empty unless more is also null has zero length
+     * @param first       the path string or initial part of the path string, may not be null.
+     *                    It may not be empty unless more is also null has zero length
      * @param more        additional strings to be joined to form the path string
      * @return a new S3Path
      * @throws InvalidPathException if the Path cannot be constructed

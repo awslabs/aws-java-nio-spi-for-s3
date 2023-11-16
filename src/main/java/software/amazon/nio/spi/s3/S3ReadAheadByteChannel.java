@@ -206,8 +206,8 @@ class S3ReadAheadByteChannel implements ReadableByteChannel {
     }
 
     /**
-     * Obtain a snapshot of the statistics of the internal cache, provides information about hits, misses, requests, evictions etc.
-     * that are useful for tuning.
+     * Obtain a snapshot of the statistics of the internal cache, provides information about
+     * hits, misses, requests, evictions etc. that are useful for tuning.
      *
      * @return the statistics of the internal cache.
      */

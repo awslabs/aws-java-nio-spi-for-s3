@@ -122,8 +122,8 @@ public class S3FileSystem extends FileSystem {
      * Tells whether this file system allows only read-only access to
      * its file stores.
      * <br>
-     * This is currently always false. The ability to write an individual object depend on the IAM role that is used by the principal
-     * and the ACL of the bucket, but S3 itself is not inherently read only.
+     * This is currently always false. The ability to write an individual object depend on the IAM role that is used by
+     * the principal and the ACL of the bucket, but S3 itself is not inherently read only.
      *
      * @return {@code false}
      */

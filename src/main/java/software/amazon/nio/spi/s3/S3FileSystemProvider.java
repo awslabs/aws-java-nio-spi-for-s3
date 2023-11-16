@@ -638,8 +638,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     * Reads a set of file attributes as a bulk operation. Largely equivalent to {@code readAttributes(Path path, Class<A> type, LinkOption... options)}
-     * where the returned object is a map of method names (attributes) to values, filtered on the comma separated {@code attributes}.
+     * Reads a set of file attributes as a bulk operation. Largely equivalent to
+     * {@code readAttributes(Path path, Class<A> type, LinkOption... options)} where the returned object is a map of
+     * method names (attributes) to values, filtered on the comma separated {@code attributes}.
      *
      * @param path       the path to the file
      * @param attributes the comma separated attributes to read. May be prefixed with "s3:"
