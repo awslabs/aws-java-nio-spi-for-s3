@@ -23,6 +23,9 @@
     <suppress checks="^((?!NoIgnoreAnnotationsCheck).)*$"
               files=".*[\\/](test|integrationTest)[\\/]java[\\/].+\.java$"/>
 
+    <suppress checks="HideUtilityClassConstructor"
+              files=".*[\\/](examples)[\\/]java[\\/].+\.java$"/>
+
     <!-- ignore missing annotation checks under test/codegen directory -->
     <suppress checks="MissingSdkAnnotationCheck"
               files=".(codegen|test|release)[\\/].+\.java$"/>
