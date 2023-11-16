@@ -1,62 +1,48 @@
 /*
- * Copyright 2023 ste.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package software.amazon.nio.spi.s3.util;
 
 import java.net.URI;
 import software.amazon.awssdk.services.s3.internal.BucketUtils;
-import software.amazon.nio.spi.s3.util.S3FileSystemInfo;
-
-import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
 
 /**
  * Populates fields with information extracted by the S3 URI provided. This
  * implementation is for standard AWS buckets as described in section
  * "Accessing a bucket using S3://" in https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-bucket-intro.html
- *
+ * <p>
  * It also computes the file system key that can be used to identify a runtime
  * instance of a S3FileSystem (for caching purposes for example). In this
  * implementation the key is the bucket name (which is unique in the AWS S3
  * namespace).
- *
  */
 public class S3XFileSystemInfo extends S3FileSystemInfo {
+
+    private static final String URI_PATH_SEPARATOR = "/";
 
     /**
      * Creates a new instance and populates it with the information extracted
      * from {@code uri}. The provided uri is parsed accordingly to the following
      * format:
-     *
+     * <p>
      * {@code
-     *
+     * <p>
      * s3x://[accessKey:accessSecret@]endpoint[:port]/bucket/key
-     *
+     * <p>
      * }
-     *
+     * <p>
      * Please note that the authority part of the URI (endpoint[:port] above) is always
      * considered a HTTP(S) endpoint, therefore the name of the bucket is the
      * first element of the path. The remaining path elements will be the object
      * key.
-     *
+     * <p>
      * Additionally {@code key} is computed as endpoint/bucket/accessKey
      *
      * @param uri a S3 URI
-     *
      * @throws IllegalArgumentException if URI contains invalid components
-     *         (e.g. an invalid bucket name)
+     *                                  (e.g. an invalid bucket name)
      */
     public S3XFileSystemInfo(URI uri) throws IllegalArgumentException {
         if (uri == null) {
@@ -68,16 +54,14 @@ public class S3XFileSystemInfo extends S3FileSystemInfo {
         if (userInfo != null) {
             var pos = userInfo.indexOf(':');
             accessKey = (pos < 0) ? userInfo : userInfo.substring(0, pos);
-            accessSecret = (pos < 0) ? null : userInfo.substring(pos+1);
-        } else {
-            accessKey = accessSecret = null;
+            accessSecret = (pos < 0) ? null : userInfo.substring(pos + 1);
         }
 
         endpoint = uri.getHost();
         if (uri.getPort() > 0) {
             endpoint += ":" + uri.getPort();
         }
-        bucket = uri.getPath().split(PATH_SEPARATOR)[1];
+        bucket = uri.getPath().split(URI_PATH_SEPARATOR)[1];
 
         BucketUtils.isValidDnsBucketName(bucket, true);
 

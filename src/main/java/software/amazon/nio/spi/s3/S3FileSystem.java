@@ -5,15 +5,21 @@
 
 package software.amazon.nio.spi.s3;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
+import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.channels.Channel;
-import java.nio.file.*;
+import java.nio.file.ClosedFileSystemException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.FileStore;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.PathMatcher;
+import java.nio.file.WatchService;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Collections;
@@ -22,12 +28,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-
-import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 /**
  * A Java NIO FileSystem for an S3 bucket as seen through the lens of the AWS Principal calling the class.
- *
  */
 public class S3FileSystem extends FileSystem {
     static final Logger logger = LoggerFactory.getLogger(S3FileSystem.class);
@@ -37,6 +44,9 @@ public class S3FileSystem extends FileSystem {
      */
     static final String BASIC_FILE_ATTRIBUTE_VIEW = "basic";
 
+    private static final Set<String> SUPPORTED_FILE_ATTRIBUTE_VIEWS =
+        Collections.singleton(BASIC_FILE_ATTRIBUTE_VIEW);
+
     S3ClientProvider clientProvider;
 
     private final String bucketName;
@@ -45,14 +55,13 @@ public class S3FileSystem extends FileSystem {
     private final Set<S3SeekableByteChannel> openChannels = new HashSet<>();
 
     private S3AsyncClient client;
-    final private S3NioSpiConfiguration configuration;
+    private final S3NioSpiConfiguration configuration;
 
     /**
      * Create a filesystem that represents the bucket specified by the URI
      *
      * @param provider the provider to be used with this fileSystem
-     * @param config the configuration to use; can be null to use a default configuration
-     *
+     * @param config   the configuration to use; can be null to use a default configuration
      */
     S3FileSystem(S3FileSystemProvider provider, S3NioSpiConfiguration config) {
         configuration = (config == null) ? new S3NioSpiConfiguration() : config;
@@ -87,13 +96,12 @@ public class S3FileSystem extends FileSystem {
      * {@link WatchService watch-service}, and other closeable objects associated
      * with this file system. The {@link FileSystems#getDefault default} file
      * system cannot be closed.
-     *
      */
     @Override
     public void close() throws IOException {
         open = false;
         for (var channel : openChannels) {
-            if(channel.isOpen()) {
+            if (channel.isOpen()) {
                 channel.close();
             }
             deregisterClosedChannel(channel);
@@ -117,8 +125,8 @@ public class S3FileSystem extends FileSystem {
      * Tells whether this file system allows only read-only access to
      * its file stores.
      * <br>
-     * This is currently always false. The ability to write an individual object depend on the IAM role that is used by the principal
-     * and the ACL of the bucket, but S3 itself is not inherently read only.
+     * This is currently always false. The ability to write an individual object depend on the IAM role that is used by
+     * the principal and the ACL of the bucket, but S3 itself is not inherently read only.
      *
      * @return {@code false}
      */
@@ -184,8 +192,6 @@ public class S3FileSystem extends FileSystem {
         return Collections.EMPTY_SET;
     }
 
-    private static final Set<String> supportedFileAttributeViews =
-            Collections.singleton(BASIC_FILE_ATTRIBUTE_VIEW);
     /**
      * Returns the set of the file attribute views supported by this {@code FileSystem}.
      * <br>
@@ -196,7 +202,7 @@ public class S3FileSystem extends FileSystem {
      */
     @Override
     public Set<String> supportedFileAttributeViews() {
-        return supportedFileAttributeViews;
+        return SUPPORTED_FILE_ATTRIBUTE_VIEWS;
     }
 
     /**
@@ -355,7 +361,8 @@ public class S3FileSystem extends FileSystem {
      */
     @Override
     public UserPrincipalLookupService getUserPrincipalLookupService() {
-        throw new UnsupportedOperationException("This method is not yet supported. Please raise a feature request describing your use case");
+        throw new UnsupportedOperationException(
+            "This method is not yet supported. Please raise a feature request describing your use case");
     }
 
     /**
@@ -368,7 +375,8 @@ public class S3FileSystem extends FileSystem {
      */
     @Override
     public WatchService newWatchService() {
-        throw new UnsupportedOperationException("This method is not yet supported. Please raise a feature request describing your use case");
+        throw new UnsupportedOperationException(
+            "This method is not yet supported. Please raise a feature request describing your use case");
     }
 
     /**
@@ -416,6 +424,7 @@ public class S3FileSystem extends FileSystem {
 
     /**
      * Obtain the name of the bucket represented by this <code>FileSystem</code> instance
+     *
      * @return the bucket name
      */
     String bucketName() {
@@ -424,17 +433,18 @@ public class S3FileSystem extends FileSystem {
 
     /**
      * The list of currently open channels. Exposed mainly for testing
+     *
      * @return a read only view wrapping the set of currently open channels.
      */
-    Set<Channel> getOpenChannels(){
+    Set<Channel> getOpenChannels() {
         return Collections.unmodifiableSet(openChannels);
     }
 
-    void registerOpenChannel(S3SeekableByteChannel channel){
+    void registerOpenChannel(S3SeekableByteChannel channel) {
         openChannels.add(channel);
     }
 
-    boolean deregisterClosedChannel(S3SeekableByteChannel closedChannel){
+    boolean deregisterClosedChannel(S3SeekableByteChannel closedChannel) {
         assert !closedChannel.isOpen();
 
         return openChannels.remove(closedChannel);
@@ -442,19 +452,26 @@ public class S3FileSystem extends FileSystem {
 
     /**
      * Tests if two S3 filesystems are equal
+     *
      * @param o the object to test for equality
      * @return true if {@code o} is not null, is an {@code S3FileSystem} and uses the same {@code S3FileSystemProvider} class
      */
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         var that = (S3FileSystem) o;
         return bucketName.equals(that.bucketName) && provider.getClass().getName().equals(that.provider.getClass().getName());
     }
 
     @Override
     public int hashCode() {
+        //CHECKSTYLE:OFF - There is no hashCode for multiple values
         return Objects.hash(bucketName, provider.getClass().getName());
+        //CHECKSTYLE:ON
     }
 }

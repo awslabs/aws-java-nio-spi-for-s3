@@ -1,7 +1,10 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package software.amazon.nio.spi.s3;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
@@ -12,11 +15,13 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.Objects;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 class S3WritableByteChannel implements WritableByteChannel {
     private final S3Path path;
@@ -26,7 +31,12 @@ class S3WritableByteChannel implements WritableByteChannel {
 
     private boolean open;
 
-    S3WritableByteChannel(S3Path path, S3AsyncClient client, S3TransferUtil s3TransferUtil, Set<? extends OpenOption> options) throws IOException {
+    S3WritableByteChannel(
+        S3Path path,
+        S3AsyncClient client,
+        S3TransferUtil s3TransferUtil,
+        Set<? extends OpenOption> options
+    ) throws IOException {
         Objects.requireNonNull(path);
         Objects.requireNonNull(client);
         this.s3TransferUtil = s3TransferUtil;

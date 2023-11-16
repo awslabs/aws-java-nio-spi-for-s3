@@ -5,7 +5,9 @@
 
 package software.amazon.nio.spi.s3;
 
-import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
+import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
+import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
+import static software.amazon.nio.spi.s3.S3FileSystemProvider.checkPath;
 
 import java.io.File;
 import java.io.IOError;
@@ -23,10 +25,7 @@ import java.nio.file.WatchService;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Objects;
-
-import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
-import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
-import static software.amazon.nio.spi.s3.S3FileSystemProvider.checkPath;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 @SuppressWarnings("NullableProblems")
 class S3Path implements Path {
@@ -34,7 +33,7 @@ class S3Path implements Path {
     private final S3FileSystem fileSystem;
     private final PosixLikePathRepresentation pathRepresentation;
 
-    private S3Path(S3FileSystem fileSystem, PosixLikePathRepresentation pathRepresentation){
+    private S3Path(S3FileSystem fileSystem, PosixLikePathRepresentation pathRepresentation) {
         this.fileSystem = fileSystem;
         this.pathRepresentation = pathRepresentation;
     }
@@ -42,7 +41,7 @@ class S3Path implements Path {
     /**
      * Construct a path using the same filesystem (bucket) as this path
      */
-    private S3Path from(String path){
+    private S3Path from(String path) {
         return getPath(this.fileSystem, path);
     }
 
@@ -62,25 +61,30 @@ class S3Path implements Path {
      * unreachable through this API due to the special meaning of the .. directory alias in POSIX.</p>
      *
      * @param fsForBucket the filesystem for the bucket that holds this path
-     * @param first the path string or initial part of the path string, may not be null. It may not be empty unless more is also null has zero length
-     * @param more additional strings to be joined to form the path string
-     * @throws InvalidPathException if the Path cannot be constructed
+     * @param first       the path string or initial part of the path string, may not be null.
+     *                    It may not be empty unless more is also null has zero length
+     * @param more        additional strings to be joined to form the path string
      * @return a new S3Path
+     * @throws InvalidPathException if the Path cannot be constructed
      */
     static S3Path getPath(S3FileSystem fsForBucket, String first, String... more) {
-        if(fsForBucket == null) throw new IllegalArgumentException("The S3FileSystem may not be null");
-        if(first == null) {
-          throw new IllegalArgumentException("first element of the path may not be null");
+        if (fsForBucket == null) {
+            throw new IllegalArgumentException("The S3FileSystem may not be null");
+        }
+        if (first == null) {
+            throw new IllegalArgumentException("first element of the path may not be null");
         }
 
         var configuration = fsForBucket.configuration();
 
         first = first.trim();
 
-        if( first.isEmpty() && !(more == null || more.length == 0)) throw new IllegalArgumentException("The first element of the path may not be empty when more exists");
+        if (first.isEmpty() && !(more == null || more.length == 0)) {
+            throw new IllegalArgumentException("The first element of the path may not be empty when more exists");
+        }
 
         var scheme = fsForBucket.provider().getScheme();
-        if(first.startsWith(scheme +":/")) {
+        if (first.startsWith(scheme + ":/")) {
             first = removeScheme(first, scheme);
             first = removeCredentials(first, configuration);
             first = removeEndpoint(first, configuration.getEndpoint());
@@ -136,12 +140,14 @@ class S3Path implements Path {
     public S3Path getFileName() {
         final var elements = pathRepresentation.elements();
         var size = elements.size();
-        if(size == 0) return null;
+        if (size == 0) {
+            return null;
+        }
 
-        if(pathRepresentation.hasTrailingSeparator()) {
-            return from(elements.get(size -1) + PATH_SEPARATOR);
+        if (pathRepresentation.hasTrailingSeparator()) {
+            return from(elements.get(size - 1) + PATH_SEPARATOR);
         } else {
-            return from(elements.get(size -1));
+            return from(elements.get(size - 1));
         }
     }
 
@@ -171,9 +177,13 @@ class S3Path implements Path {
     @Override
     public S3Path getParent() {
         var size = pathRepresentation.elements().size();
-        if (this.equals(getRoot()) || size < 1) return null;
-        if (pathRepresentation.isAbsolute() && size == 1) return getRoot();
-        return subpath(0, getNameCount()-1);
+        if (this.equals(getRoot()) || size < 1) {
+            return null;
+        }
+        if (pathRepresentation.isAbsolute() && size == 1) {
+            return getRoot();
+        }
+        return subpath(0, getNameCount() - 1);
     }
 
     /**
@@ -204,8 +214,10 @@ class S3Path implements Path {
     @Override
     public S3Path getName(int index) {
         final var elements = pathRepresentation.elements();
-        if(index < 0 || index >= elements.size()) throw new IllegalArgumentException("index must be >= 0 and <= the number of path elements");
-        return subpath(index, index+1);
+        if (index < 0 || index >= elements.size()) {
+            throw new IllegalArgumentException("index must be >= 0 and <= the number of path elements");
+        }
+        return subpath(index, index + 1);
     }
 
     /**
@@ -231,18 +243,28 @@ class S3Path implements Path {
     @Override
     public S3Path subpath(int beginIndex, int endIndex) {
         final var size = pathRepresentation.elements().size();
-        if(beginIndex < 0) throw new IllegalArgumentException("begin index may not be < 0");
-        if(beginIndex >= size) throw new IllegalArgumentException("begin index may not be >= the number of path elements");
-        if(endIndex > size) throw new IllegalArgumentException("end index may not be > the number of path elements");
-        if(endIndex <= beginIndex) throw new IllegalArgumentException("end index may not be <= the begin index");
+        if (beginIndex < 0) {
+            throw new IllegalArgumentException("begin index may not be < 0");
+        }
+        if (beginIndex >= size) {
+            throw new IllegalArgumentException("begin index may not be >= the number of path elements");
+        }
+        if (endIndex > size) {
+            throw new IllegalArgumentException("end index may not be > the number of path elements");
+        }
+        if (endIndex <= beginIndex) {
+            throw new IllegalArgumentException("end index may not be <= the begin index");
+        }
 
         var path = String.join(PATH_SEPARATOR, pathRepresentation.elements().subList(beginIndex, endIndex));
-        if (this.isAbsolute() && beginIndex == 0) path = PATH_SEPARATOR+path;
+        if (this.isAbsolute() && beginIndex == 0) {
+            path = PATH_SEPARATOR + path;
+        }
 
         if (endIndex == size && !pathRepresentation.hasTrailingSeparator()) {
             return from(path);
         } else {
-            return from(path+PATH_SEPARATOR);
+            return from(path + PATH_SEPARATOR);
         }
     }
 
@@ -269,7 +291,7 @@ class S3Path implements Path {
     @Override
     public boolean startsWith(Path other) {
         return this.equals(other) ||
-                this.fileSystem.equals(other.getFileSystem()) &&
+            this.fileSystem.equals(other.getFileSystem()) &&
                 this.isAbsolute() == other.isAbsolute() &&
                 this.getNameCount() >= other.getNameCount() &&
                 this.subpath(0, other.getNameCount()).equals(other);
@@ -315,7 +337,7 @@ class S3Path implements Path {
     @Override
     public boolean endsWith(Path other) {
         return this.equals(other) ||
-                this.fileSystem == other.getFileSystem() &&
+            this.fileSystem == other.getFileSystem() &&
                 this.getNameCount() >= other.getNameCount() &&
                 this.subpath(this.getNameCount() - other.getNameCount(), this.getNameCount()).equals(other);
     }
@@ -370,9 +392,11 @@ class S3Path implements Path {
         final var realElements = new LinkedList<String>();
 
         for (var element : elements) {
-            if (element.equals(".")) continue;
-            if (element.equals("..")){
-                if (!realElements.isEmpty()){
+            if (element.equals(".")) {
+                continue;
+            }
+            if (element.equals("..")) {
+                if (!realElements.isEmpty()) {
                     realElements.removeLast();
                 }
                 continue;
@@ -401,17 +425,23 @@ class S3Path implements Path {
      * @param other the path to resolve against this path
      * @return the resulting path
      * @throws ProviderMismatchException if {@code other} is {@code null} or if it is not an instance of {@code S3Path}
-     * @throws IllegalArgumentException if {@code other} is NOT and instance of an {@code S3Path}
+     * @throws IllegalArgumentException  if {@code other} is NOT and instance of an {@code S3Path}
      * @see #relativize
      */
     @Override
     public S3Path resolve(Path other) {
         var s3Other = checkPath(other);
 
-        if(!this.bucketName().equals(s3Other.bucketName())) throw new IllegalArgumentException("S3Paths cannot be resolved when they are from different buckets");
+        if (!this.bucketName().equals(s3Other.bucketName())) {
+            throw new IllegalArgumentException("S3Paths cannot be resolved when they are from different buckets");
+        }
 
-        if (s3Other.isAbsolute()) return s3Other;
-        if (s3Other.isEmpty()) return this;
+        if (s3Other.isAbsolute()) {
+            return s3Other;
+        }
+        if (s3Other.isEmpty()) {
+            return this;
+        }
 
         String concatenatedPath;
         if (!this.pathRepresentation.hasTrailingSeparator()) {
@@ -500,12 +530,20 @@ class S3Path implements Path {
     public S3Path relativize(Path other) {
         var otherPath = checkPath(other);
 
-        if(this.equals(otherPath)) return from("");
+        if (this.equals(otherPath)) {
+            return from("");
+        }
 
-        if(this.isAbsolute() != otherPath.isAbsolute()) throw new IllegalArgumentException("to obtain a relative path both must be absolute or both must be relative");
-        if(!Objects.equals(this.bucketName(), otherPath.bucketName())) throw new IllegalArgumentException("cannot relativize S3Paths from different buckets");
+        if (this.isAbsolute() != otherPath.isAbsolute()) {
+            throw new IllegalArgumentException("to obtain a relative path both must be absolute or both must be relative");
+        }
+        if (!Objects.equals(this.bucketName(), otherPath.bucketName())) {
+            throw new IllegalArgumentException("cannot relativize S3Paths from different buckets");
+        }
 
-        if(this.isEmpty()) return otherPath;
+        if (this.isEmpty()) {
+            return otherPath;
+        }
 
         var nameCount = this.getNameCount();
         var otherNameCount = otherPath.getNameCount();
@@ -518,13 +556,14 @@ class S3Path implements Path {
             return getRelativePathFromDifference(otherPath, otherNameCount, differenceCount, parentDirCount);
         }
 
-        var relativePath = new char[parentDirCount*3 - 1];
+        var relativePath = new char[parentDirCount * 3 - 1];
         var index = 0;
         while (parentDirCount > 0) {
             relativePath[index++] = '.';
             relativePath[index++] = '.';
-            if (parentDirCount > 1)
+            if (parentDirCount > 1) {
                 relativePath[index++] = '/';
+            }
             parentDirCount--;
         }
 
@@ -535,12 +574,16 @@ class S3Path implements Path {
         Objects.requireNonNull(otherPath);
         var remainingSubPath = otherPath.subpath(differenceCount, otherNameCount);
 
-        if (parentDirCount == 0) return remainingSubPath;
+        if (parentDirCount == 0) {
+            return remainingSubPath;
+        }
 
         // we need to pop up some directories (each of which needs three characters ../) then append the remaining sub-path
         var relativePathSize = parentDirCount * 3 + remainingSubPath.pathRepresentation.toString().length();
 
-        if (otherPath.isEmpty()) relativePathSize--;
+        if (otherPath.isEmpty()) {
+            relativePathSize--;
+        }
 
         var relativePath = new char[relativePathSize];
         var index = 0;
@@ -548,13 +591,16 @@ class S3Path implements Path {
             relativePath[index++] = '.';
             relativePath[index++] = '.';
             if (otherPath.isEmpty()) {
-                if (parentDirCount > 1) relativePath[index++] = '/';
+                if (parentDirCount > 1) {
+                    relativePath[index++] = '/';
+                }
             } else {
                 relativePath[index++] = '/';
             }
             parentDirCount--;
         }
-        System.arraycopy(remainingSubPath.pathRepresentation.chars(), 0, relativePath, index, remainingSubPath.pathRepresentation.chars().length);
+        System.arraycopy(remainingSubPath.pathRepresentation.chars(), 0, relativePath, index,
+            remainingSubPath.pathRepresentation.chars().length);
 
         return new S3Path(getFileSystem(), new PosixLikePathRepresentation(relativePath));
     }
@@ -562,14 +608,15 @@ class S3Path implements Path {
     private int getDifferenceCount(Path other, int limit) {
         var i = 0;
         while (i < limit) {
-            if (!this.getName(i).equals(other.getName(i)))
+            if (!this.getName(i).equals(other.getName(i))) {
                 break;
+            }
             i++;
         }
         return i;
     }
 
-    private boolean isEmpty(){
+    private boolean isEmpty() {
         return pathRepresentation.toString().isEmpty();
     }
 
@@ -582,7 +629,7 @@ class S3Path implements Path {
      * which means all special characters (e.g. blanks, %, ?, etc.) are encoded.
      * This may result in a different string from the real path (object key),
      * which instead allows those characters.
-     *
+     * <p>
      * For instance, the S3 URI "s3://mybucket/with space and %" is a valid S3
      * object key, which must be encoded when creating a Path and that will be
      * encoded when creating a URI. E.g.:
@@ -622,7 +669,7 @@ class S3Path implements Path {
             (e) -> {
                 var name = e.getFileName().toString();
                 if (name.endsWith(PATH_SEPARATOR)) {
-                    name = name.substring(0, name.length()-1);
+                    name = name.substring(0, name.length() - 1);
                 }
                 uri.append(PATH_SEPARATOR).append(URLEncoder.encode(name, StandardCharsets.UTF_8));
             }
@@ -647,7 +694,9 @@ class S3Path implements Path {
      */
     @Override
     public S3Path toAbsolutePath() {
-        if (isAbsolute()) return this;
+        if (isAbsolute()) {
+            return this;
+        }
 
         return new S3Path(fileSystem, PosixLikePathRepresentation.of(PATH_SEPARATOR, pathRepresentation.toString()));
     }
@@ -668,13 +717,16 @@ class S3Path implements Path {
     @Override
     public S3Path toRealPath(LinkOption... options) {
         var p = this;
-        if(!isAbsolute()) p = toAbsolutePath();
+        if (!isAbsolute()) {
+            p = toAbsolutePath();
+        }
 
         return S3Path.getPath(fileSystem, PATH_SEPARATOR, p.normalize().toString());
     }
 
     /**
      * S3 Objects cannot be represented in the local file system
+     *
      * @throws UnsupportedOperationException always
      */
     @Override
@@ -684,20 +736,30 @@ class S3Path implements Path {
 
     /**
      * Currently not implemented
+     *
      * @throws UnsupportedOperationException always
      */
     @Override
-    public WatchKey register(WatchService watcher, WatchEvent.Kind<?>[] events, WatchEvent.Modifier... modifiers) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This method is not yet supported. Please raise a feature request describing your use case");
+    public WatchKey register(
+        WatchService watcher,
+        WatchEvent.Kind<?>[] events,
+        WatchEvent.Modifier... modifiers
+    ) throws UnsupportedOperationException {
+        throw new UnsupportedOperationException(
+            "This method is not yet supported. Please raise a feature request describing your use case"
+        );
     }
 
     /**
      * Currently not implemented
+     *
      * @throws UnsupportedOperationException always
      */
     @Override
     public WatchKey register(WatchService watcher, WatchEvent.Kind<?>... events) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This method is not yet supported. Please raise a feature request describing your use case");
+        throw new UnsupportedOperationException(
+            "This method is not yet supported. Please raise a feature request describing your use case"
+        );
     }
 
     /**
@@ -713,7 +775,8 @@ class S3Path implements Path {
      */
     @Override
     public Iterator<Path> iterator() {
-        return new S3PathIterator(pathRepresentation.elements().iterator(), pathRepresentation.isAbsolute(), pathRepresentation.hasTrailingSeparator());
+        return new S3PathIterator(pathRepresentation.elements().iterator(), pathRepresentation.isAbsolute(),
+            pathRepresentation.hasTrailingSeparator());
     }
 
     /**
@@ -735,9 +798,11 @@ class S3Path implements Path {
     @Override
     public int compareTo(Path other) {
         var o = checkPath(other);
-        if(o.fileSystem != this.fileSystem) throw new ClassCastException("compared S3 paths must be from the same bucket");
+        if (o.fileSystem != this.fileSystem) {
+            throw new ClassCastException("compared S3 paths must be from the same bucket");
+        }
         return this.toRealPath(NOFOLLOW_LINKS).toString().compareTo(
-                o.toRealPath(NOFOLLOW_LINKS).toString());
+            o.toRealPath(NOFOLLOW_LINKS).toString());
     }
 
     /**
@@ -745,18 +810,21 @@ class S3Path implements Path {
      * <p>
      * {@code true} if {@code other} is also an {@code S3Path} from the same bucket and the two paths have the same
      * real path.
+     *
      * @param other the object to which this object is to be compared
      * @return {@code true} if, and only if, the given object is a {@code Path}
      * that is identical to this {@code Path}
      */
     @Override
     public boolean equals(Object other) {
-        if (this == other) return true;
+        if (this == other) {
+            return true;
+        }
 
         return other instanceof S3Path
-                && Objects.equals(((S3Path) other).bucketName(), this.bucketName())
-                && Objects.equals(((S3Path) other).toRealPath(NOFOLLOW_LINKS).pathRepresentation,
-                        this.toRealPath(NOFOLLOW_LINKS).pathRepresentation);
+            && Objects.equals(((S3Path) other).bucketName(), this.bucketName())
+            && Objects.equals(((S3Path) other).toRealPath(NOFOLLOW_LINKS).pathRepresentation,
+            this.toRealPath(NOFOLLOW_LINKS).pathRepresentation);
     }
 
     /**
@@ -785,6 +853,7 @@ class S3Path implements Path {
 
     /**
      * The name of the S3 bucket that represents the root ("/") of this Path
+     *
      * @return the bucketName, equivalent to <code>getFileSystem().bucketName()</code>
      */
     String bucketName() {
@@ -793,6 +862,7 @@ class S3Path implements Path {
 
     /**
      * Is the path inferred to be an S3 directory?
+     *
      * @return true if the path can be inferred to be a directory
      */
     boolean isDirectory() {
@@ -801,27 +871,30 @@ class S3Path implements Path {
 
     /**
      * The key of the object for S3. Essentially the "real path" with the "/" prefix and bucket name removed.
+     *
      * @return the key
      */
-    String getKey(){
-        if(isEmpty()) return "";
-        var s = toRealPath(NOFOLLOW_LINKS).toString();
-        if(s.startsWith(PATH_SEPARATOR+bucketName())) {
-                s = s.replaceFirst(PATH_SEPARATOR+bucketName(), "");
+    String getKey() {
+        if (isEmpty()) {
+            return "";
         }
-        while(s.startsWith(PATH_SEPARATOR)){
+        var s = toRealPath(NOFOLLOW_LINKS).toString();
+        if (s.startsWith(PATH_SEPARATOR + bucketName())) {
+            s = s.replaceFirst(PATH_SEPARATOR + bucketName(), "");
+        }
+        while (s.startsWith(PATH_SEPARATOR)) {
             s = s.substring(1);
         }
         return s;
     }
 
     private final class S3PathIterator implements Iterator<Path> {
-        private final Iterator<String> delegate;
-        boolean first;
         final boolean isAbsolute;
         final boolean hasTrailingSeparator;
+        boolean first;
+        private final Iterator<String> delegate;
 
-        private S3PathIterator(Iterator<String> delegate, boolean isAbsolute, boolean hasTrailingSeparator){
+        private S3PathIterator(Iterator<String> delegate, boolean isAbsolute, boolean hasTrailingSeparator) {
             this.delegate = delegate;
             this.isAbsolute = isAbsolute;
             this.hasTrailingSeparator = hasTrailingSeparator;
@@ -831,16 +904,16 @@ class S3Path implements Path {
         @Override
         public Path next() {
             var pathString = delegate.next();
-            if(isAbsolute() && first){
+            if (isAbsolute() && first) {
                 first = false;
-                pathString = PATH_SEPARATOR+pathString;
+                pathString = PATH_SEPARATOR + pathString;
                 if (!hasNext() && hasTrailingSeparator) {
-                    pathString = pathString+PATH_SEPARATOR;
+                    pathString = pathString + PATH_SEPARATOR;
                 }
             }
 
-            if(hasNext() || hasTrailingSeparator) {
-                pathString = pathString+PATH_SEPARATOR;
+            if (hasNext() || hasTrailingSeparator) {
+                pathString = pathString + PATH_SEPARATOR;
             }
             return from(pathString);
         }
@@ -851,8 +924,8 @@ class S3Path implements Path {
         }
     }
 
-    private static String removeScheme(String path, String scheme){
-        return path.substring(scheme.length()+2);
+    private static String removeScheme(String path, String scheme) {
+        return path.substring(scheme.length() + 2);
     }
 
     private static String removeCredentials(String first, S3NioSpiConfiguration configuration) {
@@ -860,7 +933,7 @@ class S3Path implements Path {
             var credentials = configuration.getCredentials();
             var credentialsAsString = credentials.accessKeyId() + ':' + credentials.secretAccessKey();
             if (first.startsWith('/' + credentialsAsString)) {
-                first = PATH_SEPARATOR + first.substring(credentialsAsString.length()+2);
+                first = PATH_SEPARATOR + first.substring(credentialsAsString.length() + 2);
             }
         }
         return first;
@@ -868,14 +941,14 @@ class S3Path implements Path {
 
     private static String removeEndpoint(String first, String endpoint) {
         if (!endpoint.isEmpty() && first.startsWith(PATH_SEPARATOR + endpoint)) {
-            first = first.substring(endpoint.length()+1);
+            first = first.substring(endpoint.length() + 1);
         }
         return first;
     }
 
     private static String removeBucket(String first, String part) {
         if (first.startsWith(PATH_SEPARATOR + part)) {
-            first = first.substring(part.length()+1);
+            first = first.substring(part.length() + 1);
         }
         return first;
     }

@@ -5,6 +5,54 @@
 
 package software.amazon.nio.spi.s3;
 
+import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
+import static software.amazon.nio.spi.s3.util.TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
+import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExceptionOnTimeOut;
+
+import java.io.IOException;
+import java.net.URI;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.AccessMode;
+import java.nio.file.CopyOption;
+import java.nio.file.DirectoryStream;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileStore;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystemNotFoundException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.nio.file.ProviderMismatchException;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributeView;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.FileAttributeView;
+import java.nio.file.spi.FileSystemProvider;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
@@ -28,39 +76,6 @@ import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 import software.amazon.nio.spi.s3.util.S3FileSystemInfo;
 import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
-import java.io.IOException;
-import java.net.URI;
-import java.nio.channels.SeekableByteChannel;
-import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributeView;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.FileAttribute;
-import java.nio.file.attribute.FileAttributeView;
-import java.nio.file.spi.FileSystemProvider;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-
-import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
-import static java.util.concurrent.TimeUnit.MINUTES;
-import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
-import static software.amazon.nio.spi.s3.util.TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
-import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExceptionOnTimeOut;
-
 /**
  * Service-provider class for S3 when represented as an NIO filesystem. The methods defined by the Files class will
  * delegate to an instance of this class when referring to an object in S3. This class will in turn make calls to the
@@ -75,10 +90,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * Constant for the S3 scheme "s3"
      */
     static final String SCHEME = "s3";
+    private static final Map<String, S3FileSystem> FS_CACHE = new HashMap<>();
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
-    private static final Map<String, S3FileSystem> cache = new HashMap<>();
 
     /**
      * Returns the URI scheme that identifies this provider.
@@ -95,7 +110,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public FileSystem newFileSystem(URI uri, Map<String, ?> env) {
-        throw new NotYetImplementedException("This method is not yet supported in v2.x. It might be implemented for bucket creation");
+        throw new NotYetImplementedException(
+            "This method is not yet supported in v2.x. It might be implemented for bucket creation");
     }
 
     /**
@@ -163,8 +179,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @SuppressWarnings("NullableProblems")
     @Override
-    public Path getPath(URI uri)
-    throws IllegalArgumentException, FileSystemNotFoundException, SecurityException {
+    public Path getPath(URI uri) throws IllegalArgumentException, FileSystemNotFoundException, SecurityException {
         Objects.requireNonNull(uri);
         return getFileSystem(uri, true).getPath(uri.getScheme() + ":/" + uri.getPath());
     }
@@ -197,7 +212,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
      *                                       {@code DELETE_ON_CLOSE} option.
      */
     @Override
-    public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
+    public SeekableByteChannel newByteChannel(
+        Path path,
+        Set<? extends OpenOption> options,
+        FileAttribute<?>... attrs
+    ) throws IOException {
         if (Objects.isNull(options)) {
             options = Collections.emptySet();
         }
@@ -234,8 +253,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
         try {
             return new S3DirectoryStream(s3Path.getFileSystem(), s3Path.bucketName(), dirName, filter);
         } catch (CompletionException e) {
-            if (e.getCause() instanceof NoSuchBucketException ) {
-                throw  new NoSuchFileException("Bucket '" + s3Path.bucketName() + "' not found", s3Path.toString(), e.getMessage());
+            if (e.getCause() instanceof NoSuchBucketException) {
+                throw new NoSuchFileException("Bucket '" + s3Path.bucketName() + "' not found", s3Path.toString(),
+                    e.getMessage());
             }
             throw e;
         }
@@ -252,7 +272,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
         var s3Directory = checkPath(dir);
-        if(s3Directory.toString().equals("/") || s3Directory.toString().isEmpty()) {
+        if (s3Directory.toString().equals("/") || s3Directory.toString().isEmpty()) {
             throw new FileAlreadyExistsException("Root directory already exists");
         }
         var directoryKey = s3Directory.toRealPath(NOFOLLOW_LINKS).getKey();
@@ -265,11 +285,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         try {
             s3Directory.getFileSystem().client().putObject(
-                    PutObjectRequest.builder()
-                            .bucket(s3Directory.bucketName())
-                            .key(directoryKey)
-                            .build(),
-                    AsyncRequestBody.empty()
+                PutObjectRequest.builder()
+                    .bucket(s3Directory.bucketName())
+                    .key(directoryKey)
+                    .build(),
+                AsyncRequestBody.empty()
             ).get(timeOut, unit);
         } catch (TimeoutException e) {
             throw logAndGenerateExceptionOnTimeOut(logger, "createDirectory", timeOut, unit);
@@ -302,12 +322,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
             for (var keyList : keys) {
                 s3Client.deleteObjects(DeleteObjectsRequest.builder()
-                                .bucket(bucketName)
-                                .delete(Delete.builder()
-                                        .objects(keyList)
-                                        .build())
-                                .build())
-                        .get(timeOut, unit);
+                        .bucket(bucketName)
+                        .delete(Delete.builder()
+                            .objects(keyList)
+                            .build())
+                        .build())
+                    .get(timeOut, unit);
             }
         } catch (TimeoutException e) {
             throw logAndGenerateExceptionOnTimeOut(logger, "delete", timeOut, unit);
@@ -360,7 +380,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
             try (var s3TransferManager = S3TransferManager.builder().s3Client(s3Client).build()) {
                 for (var keyList : sourceKeys) {
                     for (var objectIdentifier : keyList) {
-                        copyKey(objectIdentifier.key(), prefixWithSeparator, sourceBucket, s3TargetPath, s3TransferManager, fileExistsAndCannotReplace).get(timeOut, unit);
+                        copyKey(objectIdentifier.key(), prefixWithSeparator, sourceBucket, s3TargetPath, s3TransferManager,
+                            fileExistsAndCannotReplace).get(timeOut, unit);
                     }
                 }
             }
@@ -515,7 +536,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         try {
             var ioException = response.handleAsync((resp, ex) -> {
-                if( ex != null){
+                if (ex != null) {
                     return new IOException(ex);
                 }
 
@@ -528,7 +549,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
                         return null;
                     }
 
-                    if (listResp.hasContents() && !listResp.contents().isEmpty()){
+                    if (listResp.hasContents() && !listResp.contents().isEmpty()) {
                         logger.debug("checkAccess - contents: access is OK");
                         return null;
                     }
@@ -619,8 +640,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     * Reads a set of file attributes as a bulk operation. Largely equivalent to {@code readAttributes(Path path, Class<A> type, LinkOption... options)}
-     * where the returned object is a map of method names (attributes) to values, filtered on the comma separated {@code attributes}.
+     * Reads a set of file attributes as a bulk operation. Largely equivalent to
+     * {@code readAttributes(Path path, Class<A> type, LinkOption... options)} where the returned object is a map of
+     * method names (attributes) to values, filtered on the comma separated {@code attributes}.
      *
      * @param path       the path to the file
      * @param attributes the comma separated attributes to read. May be prefixed with "s3:"
@@ -642,8 +664,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
         Objects.requireNonNull(attributes);
         var s3Path = checkPath(path);
 
-        if (s3Path.isDirectory() || attributes.trim().isEmpty())
+        if (s3Path.isDirectory() || attributes.trim().isEmpty()) {
             return Collections.emptyMap();
+        }
 
         var attributesFilter = attributesFilterFor(attributes);
         return new S3BasicFileAttributes(s3Path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1)).asMap(attributesFilter);
@@ -655,7 +678,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @throws UnsupportedOperationException always
      */
     @Override
-    public void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws UnsupportedOperationException {
+    public void setAttribute(Path path, String attribute, Object value, LinkOption... options)
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException("s3 file attributes cannot be modified by this class");
     }
 
@@ -663,11 +687,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * Similar to getFileSystem(uri), but it allows to create the file system if
      * not yet created.
      *
-     * @param uri URI reference
+     * @param uri    URI reference
      * @param create if true, the file system is created if not already done
-     *
      * @return The file system
-     *
      * @throws IllegalArgumentException    If the pre-conditions for the {@code uri} parameter aren't met
      * @throws FileSystemNotFoundException If the file system does not exist
      * @throws SecurityException           If a security manager is installed, and it denies an unspecified
@@ -675,7 +697,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     S3FileSystem getFileSystem(URI uri, boolean create) {
         var info = fileSystemInfo(uri);
-        return cache.computeIfAbsent(info.key(), (key) -> {
+        return FS_CACHE.computeIfAbsent(info.key(), (key) -> {
             if (!create) {
                 throw new FileSystemNotFoundException("file system not found for '" + info.key() + "'");
             }
@@ -689,9 +711,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     void closeFileSystem(FileSystem fs) {
-        for (var key: cache.keySet()) {
-            if (fs == cache.get(key)) {
-                try (FileSystem closeable = cache.remove(key)) {
+        for (var key : FS_CACHE.keySet()) {
+            if (fs == FS_CACHE.get(key)) {
+                try (FileSystem closeable = FS_CACHE.remove(key)) {
                     closeFileSystemIfOpen(closeable);
                     return;
                 } catch (IOException e) {
@@ -707,7 +729,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     private void closeFileSystemIfOpen(FileSystem fs) throws IOException {
-        if(fs.isOpen()){
+        if (fs.isOpen()) {
             fs.close();
         }
     }
@@ -716,7 +738,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     boolean exists(S3AsyncClient s3Client, S3Path path) throws InterruptedException, TimeoutException {
         try {
             s3Client.headObject(HeadObjectRequest.builder().bucket(path.bucketName()).key(path.getKey()).build())
-                    .get(TIMEOUT_TIME_LENGTH_1, MINUTES);
+                .get(TIMEOUT_TIME_LENGTH_1, MINUTES);
             return true;
         } catch (ExecutionException | NoSuchKeyException e) {
             logger.debug("Could not retrieve object head information", e);
@@ -729,27 +751,32 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * and configure the access to a bucket. These are:
      * <br>
      * - key: the file system key that can be used to uniquely identify a S3
-     *        file systems instance (for example for caching purposes)
+     * file systems instance (for example for caching purposes)
      * - bucket: the name of the bucked to be addressed
      * - endpoint: non default endpoint where the bucket is located
      * <br>
      * The default implementation in {@code S3FileSystemProvider} treats {@code uri}
      * strictly a AWS S3 URI (see Accessing a bucket using S3:// section <a href="in
-     ">* https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-bucket-</a>intro.html).
+     * ">* https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-bucket-</a>intro.html).
      * As such, it returns an empty endpoint and the name of the bucket as key.
      * <br>
      * Subclasses can override this method to implement alternative parsing of
      * the provided URI so that they can implement alternative URI schemes.
      *
      * @param uri the uri to address the bucket
-     *
      * @return the information extracted from {@code uri}
      */
     S3FileSystemInfo fileSystemInfo(URI uri) {
         return new S3FileSystemInfo(uri);
     }
 
-    private static List<List<ObjectIdentifier>> getContainedObjectBatches(S3AsyncClient s3Client, String bucketName, String prefix, long timeOut, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+    private static List<List<ObjectIdentifier>> getContainedObjectBatches(
+        S3AsyncClient s3Client,
+        String bucketName,
+        String prefix,
+        long timeOut,
+        TimeUnit unit
+    ) throws InterruptedException, ExecutionException, TimeoutException {
         String continuationToken = null;
         var hasMoreItems = true;
         List<List<ObjectIdentifier>> keys = new ArrayList<>();
@@ -761,10 +788,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
                 requestBuilder.continuationToken(finalContinuationToken).build()
             ).get(timeOut, unit);
             var objects = response.contents()
-                    .stream()
-                    .filter(s3Object -> s3Object.key().equals(prefix) || s3Object.key().startsWith(prefix + PATH_SEPARATOR))
-                    .map(s3Object -> ObjectIdentifier.builder().key(s3Object.key()).build())
-                    .collect(Collectors.toList());
+                .stream()
+                .filter(s3Object -> s3Object.key().equals(prefix) || s3Object.key().startsWith(prefix + PATH_SEPARATOR))
+                .map(s3Object -> ObjectIdentifier.builder().key(s3Object.key()).build())
+                .collect(Collectors.toList());
             if (!objects.isEmpty()) {
                 keys.add(objects);
             }
@@ -779,12 +806,19 @@ public class S3FileSystemProvider extends FileSystemProvider {
             return x -> true;
         }
         final var attrSet = Arrays.stream(attributes.split(","))
-                .map(attr -> attr.replaceAll("^s3:", ""))
-                .collect(Collectors.toSet());
+            .map(attr -> attr.replaceAll("^s3:", ""))
+            .collect(Collectors.toSet());
         return attrSet::contains;
     }
 
-    private CompletableFuture<CompletedCopy> copyKey(String sourceObjectIdentifierKey, String sourcePrefix, String sourceBucket, S3Path targetPath, S3TransferManager transferManager, Function<S3Path, Boolean> fileExistsAndCannotReplaceFn) throws FileAlreadyExistsException {
+    private CompletableFuture<CompletedCopy> copyKey(
+        String sourceObjectIdentifierKey,
+        String sourcePrefix,
+        String sourceBucket,
+        S3Path targetPath,
+        S3TransferManager transferManager,
+        Function<S3Path, Boolean> fileExistsAndCannotReplaceFn
+    ) throws FileAlreadyExistsException {
         final var sanitizedIdKey = sourceObjectIdentifierKey.replaceFirst(sourcePrefix, "");
         var resolvedS3TargetPath = targetPath.resolve(sanitizedIdKey);
 
@@ -793,21 +827,23 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
 
         return transferManager.copy(CopyRequest.builder()
-                .copyObjectRequest(CopyObjectRequest.builder()
-                        .checksumAlgorithm(ChecksumAlgorithm.SHA256)
-                        .sourceBucket(sourceBucket)
-                        .sourceKey(sourceObjectIdentifierKey)
-                        .destinationBucket(resolvedS3TargetPath.bucketName())
-                        .destinationKey(resolvedS3TargetPath.getKey())
-                        .build())
-                .build()).completionFuture();
+            .copyObjectRequest(CopyObjectRequest.builder()
+                .checksumAlgorithm(ChecksumAlgorithm.SHA256)
+                .sourceBucket(sourceBucket)
+                .sourceKey(sourceObjectIdentifierKey)
+                .destinationBucket(resolvedS3TargetPath.bucketName())
+                .destinationKey(resolvedS3TargetPath.getKey())
+                .build())
+            .build()).completionFuture();
     }
 
     private Function<S3Path, Boolean> cannotReplaceAndFileExistsCheck(CopyOption[] options, S3AsyncClient s3Client) {
         final var canReplaceFile = Arrays.asList(options).contains(StandardCopyOption.REPLACE_EXISTING);
 
         return (S3Path destination) -> {
-            if (canReplaceFile) return false;
+            if (canReplaceFile) {
+                return false;
+            }
             try {
                 return exists(s3Client, destination);
             } catch (InterruptedException e) {
@@ -821,8 +857,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
     static S3Path checkPath(Path obj) {
         Objects.requireNonNull(obj);
-        if (!(obj instanceof S3Path))
+        if (!(obj instanceof S3Path)) {
             throw new ProviderMismatchException();
-        return (S3Path)obj;
+        }
+        return (S3Path) obj;
     }
 }
