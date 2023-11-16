@@ -55,8 +55,6 @@ public class S3XFileSystemInfo extends S3FileSystemInfo {
             var pos = userInfo.indexOf(':');
             accessKey = (pos < 0) ? userInfo : userInfo.substring(0, pos);
             accessSecret = (pos < 0) ? null : userInfo.substring(pos + 1);
-        } else {
-            accessKey = accessSecret = null;
         }
 
         endpoint = uri.getHost();

@@ -44,8 +44,8 @@ public class S3FileSystemInfo {
             throw new IllegalArgumentException("uri can not be null");
         }
 
-        key = bucket = uri.getAuthority();
-        endpoint = accessKey = accessSecret = null;
+        key = uri.getAuthority();
+        bucket = uri.getAuthority();
 
         BucketUtils.isValidDnsBucketName(bucket, true);
     }
