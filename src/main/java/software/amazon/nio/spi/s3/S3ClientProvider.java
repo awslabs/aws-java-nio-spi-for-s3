@@ -126,6 +126,7 @@ public class S3ClientProvider {
      * @param <T>   type of AwsClient
      * @return a S3Client not bound to a region
      */
+    @SuppressWarnings("unchecked")
     <T extends AwsClient> T universalClient(boolean async) {
         return (T) ((async) ? DEFAULT_ASYNC_CLIENT : DEFAULT_CLIENT);
     }
