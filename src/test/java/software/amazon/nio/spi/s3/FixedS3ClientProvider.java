@@ -5,9 +5,7 @@
 
 package software.amazon.nio.spi.s3;
 
-import software.amazon.awssdk.awscore.AwsClient;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.S3Client;
 
 /**
  * Utility class that extends {@code S3ClientProvider} with a given
@@ -16,7 +14,7 @@ import software.amazon.awssdk.services.s3.S3Client;
  */
 public class FixedS3ClientProvider extends S3ClientProvider {
 
-    final public AwsClient client;
+    final public S3AsyncClient client;
 
     public FixedS3ClientProvider(S3AsyncClient client) {
         super(null);
@@ -24,13 +22,13 @@ public class FixedS3ClientProvider extends S3ClientProvider {
     }
 
     @Override
-    S3Client universalClient() {
-        return (S3Client)client;
+    S3AsyncClient universalClient() {
+        return client;
     }
 
     @Override
-    protected S3AsyncClient generateAsyncClient(String bucketName, boolean crt) {
-        return (S3AsyncClient)client;
+    protected S3AsyncClient generateClient(String bucketName, boolean crt) {
+        return client;
     }
 
 }
