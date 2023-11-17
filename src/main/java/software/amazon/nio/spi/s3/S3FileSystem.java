@@ -412,14 +412,14 @@ public class S3FileSystem extends FileSystem {
      */
     S3AsyncClient client() {
         if (client == null) {
-            client = clientProvider.generateAsyncClient(bucketName, true);
+            client = clientProvider.generateClient(bucketName, true);
         }
 
         return client;
     }
 
     S3AsyncClient readClient() {
-        return clientProvider.generateAsyncClient(bucketName, false);
+        return clientProvider.generateClient(bucketName, false);
     }
 
     /**
