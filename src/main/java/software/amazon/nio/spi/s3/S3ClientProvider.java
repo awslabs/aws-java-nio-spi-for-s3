@@ -63,7 +63,7 @@ public class S3ClientProvider {
     /**
      * Default S3CrtAsyncClientBuilder
      */
-    protected S3CrtAsyncClientBuilder asyncClientBuilder = S3AsyncClient.crtBuilder();
+    protected S3CrtAsyncClientBuilder asyncClientBuilder = S3AsyncClient.crtBuilder().crossRegionAccessEnabled(true);
 
     final RetryCondition retryCondition;
 
