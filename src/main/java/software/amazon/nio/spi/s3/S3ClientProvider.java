@@ -52,6 +52,7 @@ public class S3ClientProvider {
      */
     private static final S3AsyncClient DEFAULT_CLIENT = S3AsyncClient.builder()
         .endpointOverride(URI.create("https://s3.us-east-1.amazonaws.com"))
+        .crossRegionAccessEnabled(true)
         .region(Region.US_EAST_1)
         .build();
 
@@ -63,7 +64,9 @@ public class S3ClientProvider {
     /**
      * Default S3CrtAsyncClientBuilder
      */
-    protected S3CrtAsyncClientBuilder asyncClientBuilder = S3AsyncClient.crtBuilder().crossRegionAccessEnabled(true);
+    protected S3CrtAsyncClientBuilder asyncClientBuilder =
+            S3AsyncClient.crtBuilder()
+                    .crossRegionAccessEnabled(true);
 
     final RetryCondition retryCondition;
 
