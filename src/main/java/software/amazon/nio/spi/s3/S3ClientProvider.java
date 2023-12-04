@@ -291,7 +291,9 @@ public class S3ClientProvider {
             asyncClientBuilder.credentialsProvider(() -> credentials);
         }
 
-        return asyncClientBuilder.forcePathStyle(configuration.getForcePathStyle()).region(region).build();
+        return asyncClientBuilder.forcePathStyle(configuration.getForcePathStyle())
+                .region(region)
+                .build();
     }
 
     private static Region getRegionFromRegionName(String regionName) {
