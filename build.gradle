@@ -54,11 +54,11 @@ sourceSets {
 dependencies {
     implementation 'io.reactivex.rxjava3:rxjava:3.1.8'
 
-    implementation platform('software.amazon.awssdk:bom:2.21.30')
+    implementation platform('software.amazon.awssdk:bom:2.21.37')
 
     implementation 'software.amazon.awssdk:s3'
     implementation 'software.amazon.awssdk:s3-transfer-manager'
-    implementation 'software.amazon.awssdk.crt:aws-crt:0.28.9'
+    implementation 'software.amazon.awssdk.crt:aws-crt:0.28.11'
     implementation 'org.slf4j:slf4j-api:2.0.9'
     implementation 'ch.qos.logback:logback-classic:1.4.14'
     implementation 'ch.qos.logback:logback-core:1.4.14'
