@@ -138,7 +138,7 @@ testing {
             useJUnitJupiter('5.10.0')
             dependencies {
                 implementation 'org.assertj:assertj-core:3.24.2'
-                implementation 'org.mockito:mockito-core:5.7.0'
+                implementation 'org.mockito:mockito-core:5.8.0'
                 implementation 'org.assertj:assertj-core:3.24.2'
                 implementation 'org.mockito:mockito-junit-jupiter:5.8.0'
                 implementation 'com.github.stefanbirkner:system-lambda:1.2.1'
