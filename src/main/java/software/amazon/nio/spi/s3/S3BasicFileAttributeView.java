@@ -5,6 +5,7 @@
 
 package software.amazon.nio.spi.s3;
 
+import java.io.IOException;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
@@ -37,8 +38,8 @@ class S3BasicFileAttributeView implements BasicFileAttributeView {
      * @return the file attributes
      */
     @Override
-    public BasicFileAttributes readAttributes() {
-        return new S3BasicFileAttributes(path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1));
+    public BasicFileAttributes readAttributes() throws IOException {
+        return S3BasicFileAttributes.get(path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1));
     }
 
     /**
