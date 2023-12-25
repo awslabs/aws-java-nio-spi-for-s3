@@ -80,7 +80,6 @@ class S3BasicFileAttributes implements BasicFileAttributes {
      *
      * @return a {@code FileTime} representing the time the file was last
      * modified.
-     * @throws RuntimeException if the S3Clients {@code RetryConditions} configuration was not able to handle the exception.
      */
     @Override
     public FileTime lastModifiedTime() {
@@ -162,7 +161,6 @@ class S3BasicFileAttributes implements BasicFileAttributes {
      * therefore unspecified.
      *
      * @return the file size, in bytes
-     * @throws RuntimeException if the S3Clients {@code RetryConditions} configuration was not able to handle the exception.
      */
     @Override
     public long size() {
@@ -173,7 +171,6 @@ class S3BasicFileAttributes implements BasicFileAttributes {
      * Returns the S3 etag for the object
      *
      * @return the etag for an object, or {@code null} for a "directory"
-     * @throws RuntimeException if the S3Clients {@code RetryConditions} configuration was not able to handle the exception.
      * @see Files#walkFileTree
      */
     @Override
@@ -211,8 +208,8 @@ class S3BasicFileAttributes implements BasicFileAttributes {
     /**
      * @param path        the path to represent the attributes of
      * @param readTimeout timeout for requests to get attributes
-     * @return
-     * @throws IOException
+     * @return path BasicFileAttributes
+     * @throws IOException Errors getting the metadata of the object represented by the path are wrapped in IOException
      */
     static S3BasicFileAttributes get(S3Path path, Duration readTimeout) throws IOException {
         if (path.isDirectory()) {
