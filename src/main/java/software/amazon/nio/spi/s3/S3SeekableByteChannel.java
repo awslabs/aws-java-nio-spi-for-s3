@@ -201,9 +201,9 @@ class S3SeekableByteChannel implements SeekableByteChannel {
         return this.size;
     }
 
-    private void fetchSize() {
+    private void fetchSize() throws IOException {
         synchronized (this) {
-            this.size = new S3BasicFileAttributes(path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1)).size();
+            this.size = S3BasicFileAttributes.get(path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1)).size();
             LOGGER.debug("size of '{}' is '{}'", path.toUri(), this.size);
         }
     }

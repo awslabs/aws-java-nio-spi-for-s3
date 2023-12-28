@@ -7,7 +7,9 @@ package software.amazon.nio.spi.s3;
 
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static software.amazon.nio.spi.s3.util.TimeOutUtils.createAndLogTimeOutMessage;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
@@ -24,36 +26,49 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
 /**
  * Representation of {@link BasicFileAttributes} for an S3 object
  */
 class S3BasicFileAttributes implements BasicFileAttributes {
 
+    private static final FileTime EPOCH_FILE_TIME = FileTime.from(Instant.EPOCH);
+
+    private static final S3BasicFileAttributes DIRECTORY_ATTRIBUTES = new S3BasicFileAttributes(
+        EPOCH_FILE_TIME,
+        0L,
+        null,
+        true,
+        false
+    );
+
     private static final Set<String> METHOD_NAMES_TO_FILTER_OUT =
         Set.of("wait", "toString", "hashCode", "getClass", "notify", "notifyAll");
 
     private static final Logger logger = LoggerFactory.getLogger(S3BasicFileAttributes.class.getName());
 
-    private final S3Path path;
-    private final S3AsyncClient client;
-    private final String bucketName;
-    private final Duration timeout;
+
+    private final FileTime lastModifiedTime;
+    private final Long size;
+    private final Object eTag;
+    private final boolean isDirectory;
+    private final boolean isRegularFile;
 
     /**
      * Constructor for the attributes of a path
-     *
-     * @param path    the path to represent the attributes of
-     * @param timeout timeout for requests to get attributes
      */
-    S3BasicFileAttributes(S3Path path, Duration timeout) {
-        this.path = path;
-        this.client = path.getFileSystem().client();
-        this.bucketName = path.bucketName();
-        this.timeout = timeout;
+    private S3BasicFileAttributes(FileTime lastModifiedTime,
+                                 Long size,
+                                 Object eTag,
+                                 boolean isDirectory,
+                                 boolean isRegularFile
+    ) {
+        this.lastModifiedTime = lastModifiedTime;
+        this.size = size;
+        this.eTag = eTag;
+        this.isDirectory = isDirectory;
+        this.isRegularFile = isRegularFile;
     }
 
     /**
@@ -65,15 +80,10 @@ class S3BasicFileAttributes implements BasicFileAttributes {
      *
      * @return a {@code FileTime} representing the time the file was last
      * modified.
-     * @throws RuntimeException if the S3Clients {@code RetryConditions} configuration was not able to handle the exception.
      */
     @Override
     public FileTime lastModifiedTime() {
-        if (path.isDirectory()) {
-            return FileTime.from(Instant.EPOCH);
-        }
-
-        return FileTime.from(getObjectMetadata("lastModifiedTime()").lastModified());
+        return lastModifiedTime;
     }
 
     /**
@@ -109,7 +119,7 @@ class S3BasicFileAttributes implements BasicFileAttributes {
      */
     @Override
     public boolean isRegularFile() {
-        return !path.isDirectory();
+        return isRegularFile;
     }
 
     /**
@@ -119,7 +129,7 @@ class S3BasicFileAttributes implements BasicFileAttributes {
      */
     @Override
     public boolean isDirectory() {
-        return path.isDirectory();
+        return isDirectory;
     }
 
     /**
@@ -151,50 +161,21 @@ class S3BasicFileAttributes implements BasicFileAttributes {
      * therefore unspecified.
      *
      * @return the file size, in bytes
-     * @throws RuntimeException if the S3Clients {@code RetryConditions} configuration was not able to handle the exception.
      */
     @Override
     public long size() {
-        if (isDirectory()) {
-            return 0;
-        }
-        return getObjectMetadata("size()").contentLength();
+        return size;
     }
 
     /**
      * Returns the S3 etag for the object
      *
      * @return the etag for an object, or {@code null} for a "directory"
-     * @throws RuntimeException if the S3Clients {@code RetryConditions} configuration was not able to handle the exception.
      * @see Files#walkFileTree
      */
     @Override
     public Object fileKey() {
-        if (path.isDirectory()) {
-            return null;
-        }
-        return getObjectMetadata("fileKey()").eTag();
-    }
-
-    private HeadObjectResponse getObjectMetadata(String forOperation) {
-        try {
-            return client.headObject(req -> req
-                .bucket(bucketName)
-                .key(path.getKey())
-            ).get(timeout.toMillis(), MILLISECONDS);
-        } catch (ExecutionException e) {
-            var errMsg = format(
-                "an '%s' error occurred while obtaining the metadata (for operation %s) of '%s'" +
-                    "that was not handled successfully by the S3Client's configured RetryConditions",
-                e.getCause().toString(), forOperation, path.toUri());
-            logger.error(errMsg);
-            throw new RuntimeException(errMsg, e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        } catch (TimeoutException e) {
-            throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(logger, forOperation, timeout.toMillis(), MILLISECONDS);
-        }
+        return eTag;
     }
 
     /**
@@ -214,13 +195,62 @@ class S3BasicFileAttributes implements BasicFileAttributes {
                     return method.invoke(this);
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     // should not ever happen as these are all public no arg methods
-                    var errorMsg = format(
-                        "an exception has occurred during a reflection operation on the methods of the file attributes" +
-                            "of '%s', check if your Java SecurityManager is configured to allow reflection.",
-                        path.toUri());
+                    var errorMsg =
+                        "an exception has occurred during a reflection operation on the methods of file attributes," +
+                            "check if your Java SecurityManager is configured to allow reflection."
+                        ;
                     logger.error("{}, caused by {}", errorMsg, e.getCause().getMessage());
                     throw new RuntimeException(errorMsg, e);
                 }
             })));
     }
+
+    /**
+     * @param path        the path to represent the attributes of
+     * @param readTimeout timeout for requests to get attributes
+     * @return path BasicFileAttributes
+     * @throws IOException Errors getting the metadata of the object represented by the path are wrapped in IOException
+     */
+    static S3BasicFileAttributes get(S3Path path, Duration readTimeout) throws IOException {
+        if (path.isDirectory()) {
+            return DIRECTORY_ATTRIBUTES;
+        }
+
+        var headResponse = getObjectMetadata(path, readTimeout);
+        return new S3BasicFileAttributes(
+            FileTime.from(headResponse.lastModified()),
+            headResponse.contentLength(),
+            headResponse.eTag(),
+            false,
+            true
+        );
+    }
+
+    private static HeadObjectResponse getObjectMetadata(
+        S3Path path,
+        Duration timeout
+    ) throws IOException {
+        var client = path.getFileSystem().client();
+        var bucketName = path.bucketName();
+        try {
+            return client.headObject(req -> req
+                .bucket(bucketName)
+                .key(path.getKey())
+            ).get(timeout.toMillis(), MILLISECONDS);
+        } catch (ExecutionException e) {
+            var errMsg = format(
+                "an '%s' error occurred while obtaining the metadata (for operation getFileAttributes) of '%s'" +
+                    "that was not handled successfully by the S3Client's configured RetryConditions",
+                e.getCause().toString(), path.toUri());
+            logger.error(errMsg);
+            throw new IOException(errMsg, e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException(e);
+        } catch (TimeoutException e) {
+            var msg = createAndLogTimeOutMessage(logger, "getFileAttributes", timeout.toMillis(), MILLISECONDS);
+            throw new IOException(msg, e);
+        }
+    }
+
 }

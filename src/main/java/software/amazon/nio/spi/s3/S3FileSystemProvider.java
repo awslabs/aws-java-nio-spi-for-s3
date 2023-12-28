@@ -626,13 +626,13 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @return the file attributes or {@code null} if {@code path} is inferred to be a directory.
      */
     @Override
-    public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) {
+    public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
         Objects.requireNonNull(type);
         var s3Path = checkPath(path);
 
         if (type.equals(BasicFileAttributes.class)) {
             @SuppressWarnings("unchecked")
-            var a = (A) new S3BasicFileAttributes(s3Path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1));
+            var a = (A) S3BasicFileAttributes.get(s3Path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1));
             return a;
         } else {
             throw new UnsupportedOperationException("cannot read attributes of type: " + type);
@@ -660,7 +660,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      *                                       may be invoked to check for additional permissions.
      */
     @Override
-    public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) {
+    public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
         Objects.requireNonNull(attributes);
         var s3Path = checkPath(path);
 
@@ -669,7 +669,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
 
         var attributesFilter = attributesFilterFor(attributes);
-        return new S3BasicFileAttributes(s3Path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1)).asMap(attributesFilter);
+        return S3BasicFileAttributes.get(s3Path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1)).asMap(attributesFilter);
     }
 
     /**

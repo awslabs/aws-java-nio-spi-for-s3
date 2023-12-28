@@ -5,6 +5,7 @@
 
 package software.amazon.nio.spi.s3;
 
+import java.time.Instant;
 import org.mockito.Mock;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
@@ -53,7 +54,10 @@ public class S3SeekableByteChannelTest {
         // forward to the method that uses the HeadObjectRequest parameter
         lenient().when(mockClient.headObject(anyConsumer())).thenCallRealMethod();
         lenient().when(mockClient.headObject(any(HeadObjectRequest.class))).thenReturn(
-                CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
+                CompletableFuture.completedFuture(
+                    HeadObjectResponse.builder().contentLength(100L).lastModified(Instant.now()).build()
+                )
+        );
         lenient().when(mockClient.getObject(anyConsumer(), any(AsyncResponseTransformer.class))).thenCallRealMethod();
         lenient().when(mockClient.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenReturn(
                 CompletableFuture.supplyAsync(() -> ResponseBytes.fromByteArray(

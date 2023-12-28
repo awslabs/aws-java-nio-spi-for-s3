@@ -162,6 +162,11 @@ public class S3FileSystemProviderTest {
 
     @Test
     public void newByteChannel() throws Exception {
+        when(mockClient.headObject(anyConsumer())).thenReturn(
+            CompletableFuture.completedFuture(
+                HeadObjectResponse.builder().lastModified(Instant.now()).contentLength(1L).build()
+            )
+        );
         final var channel = provider.newByteChannel(Paths.get(URI.create(pathUri)), Collections.singleton(StandardOpenOption.READ));
         assertNotNull(channel);
         assertThat(channel).isInstanceOf(S3SeekableByteChannel.class);
@@ -428,15 +433,21 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void readAttributes() {
+    public void readAttributes() throws IOException {
         var foo = fs.getPath("/foo");
+        when(mockClient.headObject(anyConsumer())).thenReturn(completedFuture(
+            HeadObjectResponse.builder()
+                .lastModified(Instant.EPOCH)
+                .contentLength(100L)
+                .eTag("abcdef")
+                .build()));
         final var basicFileAttributes = provider.readAttributes(foo, BasicFileAttributes.class);
         assertNotNull(basicFileAttributes);
         assertThat(basicFileAttributes).isInstanceOf(S3BasicFileAttributes.class);
     }
 
     @Test
-    public void testReadAttributes() {
+    public void testReadAttributes() throws IOException {
         var foo = fs.getPath("/foo");
         var fooDir = fs.getPath("/foo/");
 
