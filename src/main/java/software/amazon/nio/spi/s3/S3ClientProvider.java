@@ -253,11 +253,14 @@ public class S3ClientProvider {
         S3AsyncClientBuilder builder
     ) {
         var region = getRegionFromRegionName(regionName);
-        logger.debug("bucket region is: '{}'", region.id());
+        // no region provided => leave it to the provider chain to figure it out (e.g. env var AWS_REGION)
+        if (region != null) {
+            logger.debug("bucket region is: '{}'", region.id());
+            asyncClientBuilder.region(region);
+        }
 
         builder
             .forcePathStyle(configuration.getForcePathStyle())
-            .region(region)
             .overrideConfiguration(
                 conf -> conf.retryPolicy(
                     configBuilder -> configBuilder.retryCondition(retryCondition).backoffStrategy(backoffStrategy)
@@ -279,7 +282,11 @@ public class S3ClientProvider {
 
     private S3AsyncClient configureCrtClientForRegion(String regionName) {
         var region = getRegionFromRegionName(regionName);
-        logger.debug("bucket region is: '{}'", region.id());
+        // no region provided => leave it to the provider chain to figure it out (e.g. env var AWS_REGION)
+        if (region != null) {
+            logger.debug("bucket region is: '{}'", region.id());
+            asyncClientBuilder.region(region);
+        }
 
         var endpointUri = configuration.endpointUri();
         if (endpointUri != null) {
@@ -292,12 +299,11 @@ public class S3ClientProvider {
         }
 
         return asyncClientBuilder.forcePathStyle(configuration.getForcePathStyle())
-                .region(region)
                 .build();
     }
 
     private static Region getRegionFromRegionName(String regionName) {
-        return (regionName == null || regionName.isBlank()) ? Region.US_EAST_1 : Region.of(regionName);
+        return (regionName == null || regionName.isBlank()) ? null : Region.of(regionName);
     }
 
 }

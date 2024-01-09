@@ -156,11 +156,11 @@ public class S3ClientProviderTest {
         provider.configuration.withEndpoint("endpoint1:1010");
         provider.generateClient("bucket1", true);
         then(BUILDER.endpointOverride.toString()).isEqualTo("https://endpoint1:1010");
-        then(BUILDER.region).isEqualTo(Region.US_EAST_1);  // just a default in the case not provide
+        then(BUILDER.region).isNull();  // no default => leave it to the provider chain
 
         provider.configuration.withEndpoint("endpoint2:2020");
         provider.generateClient("bucket2", true);
         then(BUILDER.endpointOverride.toString()).isEqualTo("https://endpoint2:2020");
-        then(BUILDER.region).isEqualTo(Region.US_EAST_1);  // just a default in the case not provide
+        then(BUILDER.region).isNull();  // no default => leave it to the provider chain
     }
 }
