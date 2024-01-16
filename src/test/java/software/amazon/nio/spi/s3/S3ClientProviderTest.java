@@ -68,8 +68,8 @@ public class S3ClientProviderTest {
     @Test
     public void testGenerateAsyncClientWith403Response() throws ExecutionException, InterruptedException {
         // when you get a forbidden response from getBucketLocation
-        when(mockClient.getBucketLocation(anyConsumer())).thenThrow(
-                S3Exception.builder().statusCode(403).build()
+        when(mockClient.getBucketLocation(anyConsumer())).thenReturn(
+                CompletableFuture.failedFuture(S3Exception.builder().statusCode(403).build())
         );
         // you should fall back to a head bucket attempt
         when(mockClient.headBucket(anyConsumer()))
@@ -96,12 +96,12 @@ public class S3ClientProviderTest {
     @Test
     public void testGenerateAsyncClientWith403Then301Responses() throws ExecutionException, InterruptedException {
         // when you get a forbidden response from getBucketLocation
-        when(mockClient.getBucketLocation(anyConsumer())).thenThrow(
-                S3Exception.builder().statusCode(403).build()
+        when(mockClient.getBucketLocation(anyConsumer())).thenReturn(
+                CompletableFuture.failedFuture(S3Exception.builder().statusCode(403).build())
         );
         // and you get a 301 response on headBucket
-        when(mockClient.headBucket(anyConsumer())).thenThrow(
-                S3Exception.builder()
+        when(mockClient.headBucket(anyConsumer())).thenReturn(
+                CompletableFuture.failedFuture(S3Exception.builder()
                         .statusCode(301)
                         .awsErrorDetails(AwsErrorDetails.builder()
                                 .sdkHttpResponse(SdkHttpResponse.builder()
@@ -109,6 +109,7 @@ public class S3ClientProviderTest {
                                         .build())
                                 .build())
                         .build()
+                )
         );
 
         // then you should be able to get a client as long as the error response header contains the region
@@ -125,21 +126,25 @@ public class S3ClientProviderTest {
     @Test
     public void testGenerateAsyncClientWith403Then301ResponsesNoHeader(){
         // when you get a forbidden response from getBucketLocation
-        when(mockClient.getBucketLocation(anyConsumer())).thenThrow(
-                S3Exception.builder().statusCode(403).build()
+        when(mockClient.getBucketLocation(anyConsumer())).thenReturn(
+                CompletableFuture.failedFuture(
+                        S3Exception.builder().statusCode(403).build()
+                )
         );
         // and you get a 301 response on headBucket but no header for region
-        when(mockClient.headBucket(anyConsumer())).thenThrow(
-                S3Exception.builder()
+        when(mockClient.headBucket(anyConsumer())).thenReturn(
+                CompletableFuture.failedFuture(
+                    S3Exception.builder()
                         .statusCode(301)
                         .awsErrorDetails(AwsErrorDetails.builder()
                                 .sdkHttpResponse(SdkHttpResponse.builder()
                                         .build())
                                 .build())
                         .build()
+                )
         );
 
-        // then you should get a NoSuchElement exception when you try to get the header
+        // then you should get an exception when you try to get the header
         assertThrows(NoSuchElementException.class, () -> provider.generateClient("test-bucket", mockClient, true));
 
         final var inOrder = inOrder(mockClient);

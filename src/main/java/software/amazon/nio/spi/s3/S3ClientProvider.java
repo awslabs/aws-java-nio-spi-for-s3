@@ -181,8 +181,9 @@ public class S3ClientProvider {
             throws ExecutionException, InterruptedException {
         try {
             return getBucketLocation(bucketName, locationClient);
-        } catch (S3Exception e) {
-            if (isForbidden(e)) {
+        } catch (ExecutionException  e) {
+            if (e.getCause() instanceof S3Exception && isForbidden((S3Exception) e.getCause())) {
+
                 logger.debug("Cannot determine location of '{}' bucket directly", bucketName);
                 return getBucketLocationFromHead(bucketName, locationClient);
             } else {
@@ -212,9 +213,10 @@ public class S3ClientProvider {
             logger.debug("Attempting to obtain bucket '{}' location with headBucket operation", bucketName);
             final var headBucketResponse = locationClient.headBucket(builder -> builder.bucket(bucketName));
             return getBucketRegionFromResponse(headBucketResponse.get(TIMEOUT_TIME_LENGTH_1, MINUTES).sdkHttpResponse());
-        } catch (S3Exception e) {
-            if (isRedirect(e)) {
-                return getBucketRegionFromResponse(e.awsErrorDetails().sdkHttpResponse());
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof S3Exception && isRedirect((S3Exception) e.getCause())) {
+                var s3e = (S3Exception) e.getCause();
+                return getBucketRegionFromResponse(s3e.awsErrorDetails().sdkHttpResponse());
             } else {
                 throw e;
             }
