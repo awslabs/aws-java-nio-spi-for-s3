@@ -125,6 +125,16 @@ export S3_SPI_ENDPOINT_PROTOCOL=http
 java -Ds3.spi.endpoint-protocol=http
 ```
 
+## Amazon S3 Access Points
+
+[Access points](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-points.html) are named network endpoints that are attached to buckets that you can use to perform S3 object operations.
+To perform an operation via an access point using this library you will need to use the [access point alias](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-points-alias.html)
+as the access point arn is not a valid URI and cannot be used to form a Java `Path`.
+
+### Limitations
+- Not all S3 operations are [supported when using access links](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-points-alias.html). If you notice a feature of this library that cannot be used via an access point please file an issue with this repository explaining your use case.
+- Your actions may be additionally limited by policies present on the access point that are not present on the bucket
+
 ## Reading Files
 
 Bytes from S3 objects can be read using an `S3SeekableByteChannel` which is an implementation of `java.nio.channel.SeekableByteChannel`.
