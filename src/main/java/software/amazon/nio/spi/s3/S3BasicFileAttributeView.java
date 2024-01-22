@@ -10,9 +10,13 @@ import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.time.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
 class S3BasicFileAttributeView implements BasicFileAttributeView {
+
+    private final Logger logger = LoggerFactory.getLogger("S3BasicFileAttributeView");
 
     private final S3Path path;
 
@@ -22,7 +26,7 @@ class S3BasicFileAttributeView implements BasicFileAttributeView {
 
     /**
      * Returns the name of the attribute view. Attribute views of this type
-     * have the name {@code "basic"}.
+     * have the name {@code "s3"}.
      */
     @Override
     public String name() {
@@ -43,12 +47,15 @@ class S3BasicFileAttributeView implements BasicFileAttributeView {
     }
 
     /**
-     * Unsupported operation, write operations are not supported.
+     * S3 doesn't support setting of file times other than by writing the file. Therefore, this operation does
+     * nothing (no-op). To support {@code Files.copy()} and {@code Files.move()} operations which call this method,
+     * we don't throw an exception. The time set during those operations will be determined by S3.
      */
     @Override
     public void setTimes(FileTime lastModifiedTime, FileTime lastAccessTime, FileTime createTime) {
-        throw new UnsupportedOperationException(
-            "write operations are not supported, please submitted a feature request explaining your use case");
+        // intentional no-op. S3 doesn't support setting of file times other than by writing the file.
+        logger.warn("S3 doesn't support setting of file times other than by writing the file. " +
+                "The time set during those operations will be determined by S3. This method call will be ignored");
     }
 
 }
