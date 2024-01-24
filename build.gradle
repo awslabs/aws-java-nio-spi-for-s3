@@ -140,7 +140,7 @@ testing {
                 implementation 'org.assertj:assertj-core:3.25.1'
                 implementation 'org.mockito:mockito-core:5.9.0'
                 implementation 'org.assertj:assertj-core:3.25.1'
-                implementation 'org.mockito:mockito-junit-jupiter:5.8.0'
+                implementation 'org.mockito:mockito-junit-jupiter:5.9.0'
                 implementation 'com.github.stefanbirkner:system-lambda:1.2.1'
             }
         }
