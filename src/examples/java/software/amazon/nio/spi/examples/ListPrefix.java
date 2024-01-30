@@ -9,16 +9,14 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("CheckStyle")
 public class ListPrefix {
-
-    private static final Logger logger = LoggerFactory.getLogger(ListPrefix.class);
 
     public static void main(String[] args) throws IOException {
         if (args.length == 0) {
-            logger.error("Provide an s3 prefix to list.");
+            System.err.println("Provide an s3 prefix to list.");
+            //logger.error("Provide an s3 prefix to list.");
             System.exit(1);
         }
 
@@ -26,16 +24,16 @@ public class ListPrefix {
 
         // if the prefix doesn't exist you won't get any listings
         if (!Files.exists(s3Path)) {
-            logger.error("the prefix {} doesn't exist, you won't get any listings", s3Path);
+            System.err.printf("the prefix %s doesn't exist, you won't get any listings%n", s3Path);
         }
 
         //if it's not a directory you won't get any listings.
         if (!Files.isDirectory(s3Path)) {
-            logger.error("the path {} is not a directory, you won't get any listings", s3Path);
+            System.err.printf("the path %s is not a directory, you won't get any listings%n", s3Path);
         }
 
         try (var listed = Files.list(s3Path)) {
-            listed.forEach((p) -> logger.info(p.toString()));
+            listed.forEach(System.out::println);
         }
     }
 }

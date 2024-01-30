@@ -9,27 +9,17 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Demo class that will read text from S3 URIs that you provide on the command line. Your standard AWS credential chain
  * is used for permissions.
  */
+@SuppressWarnings("CheckStyle")
 public class Main {
-
-    private static final Logger logger = LoggerFactory.getLogger(Main.class);
-
-    /**
-     * Demo main method
-     *
-     * @param args one or more S3 URIs to read
-     * @throws IOException if something goes wrong
-     */
     public static void main(String[] args) throws IOException {
 
         if (args.length == 0) {
-            logger.error("Provide one or more S3 URIs to read from.");
+            System.err.println("Provide one or more S3 URIs to read from.");
             System.exit(1);
         }
 
@@ -41,10 +31,10 @@ public class Main {
             // proves that the correct path type is being used
             assert path.getClass().getName().contains("S3Path");
 
-            logger.info("*** READING FROM {} ***", path.toUri());
+            System.err.printf("*** READING FROM %s ***%n", path.toUri());
             Files.readAllLines(path)
-                .forEach(logger::info);
-            logger.info("*** FINISHED READING OBJECT ***");
+                .forEach(System.out::println);
+            System.err.println("*** FINISHED READING OBJECT ***");
         }
     }
 }
