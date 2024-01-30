@@ -26,4 +26,7 @@
     <suppress checks="HideUtilityClassConstructor"
               files=".*[\\/](examples)[\\/]java[\\/].+\.java$"/>
 
+    <suppress checks="Regexp"
+              files=".*[\\/](examples)[\\/]java[\\/].+\.java$"/>
+
 </suppressions>
