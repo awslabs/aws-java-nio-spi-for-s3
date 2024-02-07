@@ -5,6 +5,7 @@
 package software.amazon.nio.spi.s3;
 
 import java.net.URI;
+import java.util.concurrent.Executor;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -110,5 +111,11 @@ public class FakeAsyncS3ClientBuilder implements S3CrtAsyncClientBuilder {
     @Override
     public S3CrtAsyncClientBuilder thresholdInBytes(Long l) {
         BUILDER.thresholdInBytes(l); return this;
+    }
+
+    @Override
+    public S3CrtAsyncClientBuilder futureCompletionExecutor(Executor executor) {
+        BUILDER.futureCompletionExecutor(executor);
+        return this;
     }
 }
