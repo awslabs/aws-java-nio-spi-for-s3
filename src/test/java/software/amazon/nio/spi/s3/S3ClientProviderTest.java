@@ -5,14 +5,13 @@
 
 package software.amazon.nio.spi.s3;
 
-import static org.assertj.core.api.BDDAssertions.then;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
 
+import java.net.URI;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -155,17 +154,29 @@ public class S3ClientProviderTest {
 
     @Test
     public void generateAsyncClientByEndpointBucketCredentials() {
-        final var BUILDER = new FakeAsyncS3ClientBuilder();
+        // GIVEN
+        // use a spy to record method calls on the builder which should be invoked by the provider
+        var BUILDER = spy(S3AsyncClient.crtBuilder());
         provider.asyncClientBuilder = BUILDER;
-
         provider.configuration.withEndpoint("endpoint1:1010");
-        provider.generateClient("bucket1", true);
-        then(BUILDER.endpointOverride.toString()).isEqualTo("https://endpoint1:1010");
-        then(BUILDER.region).isEqualTo(Region.US_EAST_1);  // just a default in the case not provide
 
+        // WHEN
+        provider.generateClient("bucket1", true);
+
+        // THEN
+        verify(BUILDER, times(1)).endpointOverride(URI.create("https://endpoint1:1010"));
+        verify(BUILDER, times(1)).region(Region.US_EAST_1);
+
+        // GIVEN
+        BUILDER = spy(S3AsyncClient.crtBuilder());
+        provider.asyncClientBuilder = BUILDER;
         provider.configuration.withEndpoint("endpoint2:2020");
+
+        // WHEN
         provider.generateClient("bucket2", true);
-        then(BUILDER.endpointOverride.toString()).isEqualTo("https://endpoint2:2020");
-        then(BUILDER.region).isEqualTo(Region.US_EAST_1);  // just a default in the case not provide
+
+        // THEN
+        verify(BUILDER, times(1)).endpointOverride(URI.create("https://endpoint2:2020"));
+        verify(BUILDER, times(1)).region(Region.US_EAST_1);
     }
 }

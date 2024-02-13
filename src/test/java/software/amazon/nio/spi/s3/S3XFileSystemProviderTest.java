@@ -5,29 +5,31 @@
 
 package software.amazon.nio.spi.s3;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import static com.github.stefanbirkner.systemlambda.SystemLambda.restoreSystemProperties;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.BDDAssertions.then;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 import java.net.URI;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Paths;
 import java.util.Collections;
-
-import static com.github.stefanbirkner.systemlambda.SystemLambda.restoreSystemProperties;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.BDDAssertions.then;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 public class S3XFileSystemProviderTest {
 
-    final static FakeAsyncS3ClientBuilder BUILDER = new FakeAsyncS3ClientBuilder();
 
     final static URI URI1 = URI.create("s3x://myendpoint/foo");
     final static URI URI2 = URI.create("s3x://myendpoint/foo/baa2");
     final static URI URI3 = URI.create("s3x://myendpoint.com:1010/foo/baa2/dir");
     final static URI URI7 = URI.create("s3x://key:secret@myendpoint.com:1010/foo/baa2");
     final static URI URI8 = URI.create("s3x://key:anothersecret@myendpoint.com:1010/foo/baa2");
+
 
     @Test
     public void nio_provider() {
@@ -79,18 +81,22 @@ public class S3XFileSystemProviderTest {
     @Test
     public void setCredentialsThroughURI() throws Exception {
         var p = new S3XFileSystemProvider();
+        var BUILDER = spy(S3AsyncClient.crtBuilder());
         restoreSystemProperties(() -> {
             System.setProperty("aws.region", "us-west-1");
 
-            var fs = p.getFileSystem(URI.create("s3://urikey:urisecret@some.where.com:1010/bucket"), true);
+            var fs = p.getFileSystem(URI.create("s3x://urikey:urisecret@some.where.com:1010/bucket"), true);
             fs.clientProvider().asyncClientBuilder(BUILDER);
-            fs.client(); fs.close();
+            fs.client();
+            fs.close();
 
             then(fs.configuration().getBucketName()).isEqualTo("bucket");
             then(fs.configuration().getEndpoint()).isEqualTo("some.where.com:1010");
-            then(BUILDER.endpointOverride.toString()).isEqualTo("https://some.where.com:1010");
-            then(BUILDER.credentialsProvider.resolveCredentials().accessKeyId()).isEqualTo("urikey");
-            then(BUILDER.credentialsProvider.resolveCredentials().secretAccessKey()).isEqualTo("urisecret");
+
+            verify(BUILDER).endpointOverride(URI.create("https://some.where.com:1010"));
+            then(fs.configuration().getCredentials().accessKeyId()).isEqualTo("urikey");
+            then(fs.configuration().getCredentials().secretAccessKey()).isEqualTo("urisecret");
+
         });
     }
 
