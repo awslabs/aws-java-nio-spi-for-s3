@@ -52,6 +52,11 @@ public class FakeAsyncS3ClientBuilder implements S3CrtAsyncClientBuilder {
     }
 
     @Override
+    public S3CrtAsyncClientBuilder maxNativeMemoryLimitInBytes(Long aLong) {
+        BUILDER.maxNativeMemoryLimitInBytes(aLong); return this;
+    }
+
+    @Override
     public S3CrtAsyncClientBuilder targetThroughputInGbps(Double d) {
         BUILDER.targetThroughputInGbps(targetThroughputInGbps = d); return this;
     }
