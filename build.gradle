@@ -127,7 +127,7 @@ testing {
         integrationTest(JvmTestSuite) {
             dependencies {
                 implementation project
-                implementation 'org.testcontainers:junit-jupiter:1.19.5'
+                implementation 'org.testcontainers:junit-jupiter:1.19.6'
                 implementation 'org.testcontainers:localstack:1.19.5'
                 implementation 'org.testcontainers:testcontainers:1.19.5'
             }
