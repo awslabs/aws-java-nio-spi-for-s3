@@ -336,6 +336,8 @@ public class S3PathTest {
         var bcd = fileSystem.getPath("b/c/d/");
         var bcdObject = fileSystem.getPath("b/c/d/object");
 
+        assertFalse(root.relativize(ab).isAbsolute());
+
         assertEquals(fileSystem.getPath(""), absoluteObject.relativize(absoluteObject));
         assertEquals(fileSystem.getPath("../.."), abcd.relativize(ab));
         assertEquals(fileSystem.getPath("e/"), abcd.relativize(abcde));

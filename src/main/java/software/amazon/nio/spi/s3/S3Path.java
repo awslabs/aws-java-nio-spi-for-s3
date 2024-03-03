@@ -257,10 +257,6 @@ class S3Path implements Path {
         }
 
         var path = String.join(PATH_SEPARATOR, pathRepresentation.elements().subList(beginIndex, endIndex));
-        if (this.isAbsolute() && beginIndex == 0) {
-            path = PATH_SEPARATOR + path;
-        }
-
         if (endIndex == size && !pathRepresentation.hasTrailingSeparator()) {
             return from(path);
         } else {
