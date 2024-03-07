@@ -281,7 +281,7 @@ public class S3ClientProvider {
 
     private S3AsyncClient configureCrtClientForRegion(String regionName) {
         var region = getRegionFromRegionName(regionName);
-        logger.debug("bucket region is: '{}'", region.id());
+        logger.debug("bucket region is: '{}'", region);
 
         var endpointUri = configuration.endpointUri();
         if (endpointUri != null) {
@@ -299,7 +299,7 @@ public class S3ClientProvider {
     }
 
     private static Region getRegionFromRegionName(String regionName) {
-        return (regionName == null || regionName.isBlank()) ? Region.US_EAST_1 : Region.of(regionName);
+        return (regionName == null || regionName.isBlank()) ? null : Region.of(regionName);
     }
 
 }

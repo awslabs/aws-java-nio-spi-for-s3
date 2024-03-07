@@ -22,7 +22,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.http.SdkHttpResponse;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationResponse;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
@@ -165,7 +164,7 @@ public class S3ClientProviderTest {
 
         // THEN
         verify(BUILDER, times(1)).endpointOverride(URI.create("https://endpoint1:1010"));
-        verify(BUILDER, times(1)).region(Region.US_EAST_1);
+        verify(BUILDER, times(1)).region(null);
 
         // GIVEN
         BUILDER = spy(S3AsyncClient.crtBuilder());
@@ -177,6 +176,6 @@ public class S3ClientProviderTest {
 
         // THEN
         verify(BUILDER, times(1)).endpointOverride(URI.create("https://endpoint2:2020"));
-        verify(BUILDER, times(1)).region(Region.US_EAST_1);
+        verify(BUILDER, times(1)).region(null);
     }
 }
