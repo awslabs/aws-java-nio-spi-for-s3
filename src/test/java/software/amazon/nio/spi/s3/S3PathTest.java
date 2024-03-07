@@ -6,6 +6,13 @@
 package software.amazon.nio.spi.s3;
 
 
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.BDDAssertions.then;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.lenient;
+import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
+import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
+
 import java.net.URI;
 import java.nio.file.LinkOption;
 import java.nio.file.Paths;
@@ -13,17 +20,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterEach;
-
-import static org.assertj.core.api.BDDAssertions.then;
-import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import static org.mockito.Mockito.lenient;
-import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
-import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
-
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
@@ -514,6 +514,28 @@ public class S3PathTest {
 
         uri = URI.create("s3x://somewhere.com:1010/bucket/subfolder/afile.txt");
         then(Paths.get(uri).toUri()).isEqualTo(uri);
+    }
+
+    @Test
+    void testRelativizeAgainstRoot() {
+        var s3Path = S3Path.getPath(fileSystem, "/");
+        var relativePath = s3Path.relativize(S3Path.getPath(fileSystem, "/a/b/c/d"));
+        assertEquals("a/b/c/d", relativePath.toString());
+        assertFalse(relativePath.isAbsolute());
+
+        var emptyS3Path = S3Path.getPath(fileSystem, "");
+        relativePath = emptyS3Path.relativize(S3Path.getPath(fileSystem, "a/b/c/d"));
+        assertEquals("a/b/c/d", relativePath.toString());
+        assertFalse(relativePath.isAbsolute());
+    }
+
+    @Test
+    void testRelativizeWithAbsoluteAndRelative() {
+        var s3Path = S3Path.getPath(fileSystem, "/a/b/c");
+        var relativePath = S3Path.getPath(fileSystem, "a/b/c/d");
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> s3Path.relativize(relativePath))
+                .withMessage("to obtain a relative path both must be absolute or both must be relative");
     }
 
 }
