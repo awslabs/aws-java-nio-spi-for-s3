@@ -387,6 +387,10 @@ class S3Path implements Path {
         final var elements = pathRepresentation.elements();
         final var realElements = new LinkedList<String>();
 
+        if (this.isAbsolute()) {
+            realElements.add(PATH_SEPARATOR);
+        }
+
         for (var element : elements) {
             if (element.equals(".")) {
                 continue;
