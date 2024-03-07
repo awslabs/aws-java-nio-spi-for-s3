@@ -279,6 +279,18 @@ public class S3PathTest {
     }
 
     @Test
+    public void normalizeAndIsAbsolute() {
+        final S3Path pathRelative = S3Path.getPath(fileSystem, "foo/./baa/");
+        final S3Path pathAbsolute = S3Path.getPath(fileSystem, "/foo/./baa/");
+
+        assertFalse(pathRelative.isAbsolute());
+        assertTrue(pathAbsolute.isAbsolute());
+
+        assertFalse(pathRelative.normalize().isAbsolute());
+        assertTrue(pathAbsolute.normalize().isAbsolute());
+    }
+
+    @Test
     public void resolve() {
         assertEquals(absoluteObject, root.resolve(absoluteObject));
         assertEquals(absoluteDirectory, root.resolve(absoluteDirectory));
