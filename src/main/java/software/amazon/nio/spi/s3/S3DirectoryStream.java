@@ -16,6 +16,7 @@ import java.util.Iterator;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.model.CommonPrefix;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
@@ -24,7 +25,7 @@ class S3DirectoryStream implements DirectoryStream<Path> {
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
     private final Iterator<Path> iterator;
 
-    S3DirectoryStream(S3FileSystem fs, String bucketName, String finalDirName, Filter<? super Path> filter) {
+    S3DirectoryStream(S3FileSystem fs, String bucketName, String finalDirName, Filter<? super Path> filter) throws SdkException {
         final var listObjectsV2Publisher = fs.client().listObjectsV2Paginator(req -> req
             .bucket(bucketName)
             .prefix(finalDirName)
@@ -53,11 +54,13 @@ class S3DirectoryStream implements DirectoryStream<Path> {
      * @param finalDirName           the directory name that will be streamed.
      * @param listObjectsV2Publisher the publisher that returns objects and common prefixes that are iterated on.
      * @return an iterator for {@code Path}s constructed from the {@code ListObjectsV2Publisher}s responses.
+     * @throws SdkException          if there is an error with S3 access. This is an unchecked Exception
      */
     private Iterator<Path> pathIteratorForPublisher(
         final DirectoryStream.Filter<? super Path> filter,
         final FileSystem fs, String finalDirName,
-        final ListObjectsV2Publisher listObjectsV2Publisher) {
+        final ListObjectsV2Publisher listObjectsV2Publisher) throws SdkException {
+
         final var prefixPublisher = listObjectsV2Publisher.commonPrefixes().map(CommonPrefix::prefix);
         final var keysPublisher = listObjectsV2Publisher.contents().map(S3Object::key);
 

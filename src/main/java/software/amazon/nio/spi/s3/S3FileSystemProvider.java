@@ -46,7 +46,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -68,6 +67,7 @@ import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Response;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.CompletedCopy;
@@ -252,12 +252,15 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         try {
             return new S3DirectoryStream(s3Path.getFileSystem(), s3Path.bucketName(), dirName, filter);
-        } catch (CompletionException e) {
-            if (e.getCause() instanceof NoSuchBucketException) {
-                throw new NoSuchFileException("Bucket '" + s3Path.bucketName() + "' not found", s3Path.toString(),
+        } catch (Exception e) {
+            if (e instanceof NoSuchBucketException) {
+                throw new FileSystemNotFoundException("Bucket '" + s3Path.bucketName() + "' not found: NoSuchBucket");
+            }
+            if (e instanceof S3Exception && ((S3Exception) e).statusCode() == 403) {
+                throw new AccessDeniedException("Access to bucket '" + s3Path.bucketName() + "' denied", s3Path.toString(),
                     e.getMessage());
             }
-            throw e;
+            throw new IOException(e);
         }
     }
 
@@ -283,8 +286,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
         var timeOut = TIMEOUT_TIME_LENGTH_1;
         final var unit = MINUTES;
 
-        try {
-            s3Directory.getFileSystem().client().putObject(
+        try (S3AsyncClient client = s3Directory.getFileSystem().client()) {
+            client.putObject(
                 PutObjectRequest.builder()
                     .bucket(s3Directory.bucketName())
                     .key(directoryKey)
