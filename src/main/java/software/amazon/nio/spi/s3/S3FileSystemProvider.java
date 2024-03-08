@@ -252,15 +252,20 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         try {
             return new S3DirectoryStream(s3Path.getFileSystem(), s3Path.bucketName(), dirName, filter);
-        } catch (Exception e) {
-            if (e instanceof NoSuchBucketException) {
-                throw new FileSystemNotFoundException("Bucket '" + s3Path.bucketName() + "' not found: NoSuchBucket");
+        } catch (RuntimeException e) {
+            if (e.getCause() instanceof ExecutionException) {
+                var cause = (Exception) e.getCause().getCause();
+                if (cause instanceof NoSuchBucketException) {
+                    throw new FileSystemNotFoundException("Bucket '" + s3Path.bucketName() + "' not found: NoSuchBucket");
+                }
+                if (cause instanceof S3Exception && ((S3Exception) cause).statusCode() == 403) {
+                    throw new AccessDeniedException("Access to bucket '" + s3Path.bucketName() + "' denied", s3Path.toString(),
+                            cause.getMessage());
+                }
+                throw new IOException(cause.getMessage(), cause);
             }
-            if (e instanceof S3Exception && ((S3Exception) e).statusCode() == 403) {
-                throw new AccessDeniedException("Access to bucket '" + s3Path.bucketName() + "' denied", s3Path.toString(),
-                    e.getMessage());
-            }
-            throw new IOException(e);
+
+            throw new IOException(e.getMessage(), e);
         }
     }
 

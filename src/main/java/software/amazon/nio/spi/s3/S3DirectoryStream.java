@@ -14,6 +14,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import java.util.Iterator;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -25,7 +26,7 @@ class S3DirectoryStream implements DirectoryStream<Path> {
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
     private final Iterator<Path> iterator;
 
-    S3DirectoryStream(S3FileSystem fs, String bucketName, String finalDirName, Filter<? super Path> filter) throws SdkException {
+    S3DirectoryStream(S3FileSystem fs, String bucketName, String finalDirName, Filter<? super Path> filter) {
         final var listObjectsV2Publisher = fs.client().listObjectsV2Paginator(req -> req
             .bucket(bucketName)
             .prefix(finalDirName)
@@ -61,15 +62,17 @@ class S3DirectoryStream implements DirectoryStream<Path> {
         final FileSystem fs, String finalDirName,
         final ListObjectsV2Publisher listObjectsV2Publisher) throws SdkException {
 
-        final var prefixPublisher = listObjectsV2Publisher.commonPrefixes().map(CommonPrefix::prefix);
-        final var keysPublisher = listObjectsV2Publisher.contents().map(S3Object::key);
+        final Publisher<String> prefixPublisher =
+                listObjectsV2Publisher.commonPrefixes().map(CommonPrefix::prefix);
+        final Publisher<String> keysPublisher =
+                listObjectsV2Publisher.contents().map(S3Object::key);
 
         return Flowable.concat(prefixPublisher, keysPublisher)
-            .map(fs::getPath)
-            .filter(path -> !isEqualToParent(finalDirName, path))  // including the parent will induce loops
-            .filter(path -> tryAccept(filter, path))
-            .blockingStream()
-            .iterator();
+                .map(fs::getPath)
+                .filter(path -> !isEqualToParent(finalDirName, path))  // including the parent will induce loops
+                .filter(path -> tryAccept(filter, path))
+                .blockingIterable()
+                .iterator();
     }
 
 

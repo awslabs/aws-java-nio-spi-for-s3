@@ -44,6 +44,7 @@ import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -200,17 +201,14 @@ public class S3FileSystemProviderTest {
 
     @Test
     public void newDirectoryStreamS3AccessDeniedException() {
-        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(
-            new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build())
-        );
-
-        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
-            CompletableFuture.failedFuture(
-                S3Exception.builder()
-                        .statusCode(403)
-                        .message("AccessDenied")
-                        .build()
-            )
+        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenThrow(
+                // this is what is thrown by the paginator in the case that access is denied
+                new RuntimeException(new ExecutionException(
+                        S3Exception.builder()
+                                .statusCode(403)
+                                .message("AccessDenied")
+                                .build()
+                ))
         );
 
         assertThatThrownBy(() -> provider.newDirectoryStream(fs.getPath(pathUri+"/"), entry -> true))
@@ -220,17 +218,14 @@ public class S3FileSystemProviderTest {
 
     @Test
     public void newDirectoryStreamS3BucketNotFoundException() {
-        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(
-            new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build())
-        );
-
-        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
-            CompletableFuture.failedFuture(
-                NoSuchBucketException.builder()
-                        .statusCode(404)
-                        .message("NoSuchBucket")
-                        .build()
-            )
+        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenThrow(
+            // this is what is thrown by the paginator in the case that a bucket doesn't exist
+            new RuntimeException(new ExecutionException(
+                    NoSuchBucketException.builder()
+                            .statusCode(404)
+                            .message("NoSuchBucket")
+                            .build()
+            ))
         );
 
         assertThatThrownBy(() -> provider.newDirectoryStream(fs.getPath(pathUri+"/"), entry -> true))
@@ -240,17 +235,13 @@ public class S3FileSystemProviderTest {
 
     @Test
     public void newDirectoryStreamOtherExceptionsBecomeIOExceptions() {
-        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(
-            new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build())
-        );
-
-        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
-            CompletableFuture.failedFuture(
-                S3Exception.builder()
-                        .statusCode(500)
-                        .message("InternalError")
-                        .build()
-            )
+        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenThrow(
+                new RuntimeException(new ExecutionException(
+                        S3Exception.builder()
+                                .statusCode(500)
+                                .message("software.amazon.awssdk.services.s3.model.S3Exception: InternalError")
+                                .build()
+                ))
         );
 
         assertThatThrownBy(() -> provider.newDirectoryStream(fs.getPath(pathUri+"/"), entry -> true))
