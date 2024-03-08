@@ -9,13 +9,26 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.AccessMode;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
@@ -31,7 +44,7 @@ import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -54,9 +67,11 @@ import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 
@@ -185,6 +200,56 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
+    public void newDirectoryStreamS3AccessDeniedException() {
+        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenThrow(
+                // this is what is thrown by the paginator in the case that access is denied
+                new RuntimeException(new ExecutionException(
+                        S3Exception.builder()
+                                .statusCode(403)
+                                .message("AccessDenied")
+                                .build()
+                ))
+        );
+
+        assertThatThrownBy(() -> provider.newDirectoryStream(fs.getPath(pathUri+"/"), entry -> true))
+            .isInstanceOf(AccessDeniedException.class)
+            .hasMessage("Access to bucket 'foo' denied -> /baa/: AccessDenied");
+    }
+
+    @Test
+    public void newDirectoryStreamS3BucketNotFoundException() {
+        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenThrow(
+            // this is what is thrown by the paginator in the case that a bucket doesn't exist
+            new RuntimeException(new ExecutionException(
+                    NoSuchBucketException.builder()
+                            .statusCode(404)
+                            .message("NoSuchBucket")
+                            .build()
+            ))
+        );
+
+        assertThatThrownBy(() -> provider.newDirectoryStream(fs.getPath(pathUri+"/"), entry -> true))
+            .isInstanceOf(FileSystemNotFoundException.class)
+            .hasMessage("Bucket 'foo' not found: NoSuchBucket");
+    }
+
+    @Test
+    public void newDirectoryStreamOtherExceptionsBecomeIOExceptions() {
+        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenThrow(
+                new RuntimeException(new ExecutionException(
+                        S3Exception.builder()
+                                .statusCode(500)
+                                .message("software.amazon.awssdk.services.s3.model.S3Exception: InternalError")
+                                .build()
+                ))
+        );
+
+        assertThatThrownBy(() -> provider.newDirectoryStream(fs.getPath(pathUri+"/"), entry -> true))
+            .isInstanceOf(IOException.class)
+            .hasMessage("software.amazon.awssdk.services.s3.model.S3Exception: InternalError");
+    }
+
+    @Test
     public void newDirectoryStreamFiltersSelf() throws IOException {
         final var publisher = new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build());
         when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(publisher);
@@ -219,12 +284,6 @@ public class S3FileSystemProviderTest {
         try(var stream = provider.newDirectoryStream(fs.getPath(pathUri + "/"), filter)){
             assertThat(stream.iterator()).toIterable().containsExactly(fs.getPath(object2.key()));
         }
-    }
-
-    private int countDirStreamItems(DirectoryStream<Path> stream) {
-        var count = new AtomicInteger(0);
-        stream.iterator().forEachRemaining(item -> count.incrementAndGet());
-        return count.get();
     }
 
     @Test
@@ -390,7 +449,7 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void checkAccessWithExceptionHeadObject() throws Exception {
+    public void checkAccessWithExceptionHeadObject() {
         when(mockClient.headObject(anyConsumer())).thenReturn(CompletableFuture.failedFuture(new IOException()));
 
         var foo = fs.getPath("/foo");
@@ -398,7 +457,7 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void checkAccessWithExceptionListObjectsV2() throws Exception {
+    public void checkAccessWithExceptionListObjectsV2() {
         when(mockClient.listObjectsV2(anyConsumer())).thenReturn(CompletableFuture.failedFuture(new IOException()));
 
         var foo = fs.getPath("/dir/");
@@ -419,7 +478,7 @@ public class S3FileSystemProviderTest {
         var foo = fs.getPath("/foo");
         final var fileAttributeView = provider.getFileAttributeView(foo, BasicFileAttributeView.class);
         assertNotNull(fileAttributeView);
-        assertTrue(fileAttributeView instanceof S3BasicFileAttributeView);
+        assertInstanceOf(S3BasicFileAttributeView.class, fileAttributeView);
     }
 
     @Test

@@ -14,8 +14,10 @@ import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import java.util.Iterator;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.model.CommonPrefix;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
@@ -53,20 +55,24 @@ class S3DirectoryStream implements DirectoryStream<Path> {
      * @param finalDirName           the directory name that will be streamed.
      * @param listObjectsV2Publisher the publisher that returns objects and common prefixes that are iterated on.
      * @return an iterator for {@code Path}s constructed from the {@code ListObjectsV2Publisher}s responses.
+     * @throws SdkException          if there is an error with S3 access. This is an unchecked Exception
      */
     private Iterator<Path> pathIteratorForPublisher(
         final DirectoryStream.Filter<? super Path> filter,
         final FileSystem fs, String finalDirName,
-        final ListObjectsV2Publisher listObjectsV2Publisher) {
-        final var prefixPublisher = listObjectsV2Publisher.commonPrefixes().map(CommonPrefix::prefix);
-        final var keysPublisher = listObjectsV2Publisher.contents().map(S3Object::key);
+        final ListObjectsV2Publisher listObjectsV2Publisher) throws SdkException {
+
+        final Publisher<String> prefixPublisher =
+                listObjectsV2Publisher.commonPrefixes().map(CommonPrefix::prefix);
+        final Publisher<String> keysPublisher =
+                listObjectsV2Publisher.contents().map(S3Object::key);
 
         return Flowable.concat(prefixPublisher, keysPublisher)
-            .map(fs::getPath)
-            .filter(path -> !isEqualToParent(finalDirName, path))  // including the parent will induce loops
-            .filter(path -> tryAccept(filter, path))
-            .blockingStream()
-            .iterator();
+                .map(fs::getPath)
+                .filter(path -> !isEqualToParent(finalDirName, path))  // including the parent will induce loops
+                .filter(path -> tryAccept(filter, path))
+                .blockingIterable()
+                .iterator();
     }
 
 
