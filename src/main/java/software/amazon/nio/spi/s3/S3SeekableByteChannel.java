@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
 class S3SeekableByteChannel implements SeekableByteChannel {
@@ -54,9 +53,7 @@ class S3SeekableByteChannel implements SeekableByteChannel {
             throw new IOException("The SYNC/DSYNC options is not supported");
         }
 
-        // later we will add a constructor that allows providing delegates for composition
-
-        var config = new S3NioSpiConfiguration();
+        var config = s3Path.getFileSystem().configuration();
         if (options.contains(StandardOpenOption.WRITE)) {
             LOGGER.debug("using S3WritableByteChannel as write delegate for path '{}'", s3Path.toUri());
             readDelegate = null;
