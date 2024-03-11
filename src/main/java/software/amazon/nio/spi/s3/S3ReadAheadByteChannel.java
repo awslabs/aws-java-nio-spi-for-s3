@@ -239,4 +239,12 @@ class S3ReadAheadByteChannel implements ReadableByteChannel {
     Integer fragmentIndexForByteNumber(long byteNumber) {
         return Math.toIntExact(Math.floorDiv(byteNumber, (long) maxFragmentSize));
     }
+
+    public int getMaxFragmentSize() {
+        return maxFragmentSize;
+    }
+
+    public int getMaxNumberFragments() {
+        return maxNumberFragments;
+    }
 }
