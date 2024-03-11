@@ -55,6 +55,8 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
@@ -106,12 +108,75 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     * @throws NotYetImplementedException This method is not yet supported in v2.x. It might be implemented for bucket creation
+     *
+     * <em><b>Experimental</b></em>. Attempts to create a new S3 bucket based on the "authority" part of the URI and returns the
+     * {@code FileSystem} object identified by the URI.
+     *
+     * @param uri    The URI to identify the file system
+     * @param env    The environment to be used when creating the file system. May be null or empty.
+     *               The following keys are supported:
+     *               <ul>
+     *               <li>acl</li>
+     *               <li>grantFullControl</li>
+     *               <li>grantRead</li>
+     *               <li>grantReadACP</li>
+     *               <li>grantWrite</li>
+     *               <li>grantWriteACP</li>
+     *               <li>locationConstraint</li>
+     *               </ul>
+     *               The values should be @code{String}s or may be objects if the @code{toString()} method of those objects
+     *               produce @code{String}s that would be accepted by the associated S3 create bucket builders. All other
+     *               keys are currently ignored but future implementations may support additional keys and may also throw
+     *               an @link{IllegalArgumentException} if they are not recognized.
+     * @return       The new file system
+     * @since       2.0.0, the current implementation is experimental and may change in the future.
+     * @throws IOException If an exception occurs. In all cases the exception will wrap a causal exception which could be
+     *                     an SDKException thrown by the underlying S3 service or may be one of:
+     *                     ExecutionException, InterruptedException, or TimeoutException if a problem occurs with the
+     *                     asynchronous call to the service.
+     * @throws IllegalArgumentException if the URI scheme is not "s3".
      */
     @Override
-    public FileSystem newFileSystem(URI uri, Map<String, ?> env) {
-        throw new NotYetImplementedException(
-            "This method is not yet supported in v2.x. It might be implemented for bucket creation");
+    public FileSystem newFileSystem(final URI uri, final Map<String, ?> env) throws IOException {
+        if (! uri.getScheme().equals(SCHEME)) {
+            throw new IllegalArgumentException("URI scheme must be s3");
+        }
+
+        @SuppressWarnings("unchecked")
+        var envMap = (Map<String, Object>) env;
+
+        var bucketName = uri.getAuthority();
+        try (var client = S3AsyncClient.create()) {
+            var createBucketResponse = client.createBucket(
+                    bucketBuilder -> bucketBuilder.bucket(bucketName)
+                            .acl(envMap.getOrDefault("acl", "").toString())
+                            .grantFullControl(envMap.getOrDefault("grantFullControl", "").toString())
+                            .grantRead(envMap.getOrDefault("grantRead", "").toString())
+                            .grantReadACP(envMap.getOrDefault("grantReadACP", "").toString())
+                            .grantWrite(envMap.getOrDefault("grantWrite", "").toString())
+                            .grantWriteACP(envMap.getOrDefault("grantWriteACP", "").toString())
+                            .createBucketConfiguration(confBuilder -> {
+                                if (envMap.containsKey("locationConstraint")) {
+                                    String loc = envMap.get("locationConstraint").toString();
+                                    if (loc.equals(Region.US_EAST_1.id())) {
+                                        loc = null; // us-east-1 is the default (null) location for S3
+                                    }
+                                    confBuilder.locationConstraint(loc);
+                                }
+                            })
+            ).get(30, TimeUnit.SECONDS);
+            logger.debug("Create bucket response {}", createBucketResponse.toString());
+
+        } catch (ExecutionException e) {
+            throw new IOException(e.getMessage(), e.getCause());
+        } catch (InterruptedException | TimeoutException | SdkException e) {
+            throw new IOException(e.getMessage(), e);
+        }
+
+
+        return getFileSystem(uri, true);
+
+
     }
 
     /**

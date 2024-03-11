@@ -43,14 +43,6 @@ public class S3XFileSystemProviderTest {
     }
 
     @Test
-    @DisplayName("newFileSystem(URI, env) should throw")
-    public void newFileSystemURI() {
-        assertThatThrownBy(
-            () -> new S3XFileSystemProvider().newFileSystem(URI1, Collections.emptyMap())
-        ).isInstanceOf(NotYetImplementedException.class);
-    }
-
-    @Test
     @DisplayName("newFileSystem(Path, env) should throw")
     public void newFileSystemPath() {
         assertThatThrownBy(
