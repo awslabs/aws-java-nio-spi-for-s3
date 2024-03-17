@@ -144,7 +144,7 @@ public class S3ClientProvider {
      */
     S3AsyncClient generateClient(String bucketName, S3AsyncClient locationClient)
             throws ExecutionException, InterruptedException {
-        return getClientForBucket(bucketName, locationClient, (region) -> configureCrtClientForRegion(region));
+        return getClientForBucket(bucketName, locationClient, this::configureCrtClientForRegion);
     }
 
     private S3AsyncClient getClientForBucket(
