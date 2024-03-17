@@ -17,7 +17,6 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
@@ -144,13 +143,12 @@ public class S3ClientProvider {
      */
     S3AsyncClient generateClient(String bucketName, S3AsyncClient locationClient)
             throws ExecutionException, InterruptedException {
-        return getClientForBucket(bucketName, locationClient, this::configureCrtClientForRegion);
+        return getClientForBucket(bucketName, locationClient);
     }
 
     private S3AsyncClient getClientForBucket(
         String bucketName,
-        S3AsyncClient locationClient,
-        Function<String, S3AsyncClient> getClientForRegion
+        S3AsyncClient locationClient
     ) throws ExecutionException, InterruptedException {
         logger.debug("generating client for bucket: '{}'", bucketName);
         S3AsyncClient bucketSpecificClient = null;
@@ -160,7 +158,7 @@ public class S3ClientProvider {
             var bucketLocation = determineBucketLocation(bucketName, locationClient);
 
             if (bucketLocation != null) {
-                bucketSpecificClient = getClientForRegion.apply(bucketLocation);
+                bucketSpecificClient = configureCrtClientForRegion(bucketLocation);
             } else {
                 // if here, no S3 nor other client has been created yet, and we do not
                 // have a location; we'll let it figure out from the profile region
@@ -171,7 +169,7 @@ public class S3ClientProvider {
 
         return (bucketSpecificClient != null)
             ? bucketSpecificClient
-            : getClientForRegion.apply(configuration.getRegion());
+            : configureCrtClientForRegion(configuration.getRegion());
     }
 
     private String determineBucketLocation(String bucketName, S3AsyncClient locationClient)
