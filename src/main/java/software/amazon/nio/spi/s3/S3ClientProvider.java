@@ -244,36 +244,7 @@ public class S3ClientProvider {
     private S3AsyncClient asyncClientForRegion(String regionName) {
         return configureCrtClientForRegion(regionName);
     }
-
-    private S3AsyncClient configureClientForRegion(
-        String regionName,
-        S3AsyncClientBuilder builder
-    ) {
-        var region = getRegionFromRegionName(regionName);
-        logger.debug("bucket region is: '{}'", region.id());
-
-        builder
-            .forcePathStyle(configuration.getForcePathStyle())
-            .region(region)
-            .overrideConfiguration(
-                conf -> conf.retryPolicy(
-                    configBuilder -> configBuilder.retryCondition(retryCondition).backoffStrategy(backoffStrategy)
-                )
-            );
-
-        var endpointUri = configuration.endpointUri();
-        if (endpointUri != null) {
-            builder.endpointOverride(endpointUri);
-        }
-
-        var credentials = configuration.getCredentials();
-        if (credentials != null) {
-            builder.credentialsProvider(() -> credentials);
-        }
-
-        return builder.build();
-    }
-
+    
     private S3AsyncClient configureCrtClientForRegion(String regionName) {
         var region = getRegionFromRegionName(regionName);
         logger.debug("bucket region is: '{}'", region);
