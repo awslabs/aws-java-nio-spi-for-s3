@@ -145,7 +145,7 @@ public class S3ClientProvider {
      */
     S3AsyncClient generateClient(String bucketName, S3AsyncClient locationClient)
             throws ExecutionException, InterruptedException {
-        return getClientForBucket(bucketName, locationClient, (region) -> asyncClientForRegion(region, true));
+        return getClientForBucket(bucketName, locationClient, (region) -> asyncClientForRegion(region));
     }
 
     private S3AsyncClient getClientForBucket(
@@ -241,8 +241,8 @@ public class S3ClientProvider {
         );
     }
 
-    private S3AsyncClient asyncClientForRegion(String regionName, boolean crt) {
-        if (!crt) {
+    private S3AsyncClient asyncClientForRegion(String regionName) {
+        if (!true) {
             return configureClientForRegion(regionName, S3AsyncClient.builder());
         }
         return configureCrtClientForRegion(regionName);
