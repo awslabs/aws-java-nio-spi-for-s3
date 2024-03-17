@@ -11,6 +11,7 @@ import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExcepti
 
 import java.net.URI;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
@@ -104,15 +105,13 @@ public class S3ClientProvider {
         S3AsyncClient locationClient
     ) throws ExecutionException, InterruptedException {
         logger.debug("generating client for bucket: '{}'", bucketName);
-        S3AsyncClient bucketSpecificClient = null;
 
+        String bucketLocation = null;
         if (configuration.endpointUri() == null) {
             // we try to locate a bucket only if no endpoint is provided, which means we are dealing with AWS S3 buckets
-            var bucketLocation = determineBucketLocation(bucketName, locationClient);
+            bucketLocation = determineBucketLocation(bucketName, locationClient);
 
-            if (bucketLocation != null) {
-                bucketSpecificClient = configureCrtClientForRegion(bucketLocation);
-            } else {
+            if (bucketLocation == null) {
                 // if here, no S3 nor other client has been created yet, and we do not
                 // have a location; we'll let it figure out from the profile region
                 logger.warn("Unable to determine the region of bucket: '{}'. Generating a client for the profile region.",
@@ -120,9 +119,7 @@ public class S3ClientProvider {
             }
         }
 
-        return (bucketSpecificClient != null)
-            ? bucketSpecificClient
-            : configureCrtClientForRegion(configuration.getRegion());
+        return configureCrtClientForRegion(Optional.ofNullable(bucketLocation).orElse(configuration.getRegion()));
     }
 
     private String determineBucketLocation(String bucketName, S3AsyncClient locationClient)
