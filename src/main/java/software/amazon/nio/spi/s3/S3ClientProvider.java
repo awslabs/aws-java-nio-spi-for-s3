@@ -97,13 +97,6 @@ public class S3ClientProvider {
      */
     S3AsyncClient generateClient(String bucketName, S3AsyncClient locationClient)
             throws ExecutionException, InterruptedException {
-        return getClientForBucket(bucketName, locationClient);
-    }
-
-    private S3AsyncClient getClientForBucket(
-        String bucketName,
-        S3AsyncClient locationClient
-    ) throws ExecutionException, InterruptedException {
         logger.debug("generating client for bucket: '{}'", bucketName);
 
         String bucketLocation = null;
