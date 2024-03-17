@@ -123,12 +123,11 @@ public class S3ClientProvider {
      * discovery client.
      *
      * @param bucket the named of the bucket to make the client for
-     * @param crt    whether to return a CRT async client or not
      * @return an S3 client appropriate for the region of the named bucket
      */
-    protected S3AsyncClient generateClient(String bucket, boolean crt) {
+    protected S3AsyncClient generateClient(String bucket) {
         try {
-            return generateClient(bucket, universalClient(), crt);
+            return generateClient(bucket, universalClient(), true);
         } catch (ExecutionException | InterruptedException e) {
             throw new RuntimeException(e);
         }

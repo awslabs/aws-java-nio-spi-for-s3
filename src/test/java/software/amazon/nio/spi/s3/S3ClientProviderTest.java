@@ -160,7 +160,7 @@ public class S3ClientProviderTest {
         provider.configuration.withEndpoint("endpoint1:1010");
 
         // WHEN
-        provider.generateClient("bucket1", true);
+        provider.generateClient("bucket1");
 
         // THEN
         verify(BUILDER, times(1)).endpointOverride(URI.create("https://endpoint1:1010"));
@@ -172,7 +172,7 @@ public class S3ClientProviderTest {
         provider.configuration.withEndpoint("endpoint2:2020");
 
         // WHEN
-        provider.generateClient("bucket2", true);
+        provider.generateClient("bucket2");
 
         // THEN
         verify(BUILDER, times(1)).endpointOverride(URI.create("https://endpoint2:2020"));
