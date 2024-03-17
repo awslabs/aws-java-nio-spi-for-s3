@@ -10,26 +10,12 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExceptionOnTimeOut;
 
-import java.io.IOException;
 import java.net.URI;
-import java.time.Duration;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
-import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
-import software.amazon.awssdk.core.exception.RetryableException;
-import software.amazon.awssdk.core.retry.backoff.EqualJitterBackoffStrategy;
-import software.amazon.awssdk.core.retry.conditions.OrRetryCondition;
-import software.amazon.awssdk.core.retry.conditions.RetryCondition;
-import software.amazon.awssdk.core.retry.conditions.RetryOnClockSkewCondition;
-import software.amazon.awssdk.core.retry.conditions.RetryOnExceptionsCondition;
-import software.amazon.awssdk.core.retry.conditions.RetryOnStatusCodeCondition;
-import software.amazon.awssdk.core.retry.conditions.RetryOnThrottlingCondition;
-import software.amazon.awssdk.http.HttpStatusCode;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -65,35 +51,6 @@ public class S3ClientProvider {
     protected S3CrtAsyncClientBuilder asyncClientBuilder =
             S3AsyncClient.crtBuilder()
                     .crossRegionAccessEnabled(true);
-
-    final RetryCondition retryCondition;
-
-    private final EqualJitterBackoffStrategy backoffStrategy = EqualJitterBackoffStrategy.builder()
-        .baseDelay(Duration.ofMillis(200L))
-        .maxBackoffTime(Duration.ofSeconds(5L))
-        .build();
-
-    {
-        final var retryableStatusCodes = Set.of(
-            HttpStatusCode.INTERNAL_SERVER_ERROR,
-            HttpStatusCode.BAD_GATEWAY,
-            HttpStatusCode.SERVICE_UNAVAILABLE,
-            HttpStatusCode.GATEWAY_TIMEOUT
-        );
-
-        final var retryableExceptions = Set.of(
-            RetryableException.class,
-            IOException.class,
-            ApiCallAttemptTimeoutException.class,
-            ApiCallTimeoutException.class);
-
-        retryCondition = OrRetryCondition.create(
-            RetryOnStatusCodeCondition.create(retryableStatusCodes),
-            RetryOnExceptionsCondition.create(retryableExceptions),
-            RetryOnClockSkewCondition.create(),
-            RetryOnThrottlingCondition.create()
-        );
-    }
 
     public S3ClientProvider(S3NioSpiConfiguration c) {
         this.configuration = (c == null) ? new S3NioSpiConfiguration() : c;
