@@ -5,7 +5,6 @@
 
 package software.amazon.nio.spi.s3;
 
-
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExceptionOnTimeOut;
@@ -60,7 +59,6 @@ public class S3ClientProvider {
         asyncClientBuilder = builder;
     }
 
-
     /**
      * This method returns a universal client (i.e. not bound to any region)
      * that can be used by certain S3 operations for discovery.
@@ -71,7 +69,6 @@ public class S3ClientProvider {
     S3AsyncClient universalClient() {
         return DEFAULT_CLIENT;
     }
-
 
     /**
      * Generates a sync client for the named bucket using the provided location
@@ -87,7 +84,6 @@ public class S3ClientProvider {
             throw new RuntimeException(e);
         }
     }
-
 
     /**
      * Generate an async  client for the named bucket using a provided client to
