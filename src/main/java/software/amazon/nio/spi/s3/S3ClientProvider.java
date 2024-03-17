@@ -127,7 +127,7 @@ public class S3ClientProvider {
      */
     protected S3AsyncClient generateClient(String bucket) {
         try {
-            return generateClient(bucket, universalClient(), true);
+            return generateClient(bucket, universalClient());
         } catch (ExecutionException | InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -141,12 +141,11 @@ public class S3ClientProvider {
      * @param bucketName     the name of the bucket to make the client for
      * @param locationClient the client used to determine the location of the
      *                       named bucket, recommend using DEFAULT_CLIENT
-     * @param crt            whether to return a CRT async client or not
      * @return an S3 client appropriate for the region of the named bucket
      */
-    S3AsyncClient generateClient(String bucketName, S3AsyncClient locationClient, boolean crt)
+    S3AsyncClient generateClient(String bucketName, S3AsyncClient locationClient)
             throws ExecutionException, InterruptedException {
-        return getClientForBucket(bucketName, locationClient, (region) -> asyncClientForRegion(region, crt));
+        return getClientForBucket(bucketName, locationClient, (region) -> asyncClientForRegion(region, true));
     }
 
     private S3AsyncClient getClientForBucket(

@@ -59,7 +59,7 @@ public class S3ClientProviderTest {
         when(mockClient.getBucketLocation(anyConsumer()))
                 .thenReturn(CompletableFuture.completedFuture(
                         GetBucketLocationResponse.builder().locationConstraint("us-west-2").build()));
-        final var s3Client = provider.generateClient("test-bucket", mockClient, true);
+        final var s3Client = provider.generateClient("test-bucket", mockClient);
         assertNotNull(s3Client);
     }
 
@@ -82,7 +82,7 @@ public class S3ClientProviderTest {
                 );
 
         // which should get you a client
-        final var s3Client = provider.generateClient("test-bucket", mockClient, true);
+        final var s3Client = provider.generateClient("test-bucket", mockClient);
         assertNotNull(s3Client);
 
         final var inOrder = inOrder(mockClient);
@@ -111,7 +111,7 @@ public class S3ClientProviderTest {
         );
 
         // then you should be able to get a client as long as the error response header contains the region
-        final var s3Client = provider.generateClient("test-bucket", mockClient, true);
+        final var s3Client = provider.generateClient("test-bucket", mockClient);
         assertNotNull(s3Client);
 
         final var inOrder = inOrder(mockClient);
@@ -143,7 +143,7 @@ public class S3ClientProviderTest {
         );
 
         // then you should get an exception when you try to get the header
-        assertThrows(NoSuchElementException.class, () -> provider.generateClient("test-bucket", mockClient, true));
+        assertThrows(NoSuchElementException.class, () -> provider.generateClient("test-bucket", mockClient));
 
         final var inOrder = inOrder(mockClient);
         inOrder.verify(mockClient).getBucketLocation(anyConsumer());
