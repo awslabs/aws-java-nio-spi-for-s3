@@ -418,10 +418,6 @@ public class S3FileSystem extends FileSystem {
         return client;
     }
 
-    S3AsyncClient readClient() {
-        return clientProvider.generateClient(bucketName, false);
-    }
-
     /**
      * Obtain the name of the bucket represented by this <code>FileSystem</code> instance
      *
