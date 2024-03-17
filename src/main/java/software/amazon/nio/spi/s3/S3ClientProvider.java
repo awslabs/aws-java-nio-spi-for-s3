@@ -34,7 +34,6 @@ import software.amazon.awssdk.http.HttpStatusCode;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
@@ -145,7 +144,7 @@ public class S3ClientProvider {
      */
     S3AsyncClient generateClient(String bucketName, S3AsyncClient locationClient)
             throws ExecutionException, InterruptedException {
-        return getClientForBucket(bucketName, locationClient, (region) -> asyncClientForRegion(region));
+        return getClientForBucket(bucketName, locationClient, (region) -> configureCrtClientForRegion(region));
     }
 
     private S3AsyncClient getClientForBucket(
@@ -241,10 +240,6 @@ public class S3ClientProvider {
         );
     }
 
-    private S3AsyncClient asyncClientForRegion(String regionName) {
-        return configureCrtClientForRegion(regionName);
-    }
-    
     private S3AsyncClient configureCrtClientForRegion(String regionName) {
         var region = getRegionFromRegionName(regionName);
         logger.debug("bucket region is: '{}'", region);
