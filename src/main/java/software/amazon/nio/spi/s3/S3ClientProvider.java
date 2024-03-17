@@ -242,9 +242,6 @@ public class S3ClientProvider {
     }
 
     private S3AsyncClient asyncClientForRegion(String regionName) {
-        if (!true) {
-            return configureClientForRegion(regionName, S3AsyncClient.builder());
-        }
         return configureCrtClientForRegion(regionName);
     }
 
