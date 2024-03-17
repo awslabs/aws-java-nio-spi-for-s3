@@ -181,10 +181,7 @@ public class S3ClientProvider {
         );
     }
 
-    private S3AsyncClient configureCrtClientForRegion(String regionName) {
-        var region = getRegionFromRegionName(regionName);
-        logger.debug("bucket region is: '{}'", region);
-
+    S3CrtAsyncClientBuilder configureCrtClient() {
         var endpointUri = configuration.endpointUri();
         if (endpointUri != null) {
             asyncClientBuilder.endpointOverride(endpointUri);
@@ -195,9 +192,13 @@ public class S3ClientProvider {
             asyncClientBuilder.credentialsProvider(() -> credentials);
         }
 
-        return asyncClientBuilder.forcePathStyle(configuration.getForcePathStyle())
-                .region(region)
-                .build();
+        return asyncClientBuilder.forcePathStyle(configuration.getForcePathStyle());
+    }
+
+    private S3AsyncClient configureCrtClientForRegion(String regionName) {
+        var region = getRegionFromRegionName(regionName);
+        logger.debug("bucket region is: '{}'", region);
+        return configureCrtClient().region(region).build();
     }
 
     private static Region getRegionFromRegionName(String regionName) {
