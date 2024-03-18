@@ -87,7 +87,7 @@ public class S3ClientProvider {
     }
 
     /**
-     * Generate an async  client for the named bucket using a provided client to
+     * Generate an async client for the named bucket using a provided client to
      * determine the location of the named client
      *
      * @param bucketName     the name of the bucket to make the client for
