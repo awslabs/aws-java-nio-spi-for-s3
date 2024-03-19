@@ -177,7 +177,6 @@ class S3ReadAheadByteChannel implements ReadableByteChannel {
         open = false;
         readAheadBuffersCache.invalidateAll();
         readAheadBuffersCache.cleanUp();
-        client.close();
     }
 
     private void clearPriorFragments(int currentFragIndx) {

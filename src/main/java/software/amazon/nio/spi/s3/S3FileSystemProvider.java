@@ -138,15 +138,21 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public FileSystem newFileSystem(final URI uri, final Map<String, ?> env) throws IOException {
-        if (! uri.getScheme().equals(SCHEME)) {
-            throw new IllegalArgumentException("URI scheme must be s3");
+        if (!uri.getScheme().equals(getScheme())) {
+            throw new IllegalArgumentException("URI scheme must be " + getScheme());
         }
 
         @SuppressWarnings("unchecked")
         var envMap = (Map<String, Object>) env;
 
-        var bucketName = uri.getAuthority();
-        try (var client = S3AsyncClient.create()) {
+        var info = fileSystemInfo(uri);
+        var config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
+        if (info.accessKey() != null) {
+            config.withCredentials(info.accessKey(), info.accessSecret());
+        }
+        var bucketName = config.getBucketName();
+
+        try (var client = new S3ClientProvider(config).configureCrtClient().build()) {
             var createBucketResponse = client.createBucket(
                     bucketBuilder -> bucketBuilder.bucket(bucketName)
                             .acl(envMap.getOrDefault("acl", "").toString())
@@ -172,11 +178,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         } catch (InterruptedException | TimeoutException | SdkException e) {
             throw new IOException(e.getMessage(), e);
         }
-
-
         return getFileSystem(uri, true);
-
-
     }
 
     /**

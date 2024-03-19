@@ -5,6 +5,7 @@
 
 package software.amazon.nio.spi.s3;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static software.amazon.nio.spi.s3.Containers.localStackConnectionEndpoint;
 
@@ -20,16 +21,32 @@ import org.junit.jupiter.api.Test;
 public class FilesDirectoryStreamTest {
 
     @Nested
-    @DisplayName("should throw")
+    @DisplayName("when bucket does not exist")
     class DirectoryDoesNotExist {
 
-        @DisplayName("when bucket does not exist")
+        @DisplayName("should throw")
         @Test
         @SuppressWarnings("resource")
         public void whenBucketNotFound() {
             final var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/does-not-exist/some-directory"));
             assertThatThrownBy(() -> Files.newDirectoryStream(path, p -> true))
                 .isInstanceOf(IOException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("when bucket exists")
+    class DirectoryExists {
+
+        @DisplayName("and is empty, list should be empty")
+        @Test
+        public void listShouldBeEmpty() throws IOException {
+            Containers.createBucket("new-directory-stream");
+            final var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/new-directory-stream/"));
+
+            try(var stream = Files.newDirectoryStream(path, p -> true)) {
+                assertThat(stream).isEmpty();
+            }
         }
     }
 
