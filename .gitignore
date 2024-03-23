@@ -16,6 +16,3 @@ target
 
 # MacOS
 .DS_Store
-
-# Palantir Revapi
-.palantir
