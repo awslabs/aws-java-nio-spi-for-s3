@@ -67,13 +67,13 @@ For example:
 <dependency>
     <groupId>software.amazon.nio.s3</groupId>
     <artifactId>aws-java-nio-spi-for-s3</artifactId>
-    <version>2.0.0-dev</version>
+    <version>2.0.0</version>
 </dependency>
 ```
 
 `build.gradle(.kts)`
 ```groovy
-    implementation("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.0.0-dev")
+    implementation("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.0.0")
 ```
 
 The library heavily relies on the `crt` client from aws. It uses the [`uber`
@@ -84,7 +84,7 @@ and wide range of supported platforms.
 > If **size** is an **issue**, you can **exclude** the `crt` dependency from the library and import the [specific `crt` library](https://github.com/awslabs/aws-crt-java?tab=readme-ov-file#platform-specific-jars)
 > for your platform. For example:
 > ```
-> implementation("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.0.0-dev") {
+> implementation("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.0.0") {
 >	exclude group: 'software.amazon.awssdk.crt', module: 'aws-crt'
 > }
 > implementation 'software.amazon.awssdk.crt:aws-crt:0.29.11:linux-x86_64'
