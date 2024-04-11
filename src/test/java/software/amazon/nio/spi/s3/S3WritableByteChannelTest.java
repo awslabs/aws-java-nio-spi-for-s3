@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class S3WritableByteChannelTest {
@@ -39,7 +40,7 @@ class S3WritableByteChannelTest {
     @DisplayName("when file exists and constructor is invoked with option `CREATE_NEW` should throw FileAlreadyExistsException")
     void whenFileExistsAndCreateNewShouldThrowFileAlreadyExistsException() throws InterruptedException, TimeoutException {
         S3FileSystemProvider provider = mock();
-        when(provider.exists(any(), any())).thenReturn(true);
+        when(provider.exists(any(S3AsyncClient.class), any())).thenReturn(true);
 
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
@@ -53,7 +54,7 @@ class S3WritableByteChannelTest {
     @DisplayName("when file does not exist and constructor is invoked without option `CREATE_NEW` nor `CREATE` should throw NoSuchFileException")
     void whenFileDoesNotExistsAndNoCreateNewShouldThrowNoSuchFileException() throws InterruptedException, TimeoutException {
         S3FileSystemProvider provider = mock();
-        when(provider.exists(any(), any())).thenReturn(false);
+        when(provider.exists(any(S3AsyncClient.class), any())).thenReturn(false);
 
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
@@ -68,7 +69,7 @@ class S3WritableByteChannelTest {
     @DisplayName("S3WritableByteChannel")
     void shouldNotThrowWhen(boolean fileExists, Set<StandardOpenOption> openOptions) throws InterruptedException, TimeoutException, IOException {
         S3FileSystemProvider provider = mock();
-        when(provider.exists(any(), any())).thenReturn(fileExists);
+        when(provider.exists(any(S3AsyncClient.class), any())).thenReturn(fileExists);
 
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
@@ -81,7 +82,7 @@ class S3WritableByteChannelTest {
     @DisplayName("open() should be true before close()")
     void shouldBeOpenBeforeClose() throws InterruptedException, TimeoutException, IOException {
         S3FileSystemProvider provider = mock();
-        when(provider.exists(any(), any())).thenReturn(false);
+        when(provider.exists(any(S3AsyncClient.class), any())).thenReturn(false);
 
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
@@ -96,7 +97,7 @@ class S3WritableByteChannelTest {
     @DisplayName("open() should be false after close()")
     void shouldBeNotOpenAfterClose() throws InterruptedException, TimeoutException, IOException {
         S3FileSystemProvider provider = mock();
-        when(provider.exists(any(), any())).thenReturn(false);
+        when(provider.exists(any(S3AsyncClient.class), any())).thenReturn(false);
 
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
@@ -111,7 +112,7 @@ class S3WritableByteChannelTest {
     @DisplayName("close() should clean up the temporary file")
     void tmpFileIsCleanedUpAfterClose(@TempDir Path tempDir) throws InterruptedException, TimeoutException, IOException {
         S3FileSystemProvider provider = mock();
-        when(provider.exists(any(), any())).thenReturn(false);
+        when(provider.exists(any(S3AsyncClient.class), any())).thenReturn(false);
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
         var file = S3Path.getPath(fs, "somefile");
