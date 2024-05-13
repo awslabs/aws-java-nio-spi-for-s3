@@ -54,7 +54,7 @@ public class S3FileSystem extends FileSystem {
     private boolean open = true;
     private final Set<S3SeekableByteChannel> openChannels = new HashSet<>();
 
-    private S3AsyncClient client;
+    // private S3AsyncClient client;
     private final S3NioSpiConfiguration configuration;
 
     /**
@@ -411,11 +411,11 @@ public class S3FileSystem extends FileSystem {
      * @return the S3Client associated with this FileSystem
      */
     S3AsyncClient client() {
-        if (client == null) {
-            client = clientProvider.generateClient(bucketName);
-        }
+//        if (client == null) {
+//            client = clientProvider.generateClient(bucketName);
+//        }
 
-        return client;
+        return clientProvider.generateClient(bucketName);
     }
 
     /**
