@@ -54,7 +54,7 @@ sourceSets {
 dependencies {
     implementation 'io.reactivex.rxjava3:rxjava:3.1.8'
 
-    implementation platform('software.amazon.awssdk:bom:2.25.45')
+    implementation platform('software.amazon.awssdk:bom:2.25.51')
 
     implementation('software.amazon.awssdk:s3') {
         exclude group: 'software.amazon.awssdk', module: 'apache-client'
@@ -131,9 +131,9 @@ testing {
         integrationTest(JvmTestSuite) {
             dependencies {
                 implementation project
-                implementation 'org.testcontainers:junit-jupiter:1.19.7'
-                implementation 'org.testcontainers:localstack:1.19.7'
-                implementation 'org.testcontainers:testcontainers:1.19.7'
+                implementation 'org.testcontainers:junit-jupiter:1.19.8'
+                implementation 'org.testcontainers:localstack:1.19.8'
+                implementation 'org.testcontainers:testcontainers:1.19.8'
             }
         }
         withType(JvmTestSuite).configureEach {
