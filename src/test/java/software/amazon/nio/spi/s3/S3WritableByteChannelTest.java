@@ -30,6 +30,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 
@@ -123,6 +125,24 @@ class S3WritableByteChannelTest {
         channel.close();
         var countAfterClosing = countTemporaryFiles(tempDir);
         assertThat(countAfterClosing).isLessThan(countAfterOpening);
+    }
+
+    @Test
+    @DisplayName("second close() call should be a no-op")
+    void secondCloseIsNoOp() throws InterruptedException, TimeoutException, IOException {
+        S3FileSystemProvider provider = mock();
+        when(provider.exists(any(S3AsyncClient.class), any())).thenReturn(false);
+        S3FileSystem fs = mock();
+        when(fs.provider()).thenReturn(provider);
+        var file = S3Path.getPath(fs, "somefile");
+
+        S3TransferUtil utilMock = mock();
+        var channel = new S3WritableByteChannel(file, mock(), utilMock, Set.of(CREATE));
+        channel.close();
+        // this close() call should be a no-op
+        channel.close();
+
+        verify(utilMock, times(1)).uploadLocalFile(any(), any());
     }
 
     private long countTemporaryFiles(Path tempDir) throws IOException {
