@@ -16,3 +16,6 @@ target
 
 # MacOS
 .DS_Store
+
+# directory used for API break checks
+/.palantir/
