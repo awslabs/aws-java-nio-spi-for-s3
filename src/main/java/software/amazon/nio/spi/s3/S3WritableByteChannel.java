@@ -87,6 +87,10 @@ class S3WritableByteChannel implements WritableByteChannel {
     @Override
     public void close() throws IOException {
         channel.close();
+        if (!open) {
+            // channel has already been closed -> close() should have no effect
+            return;
+        }
 
         s3TransferUtil.uploadLocalFile(path, tempFile);
         Files.deleteIfExists(tempFile);
