@@ -442,16 +442,17 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final var s3Client = s3SourcePath.getFileSystem().client();
         final var sourceBucket = s3SourcePath.bucketName();
 
-        var sourcePrefix = s3SourcePath.toRealPath(NOFOLLOW_LINKS).getKey();
-
         final var timeOut = TIMEOUT_TIME_LENGTH_1;
         final var unit = MINUTES;
 
         var fileExistsAndCannotReplace = cannotReplaceAndFileExistsCheck(options, s3Client);
 
         try {
+            var sourcePrefix = s3SourcePath.toRealPath(NOFOLLOW_LINKS).getKey();
             var sourceKeys = getContainedObjectBatches(s3Client, sourceBucket, sourcePrefix, timeOut, unit);
-            final var prefixWithSeparator = sourcePrefix + PATH_SEPARATOR;
+            final var prefixWithSeparator = s3SourcePath.isDirectory() ? sourcePrefix :
+                    sourcePrefix.substring(0, sourcePrefix.lastIndexOf(PATH_SEPARATOR)) + PATH_SEPARATOR;
+
             try (var s3TransferManager = S3TransferManager.builder().s3Client(s3Client).build()) {
                 for (var keyList : sourceKeys) {
                     for (var objectIdentifier : keyList) {
@@ -864,7 +865,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
             ).get(timeOut, unit);
             var objects = response.contents()
                 .stream()
-                .filter(s3Object -> s3Object.key().equals(prefix) || s3Object.key().startsWith(prefix + PATH_SEPARATOR))
+                .filter(s3Object -> s3Object.key().equals(prefix) || s3Object.key().startsWith(prefix))
                 .map(s3Object -> ObjectIdentifier.builder().key(s3Object.key()).build())
                 .collect(Collectors.toList());
             if (!objects.isEmpty()) {
@@ -895,9 +896,13 @@ public class S3FileSystemProvider extends FileSystemProvider {
         Function<S3Path, Boolean> fileExistsAndCannotReplaceFn
     ) throws FileAlreadyExistsException {
         final var sanitizedIdKey = sourceObjectIdentifierKey.replaceFirst(sourcePrefix, "");
-        var resolvedS3TargetPath = targetPath.resolve(sanitizedIdKey);
 
-        if (fileExistsAndCannotReplaceFn.apply(resolvedS3TargetPath)) {
+        // should resolve if the target path is a dir
+        if (targetPath.isDirectory()) {
+            targetPath = targetPath.resolve(sanitizedIdKey);
+        }
+
+        if (fileExistsAndCannotReplaceFn.apply(targetPath)) {
             throw new FileAlreadyExistsException("File already exists at the target key");
         }
 
@@ -906,8 +911,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
                 .checksumAlgorithm(ChecksumAlgorithm.SHA256)
                 .sourceBucket(sourceBucket)
                 .sourceKey(sourceObjectIdentifierKey)
-                .destinationBucket(resolvedS3TargetPath.bucketName())
-                .destinationKey(resolvedS3TargetPath.getKey())
+                .destinationBucket(targetPath.bucketName())
+                .destinationKey(targetPath.getKey())
                 .build())
             .build()).completionFuture();
     }

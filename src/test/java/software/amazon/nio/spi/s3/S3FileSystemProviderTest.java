@@ -338,8 +338,8 @@ public class S3FileSystemProviderTest {
         when(mockClient.copyObject(any(CopyObjectRequest.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 CopyObjectResponse.builder().build()));
 
-        var dir1 = fs.getPath("/dir1");
-        var dir2 = fs.getPath("/dir2");
+        var dir1 = fs.getPath("/dir1/");
+        var dir2 = fs.getPath("/dir2/");
         assertThrows(FileAlreadyExistsException.class, () -> provider.copy(dir1, dir2));
         provider.copy(dir1, dir2, StandardCopyOption.REPLACE_EXISTING);
 
@@ -370,8 +370,8 @@ public class S3FileSystemProviderTest {
         when(mockClient.deleteObjects(any(DeleteObjectsRequest.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 DeleteObjectsResponse.builder().build()));
 
-        var dir1 = fs.getPath("/dir1");
-        var dir2 = fs.getPath("/dir2");
+        var dir1 = fs.getPath("/dir1/");
+        var dir2 = fs.getPath("/dir2/");
         assertThrows(FileAlreadyExistsException.class, () -> provider.move(dir1, dir2));
         provider.move(dir1, dir2, StandardCopyOption.REPLACE_EXISTING);
 
