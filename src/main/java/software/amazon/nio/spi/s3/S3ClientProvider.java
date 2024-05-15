@@ -35,11 +35,7 @@ public class S3ClientProvider {
     /**
      * Default asynchronous client using the "<a href="https://s3.us-east-1.amazonaws.com">...</a>" endpoint
      */
-    private static final S3AsyncClient UNIVERSAL_CLIENT = S3AsyncClient.builder()
-        .endpointOverride(URI.create("https://s3.us-east-1.amazonaws.com"))
-        .crossRegionAccessEnabled(true)
-        .region(Region.US_EAST_1)
-        .build();
+    protected S3AsyncClient universalClient;
 
     /**
      * Configuration
@@ -55,6 +51,11 @@ public class S3ClientProvider {
 
     public S3ClientProvider(S3NioSpiConfiguration c) {
         this.configuration = (c == null) ? new S3NioSpiConfiguration() : c;
+        this.universalClient = S3AsyncClient.builder()
+                .endpointOverride(URI.create("https://s3.us-east-1.amazonaws.com"))
+                .crossRegionAccessEnabled(true)
+                .region(Region.US_EAST_1)
+                .build();
     }
 
     public void asyncClientBuilder(final S3CrtAsyncClientBuilder builder) {
@@ -68,19 +69,27 @@ public class S3ClientProvider {
      * @return an S3AsyncClient bound to us-east-1
      */
     S3AsyncClient universalClient() {
-        return UNIVERSAL_CLIENT;
+        return universalClient;
     }
 
     /**
-     * Generates a sync client for the named bucket using the provided location
-     * discovery client.
+     * Sets the fallback client used to make {@code S3AsyncClient#getBucketLocation()} calls. Typically, this would
+     * only be set for testing purposes to use a {@code Mock} or {@code Spy} class.
+     * @param client the client to be used for getBucketLocation calls.
+     */
+    void universalClient(S3AsyncClient client) {
+        this.universalClient = client;
+    }
+
+    /**
+     * Generates a sync client for the named bucket using a client configured by the default region configuration chain.
      *
      * @param bucket the named of the bucket to make the client for
      * @return an S3 client appropriate for the region of the named bucket
      */
     protected S3AsyncClient generateClient(String bucket) {
         try {
-            return generateClient(bucket, universalClient());
+            return generateClient(bucket, S3AsyncClient.create());
         } catch (ExecutionException | InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -118,8 +127,8 @@ public class S3ClientProvider {
 
     private String getBucketLocation(String bucketName, S3AsyncClient locationClient)
             throws ExecutionException, InterruptedException {
-        logger.debug("checking if the bucket is in the same region as the current profile using HeadBucket");
-        try (var client = S3AsyncClient.create()) {
+        logger.debug("checking if the bucket is in the same region as the providedClient using HeadBucket");
+        try (var client = locationClient) {
             final HeadBucketResponse response = client
                     .headBucket(builder -> builder.bucket(bucketName))
                     .get(TIMEOUT_TIME_LENGTH_3, SECONDS);
@@ -135,28 +144,33 @@ public class S3ClientProvider {
 
             if (t instanceof ExecutionException &&
                     t.getCause() instanceof S3Exception &&
-                    ((S3Exception) t.getCause()).statusCode() == 301) {
-                // redirect region should be in the header
+                    ((S3Exception) t.getCause()).statusCode() == 301) {  // you got a redirect, the region should be in the header
                 logger.debug("HeadBucket was unsuccessful, redirect received, attempting to extract x-amz-bucket-region header");
                 S3Exception s3e = (S3Exception) t.getCause();
                 final var matchingHeaders = s3e.awsErrorDetails().sdkHttpResponse().matchingHeaders("x-amz-bucket-region");
                 if (matchingHeaders != null && !matchingHeaders.isEmpty()) {
                     return matchingHeaders.get(0);
                 }
-            }
-
-            logger.debug("HeadBucket failed and no redirect. Attempting a call to GetBucketLocation");
-            try {
-                return locationClient.getBucketLocation(builder -> builder.bucket(bucketName))
-                        .get(TIMEOUT_TIME_LENGTH_1, MINUTES).locationConstraintAsString();
-            } catch (TimeoutException e) {
-                throw logAndGenerateExceptionOnTimeOut(
-                        logger,
-                        "generateClient",
-                        TIMEOUT_TIME_LENGTH_1,
-                        MINUTES);
+            } else if (t instanceof ExecutionException &&
+                    t.getCause() instanceof S3Exception &&
+                    ((S3Exception) t.getCause()).statusCode() == 403) {  // HeadBucket was forbidden
+                logger.debug("HeadBucket forbidden. Attempting a call to GetBucketLocation using the UNIVERSAL_CLIENT");
+                try {
+                    return universalClient.getBucketLocation(builder -> builder.bucket(bucketName))
+                            .get(TIMEOUT_TIME_LENGTH_1, MINUTES).locationConstraintAsString();
+                } catch (TimeoutException e) {
+                    throw logAndGenerateExceptionOnTimeOut(
+                            logger,
+                            "generateClient",
+                            TIMEOUT_TIME_LENGTH_1,
+                            MINUTES);
+                }
+            } else {
+                // didn't handle the exception - rethrow it
+                throw t;
             }
         }
+        return "";
     }
 
     S3CrtAsyncClientBuilder configureCrtClient() {
