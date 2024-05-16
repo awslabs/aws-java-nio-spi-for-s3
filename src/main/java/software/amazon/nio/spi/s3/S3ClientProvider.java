@@ -6,9 +6,7 @@
 package software.amazon.nio.spi.s3;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
-import static software.amazon.nio.spi.s3.util.TimeOutUtils.TIMEOUT_TIME_LENGTH_3;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExceptionOnTimeOut;
 
 import java.net.URI;
@@ -90,7 +88,10 @@ public class S3ClientProvider {
     protected S3AsyncClient generateClient(String bucket) {
         try {
             return generateClient(bucket, S3AsyncClient.create());
-        } catch (ExecutionException | InterruptedException e) {
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
     }
@@ -131,7 +132,7 @@ public class S3ClientProvider {
         try (var client = locationClient) {
             final HeadBucketResponse response = client
                     .headBucket(builder -> builder.bucket(bucketName))
-                    .get(TIMEOUT_TIME_LENGTH_3, SECONDS);
+                    .get(TIMEOUT_TIME_LENGTH_1, MINUTES);
             return response.bucketRegion();
 
         } catch (TimeoutException e) {
