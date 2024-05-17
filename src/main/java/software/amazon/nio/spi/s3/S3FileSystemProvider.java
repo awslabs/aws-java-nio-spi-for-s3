@@ -21,6 +21,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
+import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -58,6 +59,8 @@ import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.BucketAlreadyExistsException;
+import software.amazon.awssdk.services.s3.model.BucketAlreadyOwnedByYouException;
 import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.Delete;
@@ -174,8 +177,16 @@ public class S3FileSystemProvider extends FileSystemProvider {
             logger.debug("Create bucket response {}", createBucketResponse.toString());
 
         } catch (ExecutionException e) {
-            throw new IOException(e.getMessage(), e.getCause());
+            if (e.getCause() instanceof BucketAlreadyOwnedByYouException ||
+                    e.getCause() instanceof BucketAlreadyExistsException) {
+                throw new FileSystemAlreadyExistsException(e.getCause().getMessage());
+            } else {
+                throw new IOException(e.getMessage(), e.getCause());
+            }
         } catch (InterruptedException | TimeoutException | SdkException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             throw new IOException(e.getMessage(), e);
         }
         return getFileSystem(uri, true);
