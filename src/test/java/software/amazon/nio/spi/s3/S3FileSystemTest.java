@@ -5,6 +5,21 @@
 
 package software.amazon.nio.spi.s3;
 
+import static org.assertj.core.api.BDDAssertions.then;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.lenient;
+import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
+import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
+
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.FileSystems;
+import java.util.Collections;
+import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,19 +28,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-
-import java.io.IOException;
-import java.net.URI;
-import java.nio.file.FileSystemNotFoundException;
-import java.nio.file.FileSystems;
-import java.util.Collections;
-import java.util.concurrent.CompletableFuture;
-
-import static org.assertj.core.api.BDDAssertions.then;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.lenient;
-import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
-import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
 
 @ExtendWith(MockitoExtension.class)
 public class S3FileSystemTest {
@@ -39,7 +41,7 @@ public class S3FileSystemTest {
     @BeforeEach
     public void init() {
         provider = new S3FileSystemProvider();
-        s3FileSystem = provider.getFileSystem(s3Uri, true);
+        s3FileSystem = (S3FileSystem) provider.getFileSystem(s3Uri);
         s3FileSystem.clientProvider = new FixedS3ClientProvider(mockClient);
         lenient().when(mockClient.headObject(anyConsumer())).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
@@ -62,7 +64,7 @@ public class S3FileSystemTest {
         assertFalse(s3FileSystem.isOpen(), "File system should return false from isOpen when closed has been called");
 
         // close() should also remove the instance from the provider
-        assertThrows(FileSystemNotFoundException.class, () -> provider.getFileSystem(s3Uri));
+        assertFalse(provider.getFsCache().containsKey(s3Uri.toString()));
     }
 
     @Test

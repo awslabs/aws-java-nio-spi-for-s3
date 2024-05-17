@@ -23,11 +23,17 @@ public class CreateBucket {
         }
 
         System.out.println("Creating bucket " + args[0]);
-        try (var fs = FileSystems.newFileSystem(URI.create(args[0]),
+        var uri = URI.create(args[0]);
+        try (var fs = FileSystems.newFileSystem(uri,
                 Map.of("locationConstraint", "us-west-2"))) {
             System.out.println(fs.toString());
         } catch (FileSystemAlreadyExistsException e) {
             System.err.printf("Bucket already exists: %s\n", e.getMessage());
+        }
+
+        try (var fileSystem = FileSystems.getFileSystem(uri))
+        {
+            fileSystem.getRootDirectories().forEach(System.out::println);
         }
     }
 }

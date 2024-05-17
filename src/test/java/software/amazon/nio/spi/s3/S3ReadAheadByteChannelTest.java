@@ -5,28 +5,29 @@
 
 package software.amazon.nio.spi.s3;
 
-import org.mockito.Mock;
-import software.amazon.awssdk.core.ResponseBytes;
-import software.amazon.awssdk.core.internal.async.ByteArrayAsyncResponseTransformer;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.when;
+import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
 
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
-import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.when;
-import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
-
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.core.ResponseBytes;
+import software.amazon.awssdk.core.internal.async.ByteArrayAsyncResponseTransformer;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("unchecked")
@@ -47,7 +48,7 @@ public class S3ReadAheadByteChannelTest {
 
     @BeforeEach
     public void setup() throws IOException {
-        path = S3Path.getPath(provider.getFileSystem(URI.create("s3://my-bucket"), true), "/object");
+        path = S3Path.getPath((S3FileSystem) provider.getFileSystem(URI.create("s3://my-bucket")), "/object");
 
         // mocking
         lenient().when(delegator.size()).thenReturn(52L);

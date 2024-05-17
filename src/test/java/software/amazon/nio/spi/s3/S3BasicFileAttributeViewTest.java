@@ -5,7 +5,8 @@
 
 package software.amazon.nio.spi.s3;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.net.URI;
 import org.junit.jupiter.api.Test;
@@ -14,7 +15,7 @@ class S3BasicFileAttributeViewTest {
     final String uriString = "s3://mybucket";
     final S3FileSystemProvider provider = new S3FileSystemProvider();
 
-    S3FileSystem fileSystem = provider.getFileSystem(URI.create(uriString), true);
+    S3FileSystem fileSystem = (S3FileSystem) provider.getFileSystem(URI.create(uriString));
     S3Path path = S3Path.getPath(fileSystem, uriString);
     S3BasicFileAttributeView view = new S3BasicFileAttributeView(path);
 
