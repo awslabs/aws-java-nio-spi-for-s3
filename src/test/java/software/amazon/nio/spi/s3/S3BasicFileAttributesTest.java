@@ -5,7 +5,21 @@
 
 package software.amazon.nio.spi.s3;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.when;
+import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
+
 import java.io.IOException;
+import java.nio.file.attribute.FileTime;
+import java.nio.file.spi.FileSystemProvider;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,21 +34,6 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 import software.amazon.nio.spi.s3.util.TimeOutUtils;
-
-import java.nio.file.attribute.FileTime;
-import java.nio.file.spi.FileSystemProvider;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-import java.util.stream.Stream;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.when;
-import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
 
 @DisplayName("S3BasicFileAttributes")
 public class S3BasicFileAttributesTest {
@@ -228,6 +227,7 @@ public class S3BasicFileAttributesTest {
                 try {
                     Thread.sleep(Duration.ofMinutes(1).toMillis());
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     throw new RuntimeException(e);
                 }
                 return HeadObjectResponse.builder().build();
