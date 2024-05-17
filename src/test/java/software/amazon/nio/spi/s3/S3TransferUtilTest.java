@@ -5,12 +5,12 @@
 
 package software.amazon.nio.spi.s3;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import software.amazon.awssdk.core.async.AsyncRequestBody;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,13 +18,12 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 @DisplayName("S3TransferUtil")
 class S3TransferUtilTest {
@@ -57,6 +56,7 @@ class S3TransferUtilTest {
                 try {
                     Thread.sleep(Duration.ofMinutes(1).toMillis());
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     throw new RuntimeException(e);
                 }
                 return PutObjectResponse.builder().build();

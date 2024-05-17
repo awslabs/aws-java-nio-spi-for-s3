@@ -669,6 +669,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
         } catch (TimeoutException e) {
             throw logAndGenerateExceptionOnTimeOut(logger, "checkAccess", timeOut, unit);
         } catch (InterruptedException | ExecutionException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             throw new RuntimeException(e);
         }
     }
