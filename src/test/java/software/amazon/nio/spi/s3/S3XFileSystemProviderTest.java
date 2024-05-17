@@ -6,7 +6,6 @@
 package software.amazon.nio.spi.s3;
 
 import static com.github.stefanbirkner.systemlambda.SystemLambda.restoreSystemProperties;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.BDDAssertions.then;
 import static org.mockito.Mockito.spy;
@@ -14,7 +13,6 @@ import static org.mockito.Mockito.verify;
 
 import java.net.URI;
 import java.nio.file.FileSystem;
-import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Paths;
 import java.util.Collections;
 import org.junit.jupiter.api.DisplayName;
@@ -54,20 +52,15 @@ public class S3XFileSystemProviderTest {
     public void getFileSystem() {
         var provider = new S3XFileSystemProvider();
 
-        FileSystem fs2 = provider.getFileSystem(URI1, true);
+        FileSystem fs2 = provider.getFileSystem(URI1);
         then(provider.getFileSystem(URI1)).isSameAs(fs2);
-        FileSystem fs3 = provider.getFileSystem(URI3, true);
+        FileSystem fs3 = provider.getFileSystem(URI3);
         then(fs3).isNotSameAs(fs2);
         then(provider.getFileSystem(URI2)).isSameAs(fs2);
-        then(provider.getFileSystem(URI7, true)).isNotSameAs(fs3);
+        then(provider.getFileSystem(URI7)).isNotSameAs(fs3);
         then(provider.getFileSystem(URI8)).isNotSameAs(fs3);
         provider.closeFileSystem(fs2);
         provider.closeFileSystem(fs3);
-
-        assertThatCode(() -> provider.getFileSystem(URI.create("s3://nowhere.com:2000/foo2/baa2")))
-                .as("missing error")
-                .isInstanceOf(FileSystemNotFoundException.class)
-                .hasMessageContaining("file system not found for 'nowhere.com:2000/foo2'");
     }
 
     @Test
@@ -77,7 +70,7 @@ public class S3XFileSystemProviderTest {
         restoreSystemProperties(() -> {
             System.setProperty("aws.region", "us-west-1");
 
-            var fs = p.getFileSystem(URI.create("s3x://urikey:urisecret@some.where.com:1010/bucket"), true);
+            var fs = (S3FileSystem) p.getFileSystem(URI.create("s3x://urikey:urisecret@some.where.com:1010/bucket"));
             fs.clientProvider().asyncClientBuilder(BUILDER);
             fs.client();
             fs.close();

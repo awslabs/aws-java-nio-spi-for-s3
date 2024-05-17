@@ -99,6 +99,13 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
+    /**
+     * Get an unmodifiable copy of the Filesystem Cache. Mainly used for testing purposes.
+     * @return An immutable copy of the filesystem cache.
+     */
+    protected Map<String, S3FileSystem> getFsCache() {
+        return Map.copyOf(FS_CACHE);
+    }
 
     /**
      * Returns the URI scheme that identifies this provider.
@@ -189,7 +196,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
             }
             throw new IOException(e.getMessage(), e);
         }
-        return getFileSystem(uri, true);
+        return getFileSystem(uri);
     }
 
     /**
@@ -227,7 +234,14 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public FileSystem getFileSystem(URI uri) {
-        return getFileSystem(uri, false);
+        var info = fileSystemInfo(uri);
+        return FS_CACHE.computeIfAbsent(info.key(), (key) -> {
+            var config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
+            if (info.accessKey() != null) {
+                config.withCredentials(info.accessKey(), info.accessSecret());
+            }
+            return new S3FileSystem(this, config);
+        });
     }
 
     /**
@@ -259,7 +273,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public Path getPath(URI uri) throws IllegalArgumentException, FileSystemNotFoundException, SecurityException {
         Objects.requireNonNull(uri);
-        return getFileSystem(uri, true).getPath(uri.getScheme() + ":/" + uri.getPath());
+        return getFileSystem(uri).getPath(uri.getScheme() + ":/" + uri.getPath());
     }
 
     /**
@@ -768,33 +782,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException("s3 file attributes cannot be modified by this class");
-    }
-
-    /**
-     * Similar to getFileSystem(uri), but it allows to create the file system if
-     * not yet created.
-     *
-     * @param uri    URI reference
-     * @param create if true, the file system is created if not already done
-     * @return The file system
-     * @throws IllegalArgumentException    If the pre-conditions for the {@code uri} parameter aren't met
-     * @throws FileSystemNotFoundException If the file system does not exist
-     * @throws SecurityException           If a security manager is installed, and it denies an unspecified
-     *                                     permission.
-     */
-    S3FileSystem getFileSystem(URI uri, boolean create) {
-        var info = fileSystemInfo(uri);
-        return FS_CACHE.computeIfAbsent(info.key(), (key) -> {
-            if (!create) {
-                throw new FileSystemNotFoundException("file system not found for '" + info.key() + "'");
-            }
-
-            var config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
-            if (info.accessKey() != null) {
-                config.withCredentials(info.accessKey(), info.accessSecret());
-            }
-            return new S3FileSystem(this, config);
-        });
     }
 
     void closeFileSystem(FileSystem fs) {
