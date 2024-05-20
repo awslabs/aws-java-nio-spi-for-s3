@@ -154,8 +154,8 @@ public class S3ClientProvider {
         }
 
         logger.debug("checking if the bucket is in the same region as the providedClient using HeadBucket");
-        try (var client = locationClient) {
-            final HeadBucketResponse response = client
+        try {
+            final HeadBucketResponse response = locationClient
                     .headBucket(builder -> builder.bucket(bucketName))
                     .get(TIMEOUT_TIME_LENGTH_1, MINUTES);
             bucketRegionCache.put(bucketName, response.bucketRegion());

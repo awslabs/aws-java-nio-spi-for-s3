@@ -162,7 +162,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
         var bucketName = config.getBucketName();
 
-        try (var client = new S3ClientProvider(config).configureCrtClient().build()) {
+        try {
+            @SuppressWarnings("resource")
+            var client = new S3ClientProvider(config).configureCrtClient().build();
             var createBucketResponse = client.createBucket(
                     bucketBuilder -> bucketBuilder.bucket(bucketName)
                             .acl(envMap.getOrDefault("acl", "").toString())
@@ -384,7 +386,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
         var timeOut = TIMEOUT_TIME_LENGTH_1;
         final var unit = MINUTES;
 
-        try (S3AsyncClient client = s3Directory.getFileSystem().client()) {
+        @SuppressWarnings("resource")
+        S3AsyncClient client = s3Directory.getFileSystem().client();
+        try {
             client.putObject(
                 PutObjectRequest.builder()
                     .bucket(s3Directory.bucketName())
