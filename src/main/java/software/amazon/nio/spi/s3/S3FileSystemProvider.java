@@ -186,7 +186,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
         } catch (ExecutionException e) {
             if (e.getCause() instanceof BucketAlreadyOwnedByYouException ||
                     e.getCause() instanceof BucketAlreadyExistsException) {
-                throw new FileSystemAlreadyExistsException(e.getCause().getMessage());
+                throw (FileSystemAlreadyExistsException) new FileSystemAlreadyExistsException(e.getCause().getMessage())
+                        .initCause(e.getCause());
             } else {
                 throw new IOException(e.getMessage(), e.getCause());
             }
