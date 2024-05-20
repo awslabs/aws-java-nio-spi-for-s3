@@ -9,7 +9,10 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExceptionOnTimeOut;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -46,6 +49,16 @@ public class S3ClientProvider {
     protected S3CrtAsyncClientBuilder asyncClientBuilder =
             S3AsyncClient.crtBuilder()
                     .crossRegionAccessEnabled(true);
+
+    private final Cache<String, String> bucketRegionCache = Caffeine.newBuilder()
+            .maximumSize(16)
+            .expireAfterWrite(Duration.ofMinutes(30))
+            .build();
+
+    private final Cache<String, CacheableS3Client> bucketClientCache = Caffeine.newBuilder()
+            .maximumSize(4)
+            .expireAfterWrite(Duration.ofHours(1))
+            .build();
 
     public S3ClientProvider(S3NioSpiConfiguration c) {
         this.configuration = (c == null) ? new S3NioSpiConfiguration() : c;
@@ -122,17 +135,30 @@ public class S3ClientProvider {
             }
         }
 
-        return configureCrtClientForRegion(Optional.ofNullable(bucketLocation).orElse(configuration.getRegion()));
+        var client = bucketClientCache.getIfPresent(bucketName);
+        if (client != null && !client.isClosed()) {
+            return client;
+        } else {
+            String r = Optional.ofNullable(bucketLocation).orElse(configuration.getRegion());
+            return bucketClientCache.get(bucketName, b -> new CacheableS3Client(configureCrtClientForRegion(r)));
+        }
+
     }
 
 
     private String getBucketLocation(String bucketName, S3AsyncClient locationClient)
             throws ExecutionException, InterruptedException {
+
+        if (bucketRegionCache.getIfPresent(bucketName) != null) {
+            return bucketRegionCache.getIfPresent(bucketName);
+        }
+
         logger.debug("checking if the bucket is in the same region as the providedClient using HeadBucket");
         try (var client = locationClient) {
             final HeadBucketResponse response = client
                     .headBucket(builder -> builder.bucket(bucketName))
                     .get(TIMEOUT_TIME_LENGTH_1, MINUTES);
+            bucketRegionCache.put(bucketName, response.bucketRegion());
             return response.bucketRegion();
 
         } catch (TimeoutException e) {
@@ -150,6 +176,7 @@ public class S3ClientProvider {
                 S3Exception s3e = (S3Exception) t.getCause();
                 final var matchingHeaders = s3e.awsErrorDetails().sdkHttpResponse().matchingHeaders("x-amz-bucket-region");
                 if (matchingHeaders != null && !matchingHeaders.isEmpty()) {
+                    bucketRegionCache.put(bucketName, matchingHeaders.get(0));
                     return matchingHeaders.get(0);
                 }
             } else if (t instanceof ExecutionException &&
@@ -157,8 +184,9 @@ public class S3ClientProvider {
                     ((S3Exception) t.getCause()).statusCode() == 403) {  // HeadBucket was forbidden
                 logger.debug("HeadBucket forbidden. Attempting a call to GetBucketLocation using the UNIVERSAL_CLIENT");
                 try {
-                    return universalClient.getBucketLocation(builder -> builder.bucket(bucketName))
+                    String location =  universalClient.getBucketLocation(builder -> builder.bucket(bucketName))
                             .get(TIMEOUT_TIME_LENGTH_1, MINUTES).locationConstraintAsString();
+                    bucketRegionCache.put(bucketName, location);
                 } catch (TimeoutException e) {
                     throw logAndGenerateExceptionOnTimeOut(
                             logger,
