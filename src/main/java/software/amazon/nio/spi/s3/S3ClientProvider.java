@@ -55,7 +55,7 @@ public class S3ClientProvider {
             .expireAfterWrite(Duration.ofMinutes(30))
             .build();
 
-    private final Cache<String, CacheableS3Client> regionClientCache = Caffeine.newBuilder()
+    private final Cache<String, CacheableS3Client> bucketClientCache = Caffeine.newBuilder()
             .maximumSize(4)
             .expireAfterWrite(Duration.ofHours(1))
             .build();
@@ -135,12 +135,12 @@ public class S3ClientProvider {
             }
         }
 
-        var client = regionClientCache.getIfPresent(Optional.ofNullable(bucketLocation).orElse(configuration.getRegion()));
+        var client = bucketClientCache.getIfPresent(bucketName);
         if (client != null && !client.isClosed()) {
             return client;
         } else {
-            String region = Optional.ofNullable(bucketLocation).orElse(configuration.getRegion());
-            return regionClientCache.get(region, r -> new CacheableS3Client(configureCrtClientForRegion(r)));
+            String r = Optional.ofNullable(bucketLocation).orElse(configuration.getRegion());
+            return bucketClientCache.get(bucketName, b -> new CacheableS3Client(configureCrtClientForRegion(r)));
         }
 
     }

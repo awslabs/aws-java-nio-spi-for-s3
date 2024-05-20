@@ -209,6 +209,11 @@ import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 import software.amazon.awssdk.services.s3.paginators.ListPartsPublisher;
 import software.amazon.awssdk.services.s3.waiters.S3AsyncWaiter;
 
+/**
+ * A wrapper around an {@code S3AsyncClient} that can be used in a cache. It keeps track of the "closed" status of the wrapped
+ * client and adds a {@code boolean isClosed()} method that can be used to determine if any client returned by the cache has
+ * been previously closed. All other method calls are delegated to the wrapped client.
+ */
 public class CacheableS3Client implements S3AsyncClient {
 
     private final S3AsyncClient client;
@@ -227,14 +232,11 @@ public class CacheableS3Client implements S3AsyncClient {
     @Override
     public void close() {
         this.closed = true;
+        client.close();
     }
 
     public boolean isClosed() {
         return closed;
-    }
-
-    public S3AsyncClient getClient() {
-        return client;
     }
 
     @Override
