@@ -234,15 +234,15 @@ public class S3NioSpiConfigurationTest {
     
     @Test
     public void withAndGetForcePathStyle() {
-        then(config).doesNotContainKey(S3_SPI_FORCE_PATH_STYLE_PROPERTY);
+        then(config).contains(entry(S3_SPI_FORCE_PATH_STYLE_PROPERTY, "false"));
         then(config.withForcePathStyle(true)).isSameAs(config);
-        then(config).contains(entry(S3_SPI_FORCE_PATH_STYLE_PROPERTY, true));
+        then(config).contains(entry(S3_SPI_FORCE_PATH_STYLE_PROPERTY, "true"));
         then(config.getForcePathStyle()).isTrue();
         then(config.withForcePathStyle(false).getForcePathStyle()).isFalse();
         
         Map<String, Object> map = new HashMap<>(); config = new S3NioSpiConfiguration(map);
         then(config.getForcePathStyle()).isFalse();
-        map.put(S3_SPI_FORCE_PATH_STYLE_PROPERTY, true); config = new S3NioSpiConfiguration(map);
+        map.put(S3_SPI_FORCE_PATH_STYLE_PROPERTY, "true"); config = new S3NioSpiConfiguration(map);
         then(config .getForcePathStyle()).isTrue();
         map.remove(S3_SPI_FORCE_PATH_STYLE_PROPERTY); // same S3NioSpiConfiguration on purpose
         then(config.getForcePathStyle()).isTrue();
