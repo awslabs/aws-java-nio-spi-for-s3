@@ -66,6 +66,10 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      */
     public static final String S3_SPI_FORCE_PATH_STYLE_PROPERTY = "s3.spi.force-path-style";
     /**
+     * The default value of the force path style property
+     */
+    public static final boolean S3_SPI_FORCE_PATH_STYLE_DEFAULT = false;
+    /**
      * The default value of the credentials property
      */
     public static final String S3_SPI_CREDENTIALS_PROPERTY = "s3.spi.credentials";
@@ -98,6 +102,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         put(S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY, String.valueOf(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT));
         put(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, String.valueOf(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT));
         put(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
+        put(S3_SPI_FORCE_PATH_STYLE_PROPERTY, String.valueOf(S3_SPI_FORCE_PATH_STYLE_DEFAULT));
 
         //
         // With the below we pick existing environment variables and system
@@ -286,7 +291,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         if (forcePathStyle == null) {
             remove(S3_SPI_FORCE_PATH_STYLE_PROPERTY);
         } else {
-            put(S3_SPI_FORCE_PATH_STYLE_PROPERTY, forcePathStyle);
+            put(S3_SPI_FORCE_PATH_STYLE_PROPERTY, String.valueOf(forcePathStyle));
         }
 
         return this;
@@ -387,7 +392,8 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     }
 
     public boolean getForcePathStyle() {
-        return (boolean) getOrDefault(S3_SPI_FORCE_PATH_STYLE_PROPERTY, false);
+        return Boolean.parseBoolean((String) getOrDefault(S3_SPI_FORCE_PATH_STYLE_PROPERTY, 
+                                                          String.valueOf(S3_SPI_FORCE_PATH_STYLE_DEFAULT)));
     }
 
     /**
