@@ -392,7 +392,8 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     }
 
     public boolean getForcePathStyle() {
-        return Boolean.parseBoolean((String) getOrDefault(S3_SPI_FORCE_PATH_STYLE_PROPERTY, String.valueOf(S3_SPI_FORCE_PATH_STYLE_DEFAULT)));
+        return Boolean.parseBoolean((String) getOrDefault(S3_SPI_FORCE_PATH_STYLE_PROPERTY, 
+                                                          String.valueOf(S3_SPI_FORCE_PATH_STYLE_DEFAULT)));
     }
 
     /**
