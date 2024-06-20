@@ -41,13 +41,13 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
@@ -95,7 +95,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * Constant for the S3 scheme "s3"
      */
     static final String SCHEME = "s3";
-    private static final Map<String, S3FileSystem> FS_CACHE = new HashMap<>();
+    private static final Map<String, S3FileSystem> FS_CACHE = new ConcurrentHashMap<>();
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
