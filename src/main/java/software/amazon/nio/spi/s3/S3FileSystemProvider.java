@@ -715,7 +715,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
             @SuppressWarnings("unchecked") final var v = (V) new S3BasicFileAttributeView(s3Path);
             return v;
         } else {
-            throw new IllegalArgumentException("type must be BasicFileAttributeView.class");
+            // if the type is not supported, return null, to be compliant with the method contract
+            return null;
         }
     }
 

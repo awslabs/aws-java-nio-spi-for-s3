@@ -466,9 +466,10 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
-    public void getFileAttributeViewIllegalArg() {
+    public void getFileAttributeViewUnsupportedView() {
         var foo = fs.getPath("/foo");
-        assertThrows(IllegalArgumentException.class, () -> provider.getFileAttributeView(foo, FileAttributeView.class));
+        final var unsupportedView = provider.getFileAttributeView(foo, FileAttributeView.class);
+        assertNull(unsupportedView);
     }
 
     @Test
