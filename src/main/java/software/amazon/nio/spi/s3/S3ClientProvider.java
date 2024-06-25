@@ -139,12 +139,13 @@ public class S3ClientProvider {
         if (client != null && !client.isClosed()) {
             return client;
         } else {
+            if (client != null && client.isClosed()) {
+                bucketClientCache.invalidate(bucketName);    // remove the closed client from the cache
+            }
             String r = Optional.ofNullable(bucketLocation).orElse(configuration.getRegion());
             return bucketClientCache.get(bucketName, b -> new CacheableS3Client(configureCrtClientForRegion(r)));
         }
-
     }
-
 
     private String getBucketLocation(String bucketName, S3AsyncClient locationClient)
             throws ExecutionException, InterruptedException {
