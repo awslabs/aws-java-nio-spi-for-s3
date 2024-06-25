@@ -13,6 +13,7 @@ import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExcepti
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.channels.FileChannel;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.AccessMode;
@@ -787,6 +788,23 @@ public class S3FileSystemProvider extends FileSystemProvider {
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException("s3 file attributes cannot be modified by this class");
+    }
+
+    /**
+     * @param path    the path of the file to open or create
+     * @param options options specifying how the file is opened
+     * @param attrs   an optional list of file attributes to set atomically when
+     *                creating the file. Currently, ignored.
+     * @return a new {@code FileChannel} object representing the specified file
+     * @throws IOException if an I/O error occurs
+     */
+    @Override
+    public FileChannel newFileChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs)
+            throws IOException {
+
+        S3FileSystem fs = (S3FileSystem) getFileSystem(path.toUri());
+        S3SeekableByteChannel s3SeekableByteChannel = new S3SeekableByteChannel((S3Path) path, fs.client(), options);
+        return new S3FileChannel(s3SeekableByteChannel);
     }
 
     void closeFileSystem(FileSystem fs) {

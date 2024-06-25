@@ -7,6 +7,7 @@ package software.amazon.nio.spi.s3;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.file.FileAlreadyExistsException;
@@ -96,5 +97,17 @@ class S3WritableByteChannel implements WritableByteChannel {
         Files.deleteIfExists(tempFile);
 
         open = false;
+    }
+
+    /**
+     * Cause the local tmp data to be written to S3 without closing the channel and without deleting the tmp file.
+     * @throws IOException if an error occurs during the upload
+     * @throws ClosedChannelException if the channel is closed
+     */
+    protected void force() throws IOException {
+        if (!open) {
+            throw new ClosedChannelException();
+        }
+        s3TransferUtil.uploadLocalFile(path, tempFile);
     }
 }
