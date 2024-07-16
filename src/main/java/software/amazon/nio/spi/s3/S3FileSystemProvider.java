@@ -384,8 +384,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
         var timeOut = TIMEOUT_TIME_LENGTH_1;
         final var unit = MINUTES;
 
-        try (S3AsyncClient client = s3Directory.getFileSystem().client()) {
-            client.putObject(
+        try {
+            s3Directory.getFileSystem().client().putObject(
                 PutObjectRequest.builder()
                     .bucket(s3Directory.bucketName())
                     .key(directoryKey)
