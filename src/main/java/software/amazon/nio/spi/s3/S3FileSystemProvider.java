@@ -419,7 +419,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
         var timeOut = TIMEOUT_TIME_LENGTH_1;
         final var unit = MINUTES;
         try {
-            var keys = getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit);
+            var keys = s3Path.isDirectory() ?
+                    getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit)
+                    : List.of(List.of(ObjectIdentifier.builder().key(prefix).build()));
 
             for (var keyList : keys) {
                 s3Client.deleteObjects(DeleteObjectsRequest.builder()
@@ -475,9 +477,16 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         try {
             var sourcePrefix = s3SourcePath.toRealPath(NOFOLLOW_LINKS).getKey();
-            var sourceKeys = getContainedObjectBatches(s3Client, sourceBucket, sourcePrefix, timeOut, unit);
-            final var prefixWithSeparator = s3SourcePath.isDirectory() ? sourcePrefix :
-                    sourcePrefix.substring(0, sourcePrefix.lastIndexOf(PATH_SEPARATOR)) + PATH_SEPARATOR;
+
+            List<List<ObjectIdentifier>> sourceKeys;
+            String prefixWithSeparator;
+            if (s3SourcePath.isDirectory()) {
+                sourceKeys = getContainedObjectBatches(s3Client, sourceBucket, sourcePrefix, timeOut, unit);
+                prefixWithSeparator = sourcePrefix;
+            } else {
+                sourceKeys = List.of(List.of(ObjectIdentifier.builder().key(sourcePrefix).build()));
+                prefixWithSeparator = sourcePrefix.substring(0, sourcePrefix.lastIndexOf(PATH_SEPARATOR)) + PATH_SEPARATOR;
+            }
 
             try (var s3TransferManager = S3TransferManager.builder().s3Client(s3Client).build()) {
                 for (var keyList : sourceKeys) {

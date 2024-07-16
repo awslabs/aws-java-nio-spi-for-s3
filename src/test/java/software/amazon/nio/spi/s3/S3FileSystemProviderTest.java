@@ -306,7 +306,7 @@ public class S3FileSystemProviderTest {
         when(mockClient.deleteObjects(any(DeleteObjectsRequest.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 DeleteObjectsResponse.builder().build()));
 
-        provider.delete(fs.getPath("/dir"));
+        provider.delete(fs.getPath("/dir/"));
 
         var argumentCaptor = ArgumentCaptor.forClass(DeleteObjectsRequest.class);
         verify(mockClient, times(1)).deleteObjects(argumentCaptor.capture());
