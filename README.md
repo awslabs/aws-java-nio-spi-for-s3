@@ -48,7 +48,7 @@ by the JVM you need to supply the JAR on your classpath using the `-classpath` f
 you would type the following:
 
 ```
-java -classpath build/libs/nio-spi-for-s3-1.1.0-all.jar:myApp.jar org.example.myapp.Main
+java -classpath build/libs/nio-spi-for-s3-<version>-all.jar:myApp.jar org.example.myapp.Main
 ```
 
 As a concrete example, using Java 9+ with the popular genomics application [GATK](https://gatk.broadinstitute.org/hc/en-us), you could do the following:
