@@ -132,7 +132,7 @@ testing {
             dependencies {
                 implementation project
                 implementation 'org.testcontainers:junit-jupiter:1.20.0'
-                implementation 'org.testcontainers:localstack:1.20.0'
+                implementation 'org.testcontainers:localstack:1.20.1'
                 implementation 'org.testcontainers:testcontainers:1.20.0'
             }
         }
