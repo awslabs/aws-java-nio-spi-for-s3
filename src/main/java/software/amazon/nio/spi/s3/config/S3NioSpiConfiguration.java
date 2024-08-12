@@ -325,6 +325,63 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     }
 
     /**
+     * Fluently sets the value of {@code timeoutLow} and adds
+     * {@code S3_SPI_TIMEOUT_LOW_PROPERTY} to the map unless the given
+     * value is null. If null, {@code S3_SPI_TIMEOUT_LOW_PROPERTY} takes
+     * default value of 1.
+     *
+     * @param timeoutLow the new value; can be null
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withTimeoutLow(Long timeoutLow) {
+        if (timeoutLow == null) {
+            put(S3_SPI_TIMEOUT_LOW_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_LOW_DEFAULT));
+        } else {
+            put(S3_SPI_TIMEOUT_LOW_PROPERTY, String.valueOf(timeoutLow));
+        }
+
+        return this;
+    }
+
+    /**
+     * Fluently sets the value of {@code timeoutMedium} and adds
+     * {@code S3_SPI_TIMEOUT_MEDIUM_PROPERTY} to the map unless the given
+     * value is null. If null, {@code S3_SPI_TIMEOUT_MEDIUM_PROPERTY} takes
+     * default value of 3.
+     *
+     * @param timeoutMedium the new value; can be null
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withTimeoutMedium(Long timeoutMedium) {
+        if (timeoutMedium == null) {
+            put(S3_SPI_TIMEOUT_MEDIUM_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_MEDIUM_DEFAULT));
+        } else {
+            put(S3_SPI_TIMEOUT_MEDIUM_PROPERTY, String.valueOf(timeoutMedium));
+        }
+
+        return this;
+    }
+
+    /**
+     * Fluently sets the value of {@code timeoutHigh} and adds
+     * {@code S3_SPI_TIMEOUT_HIGH_PROPERTY} to the map unless the given
+     * value is null. If null, {@code S3_SPI_TIMEOUT_HIGH_PROPERTY} holds
+     * default value of 5.
+     *
+     * @param timeoutHigh the new value; can be null
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withTimeoutHigh(Long timeoutHigh) {
+        if (timeoutHigh == null) {
+            put(S3_SPI_TIMEOUT_HIGH_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_HIGH_DEFAULT));
+        } else {
+            put(S3_SPI_TIMEOUT_HIGH_PROPERTY, String.valueOf(timeoutHigh));
+        }
+
+        return this;
+    }
+
+    /**
      * Get the value of the Maximum Fragment Size
      *
      * @return the configured value or the default if not overridden
@@ -421,6 +478,33 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     public boolean getForcePathStyle() {
         return Boolean.parseBoolean((String) getOrDefault(S3_SPI_FORCE_PATH_STYLE_PROPERTY, 
                                                           String.valueOf(S3_SPI_FORCE_PATH_STYLE_DEFAULT)));
+    }
+
+    /**
+     * Get the value of the Timeout Low
+     *
+     * @return the configured value or the default if not overridden
+     */
+    public Long getTimeoutLow() {
+        return Long.parseLong((String) getOrDefault(S3_SPI_TIMEOUT_LOW_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_LOW_DEFAULT)));
+    }
+
+    /**
+     * Get the value of the Timeout Medium
+     *
+     * @return the configured value or the default if not overridden
+     */
+    public Long getTimeoutMedium() {
+        return Long.parseLong((String) getOrDefault(S3_SPI_TIMEOUT_MEDIUM_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_MEDIUM_DEFAULT)));
+    }
+
+    /**
+     * Get the value of the Timeout High
+     *
+     * @return the configured value or the default if not overridden
+     */
+    public Long getTimeoutHigh() {
+        return Long.parseLong((String) getOrDefault(S3_SPI_TIMEOUT_HIGH_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_HIGH_DEFAULT)));
     }
 
     /**
