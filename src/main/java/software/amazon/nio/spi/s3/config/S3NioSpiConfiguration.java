@@ -70,6 +70,30 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      */
     public static final boolean S3_SPI_FORCE_PATH_STYLE_DEFAULT = false;
     /**
+     * Low timeout (in minutes) for Async APIs
+     */
+    public static final String S3_SPI_TIMEOUT_LOW_PROPERTY = "s3.spi.timeout-low";
+    /**
+     * The default value of low timeout property
+     */
+    public static final Long S3_SPI_TIMEOUT_LOW_DEFAULT = 1L;
+    /**
+     * Medium timeout (in minutes) for Async APIs
+     */
+    public static final String S3_SPI_TIMEOUT_MEDIUM_PROPERTY = "s3.spi.timeout-medium";
+    /**
+     * The default value of medium timeout property
+     */
+    public static final Long S3_SPI_TIMEOUT_MEDIUM_DEFAULT = 3L;
+    /**
+     * High timeout (in minutes) for Async APIs
+     */
+    public static final String S3_SPI_TIMEOUT_HIGH_PROPERTY = "s3.spi.timeout-high";
+    /**
+     * The default value of high timeout property
+     */
+    public static final Long S3_SPI_TIMEOUT_HIGH_DEFAULT = 5L;
+    /**
      * The default value of the credentials property
      */
     public static final String S3_SPI_CREDENTIALS_PROPERTY = "s3.spi.credentials";
@@ -103,6 +127,9 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         put(S3_SPI_READ_MAX_FRAGMENT_SIZE_PROPERTY, String.valueOf(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT));
         put(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, S3_SPI_ENDPOINT_PROTOCOL_DEFAULT);
         put(S3_SPI_FORCE_PATH_STYLE_PROPERTY, String.valueOf(S3_SPI_FORCE_PATH_STYLE_DEFAULT));
+        put(S3_SPI_TIMEOUT_LOW_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_LOW_DEFAULT));
+        put(S3_SPI_TIMEOUT_MEDIUM_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_MEDIUM_DEFAULT));
+        put(S3_SPI_TIMEOUT_HIGH_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_HIGH_DEFAULT));
 
         //
         // With the below we pick existing environment variables and system
