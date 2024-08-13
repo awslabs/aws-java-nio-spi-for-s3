@@ -19,6 +19,7 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.services.s3.internal.BucketUtils;
 import software.amazon.awssdk.utils.Pair;
+import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
 /**
  * Object to hold configuration of the S3 NIO SPI
@@ -76,7 +77,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     /**
      * The default value of low timeout property
      */
-    public static final Long S3_SPI_TIMEOUT_LOW_DEFAULT = 1L;
+    public static final Long S3_SPI_TIMEOUT_LOW_DEFAULT = TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
     /**
      * Medium timeout (in minutes) for Async APIs
      */
@@ -84,7 +85,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     /**
      * The default value of medium timeout property
      */
-    public static final Long S3_SPI_TIMEOUT_MEDIUM_DEFAULT = 3L;
+    public static final Long S3_SPI_TIMEOUT_MEDIUM_DEFAULT = TimeOutUtils.TIMEOUT_TIME_LENGTH_3;
     /**
      * High timeout (in minutes) for Async APIs
      */
@@ -92,7 +93,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     /**
      * The default value of high timeout property
      */
-    public static final Long S3_SPI_TIMEOUT_HIGH_DEFAULT = 5L;
+    public static final Long S3_SPI_TIMEOUT_HIGH_DEFAULT = TimeOutUtils.TIMEOUT_TIME_LENGTH_5;
     /**
      * The default value of the credentials property
      */

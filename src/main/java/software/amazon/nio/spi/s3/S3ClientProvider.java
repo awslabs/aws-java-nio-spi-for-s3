@@ -6,7 +6,6 @@
 package software.amazon.nio.spi.s3;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static software.amazon.nio.spi.s3.util.TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExceptionOnTimeOut;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -158,7 +157,7 @@ public class S3ClientProvider {
         try (var client = locationClient) {
             final HeadBucketResponse response = client
                     .headBucket(builder -> builder.bucket(bucketName))
-                    .get(TIMEOUT_TIME_LENGTH_1, MINUTES);
+                    .get(configuration.getTimeoutLow(), MINUTES);
             bucketRegionCache.put(bucketName, response.bucketRegion());
             return response.bucketRegion();
 
@@ -166,7 +165,7 @@ public class S3ClientProvider {
             throw logAndGenerateExceptionOnTimeOut(
                     logger,
                     "generateClient",
-                    TIMEOUT_TIME_LENGTH_1,
+                    configuration.getTimeoutLow(),
                     MINUTES);
         } catch (Throwable t) {
 
@@ -186,13 +185,13 @@ public class S3ClientProvider {
                 logger.debug("HeadBucket forbidden. Attempting a call to GetBucketLocation using the UNIVERSAL_CLIENT");
                 try {
                     String location =  universalClient.getBucketLocation(builder -> builder.bucket(bucketName))
-                            .get(TIMEOUT_TIME_LENGTH_1, MINUTES).locationConstraintAsString();
+                            .get(configuration.getTimeoutLow(), MINUTES).locationConstraintAsString();
                     bucketRegionCache.put(bucketName, location);
                 } catch (TimeoutException e) {
                     throw logAndGenerateExceptionOnTimeOut(
                             logger,
                             "generateClient",
-                            TIMEOUT_TIME_LENGTH_1,
+                            configuration.getTimeoutLow(),
                             MINUTES);
                 }
             } else {
