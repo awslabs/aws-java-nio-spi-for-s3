@@ -487,7 +487,8 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * @return the configured value or the default if not overridden
      */
     public Long getTimeoutLow() {
-        return Long.parseLong((String) getOrDefault(S3_SPI_TIMEOUT_LOW_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_LOW_DEFAULT)));
+        return Long.parseLong((String) getOrDefault(S3_SPI_TIMEOUT_LOW_PROPERTY,
+                                                            String.valueOf(S3_SPI_TIMEOUT_LOW_DEFAULT)));
     }
 
     /**
@@ -496,7 +497,8 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * @return the configured value or the default if not overridden
      */
     public Long getTimeoutMedium() {
-        return Long.parseLong((String) getOrDefault(S3_SPI_TIMEOUT_MEDIUM_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_MEDIUM_DEFAULT)));
+        return Long.parseLong((String) getOrDefault(S3_SPI_TIMEOUT_MEDIUM_PROPERTY,
+                                                            String.valueOf(S3_SPI_TIMEOUT_MEDIUM_DEFAULT)));
     }
 
     /**
@@ -505,7 +507,8 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * @return the configured value or the default if not overridden
      */
     public Long getTimeoutHigh() {
-        return Long.parseLong((String) getOrDefault(S3_SPI_TIMEOUT_HIGH_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_HIGH_DEFAULT)));
+        return Long.parseLong((String) getOrDefault(S3_SPI_TIMEOUT_HIGH_PROPERTY,
+                                                            String.valueOf(S3_SPI_TIMEOUT_HIGH_DEFAULT)));
     }
 
     /**

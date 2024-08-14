@@ -78,7 +78,6 @@ import software.amazon.awssdk.transfer.s3.model.CompletedCopy;
 import software.amazon.awssdk.transfer.s3.model.CopyRequest;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 import software.amazon.nio.spi.s3.util.S3FileSystemInfo;
-import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
 /**
  * Service-provider class for S3 when represented as an NIO filesystem. The methods defined by the Files class will
@@ -96,9 +95,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
     static final String SCHEME = "s3";
     private static final Map<String, S3FileSystem> FS_CACHE = new HashMap<>();
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
-
     protected S3NioSpiConfiguration configuration = new S3NioSpiConfiguration();
+
+    private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
     /**
      * Get an unmodifiable copy of the Filesystem Cache. Mainly used for testing purposes.
