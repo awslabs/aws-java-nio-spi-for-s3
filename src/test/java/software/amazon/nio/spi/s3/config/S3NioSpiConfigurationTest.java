@@ -54,6 +54,9 @@ public class S3NioSpiConfigurationTest {
         then(config.getRegion()).isNull();
         then(config.getCredentials()).isNull();
         then(config.getForcePathStyle()).isFalse();
+        then(config.getTimeoutLow()).isEqualTo(S3_SPI_TIMEOUT_LOW_DEFAULT);
+        then(config.getTimeoutMedium()).isEqualTo(S3_SPI_TIMEOUT_MEDIUM_DEFAULT);
+        then(config.getTimeoutHigh()).isEqualTo(S3_SPI_TIMEOUT_HIGH_DEFAULT);
     }
 
     @Test
@@ -239,7 +242,7 @@ public class S3NioSpiConfigurationTest {
         then(config).contains(entry(S3_SPI_FORCE_PATH_STYLE_PROPERTY, "true"));
         then(config.getForcePathStyle()).isTrue();
         then(config.withForcePathStyle(false).getForcePathStyle()).isFalse();
-        
+
         Map<String, Object> map = new HashMap<>(); config = new S3NioSpiConfiguration(map);
         then(config.getForcePathStyle()).isFalse();
         map.put(S3_SPI_FORCE_PATH_STYLE_PROPERTY, "true"); config = new S3NioSpiConfiguration(map);
@@ -249,4 +252,32 @@ public class S3NioSpiConfigurationTest {
         then(config.withForcePathStyle(null).getForcePathStyle()).isFalse();
         then(config).doesNotContainKey(S3_SPI_FORCE_PATH_STYLE_PROPERTY);
     }
+
+    @Test
+    public void withAndGetTimeoutLow() {
+        then(config).contains(entry(S3_SPI_TIMEOUT_LOW_PROPERTY, "1"));
+        then(config.withTimeoutLow(4L)).isSameAs(config);
+        then(config).contains(entry(S3_SPI_TIMEOUT_LOW_PROPERTY, "4"));
+        then(config.getTimeoutLow()).isEqualTo(4L);
+        then(config.withTimeoutLow(5L).getTimeoutLow()).isEqualTo(5L);
+    }
+
+    @Test
+    public void withAndGetTimeoutMedium() {
+        then(config).contains(entry(S3_SPI_TIMEOUT_MEDIUM_PROPERTY, "3"));
+        then(config.withTimeoutMedium(5L)).isSameAs(config);
+        then(config).contains(entry(S3_SPI_TIMEOUT_MEDIUM_PROPERTY, "5"));
+        then(config.getTimeoutMedium()).isEqualTo(5L);
+        then(config.withTimeoutMedium(6L).getTimeoutMedium()).isEqualTo(6L);
+    }
+
+    @Test
+    public void withAndGetTimeoutHigh() {
+        then(config).contains(entry(S3_SPI_TIMEOUT_HIGH_PROPERTY, "5"));
+        then(config.withTimeoutHigh(7L)).isSameAs(config);
+        then(config).contains(entry(S3_SPI_TIMEOUT_HIGH_PROPERTY, "7"));
+        then(config.getTimeoutHigh()).isEqualTo(7L);
+        then(config.withTimeoutHigh(8L).getTimeoutHigh()).isEqualTo(8L);
+    }
+
 }
