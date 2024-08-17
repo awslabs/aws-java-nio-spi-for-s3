@@ -470,7 +470,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final var s3Client = s3SourcePath.getFileSystem().client();
         final var sourceBucket = s3SourcePath.bucketName();
 
-        final var timeOut = configuration.getTimeoutLow();
+        final var timeOut = configuration.getTimeoutHigh();
         final var unit = MINUTES;
 
         var fileExistsAndCannotReplace = cannotReplaceAndFileExistsCheck(options, s3Client);
