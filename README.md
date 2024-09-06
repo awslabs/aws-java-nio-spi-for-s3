@@ -48,13 +48,13 @@ by the JVM you need to supply the JAR on your classpath using the `-classpath` f
 you would type the following:
 
 ```
-java -classpath build/libs/nio-spi-for-s3-1.1.0-all.jar:myApp.jar org.example.myapp.Main
+java -classpath build/libs/nio-spi-for-s3-<version>-all.jar:myApp.jar org.example.myapp.Main
 ```
 
 As a concrete example, using Java 9+ with the popular genomics application [GATK](https://gatk.broadinstitute.org/hc/en-us), you could do the following:
 
 ```
-java -classpath build/libs/nio-spi-for-s3-1.1.0-all.jar:gatk-package-4.2.2.0-local.jar org.broadinstitute.hellbender.Main CountReads -I s3://<some-bucket>/ena/PRJEB3381/ERR194158/ERR194158.hg38.bam
+java -classpath build/libs/nio-spi-for-s3-<version>-all.jar:gatk-package-4.2.2.0-local.jar org.broadinstitute.hellbender.Main CountReads -I s3://<some-bucket>/ena/PRJEB3381/ERR194158/ERR194158.hg38.bam
 ```
 
 ## Including as a dependency
@@ -69,7 +69,7 @@ For example:
 <dependency>
     <groupId>software.amazon.nio.s3</groupId>
     <artifactId>aws-java-nio-spi-for-s3</artifactId>
-    <version>2.0.2</version>
+    <version>2.0.4</version>
 </dependency>
 ```
 

@@ -8,7 +8,6 @@ package software.amazon.nio.spi.s3;
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
-import static software.amazon.nio.spi.s3.util.TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
 import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExceptionOnTimeOut;
 
 import java.io.IOException;
@@ -42,12 +41,12 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -80,7 +79,6 @@ import software.amazon.awssdk.transfer.s3.model.CompletedCopy;
 import software.amazon.awssdk.transfer.s3.model.CopyRequest;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 import software.amazon.nio.spi.s3.util.S3FileSystemInfo;
-import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
 /**
  * Service-provider class for S3 when represented as an NIO filesystem. The methods defined by the Files class will
@@ -96,7 +94,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * Constant for the S3 scheme "s3"
      */
     static final String SCHEME = "s3";
-    private static final Map<String, S3FileSystem> FS_CACHE = new HashMap<>();
+    private static final Map<String, S3FileSystem> FS_CACHE = new ConcurrentHashMap<>();
+
+    protected S3NioSpiConfiguration configuration = new S3NioSpiConfiguration();
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
@@ -382,11 +382,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
             directoryKey = directoryKey + PATH_SEPARATOR;
         }
 
-        var timeOut = TIMEOUT_TIME_LENGTH_1;
+        var timeOut = configuration.getTimeoutLow();
         final var unit = MINUTES;
 
-        try (S3AsyncClient client = s3Directory.getFileSystem().client()) {
-            client.putObject(
+        try {
+            s3Directory.getFileSystem().client().putObject(
                 PutObjectRequest.builder()
                     .bucket(s3Directory.bucketName())
                     .key(directoryKey)
@@ -417,10 +417,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         final var s3Client = s3Path.getFileSystem().client();
 
-        var timeOut = TIMEOUT_TIME_LENGTH_1;
+        var timeOut = configuration.getTimeoutLow();
         final var unit = MINUTES;
         try {
-            var keys = getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit);
+            var keys = s3Path.isDirectory() ?
+                    getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit)
+                    : List.of(List.of(ObjectIdentifier.builder().key(prefix).build()));
 
             for (var keyList : keys) {
                 s3Client.deleteObjects(DeleteObjectsRequest.builder()
@@ -469,16 +471,23 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final var s3Client = s3SourcePath.getFileSystem().client();
         final var sourceBucket = s3SourcePath.bucketName();
 
-        final var timeOut = TIMEOUT_TIME_LENGTH_1;
+        final var timeOut = configuration.getTimeoutHigh();
         final var unit = MINUTES;
 
         var fileExistsAndCannotReplace = cannotReplaceAndFileExistsCheck(options, s3Client);
 
         try {
             var sourcePrefix = s3SourcePath.toRealPath(NOFOLLOW_LINKS).getKey();
-            var sourceKeys = getContainedObjectBatches(s3Client, sourceBucket, sourcePrefix, timeOut, unit);
-            final var prefixWithSeparator = s3SourcePath.isDirectory() ? sourcePrefix :
-                    sourcePrefix.substring(0, sourcePrefix.lastIndexOf(PATH_SEPARATOR)) + PATH_SEPARATOR;
+
+            List<List<ObjectIdentifier>> sourceKeys;
+            String prefixWithSeparator;
+            if (s3SourcePath.isDirectory()) {
+                sourceKeys = getContainedObjectBatches(s3Client, sourceBucket, sourcePrefix, timeOut, unit);
+                prefixWithSeparator = sourcePrefix;
+            } else {
+                sourceKeys = List.of(List.of(ObjectIdentifier.builder().key(sourcePrefix).build()));
+                prefixWithSeparator = sourcePrefix.substring(0, sourcePrefix.lastIndexOf(PATH_SEPARATOR)) + PATH_SEPARATOR;
+            }
 
             try (var s3TransferManager = S3TransferManager.builder().s3Client(s3Client).build()) {
                 for (var keyList : sourceKeys) {
@@ -634,7 +643,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final var s3Path = checkPath(path.toRealPath(NOFOLLOW_LINKS));
         final var response = getCompletableFutureForHead(s3Path);
 
-        var timeOut = TimeOutUtils.TIMEOUT_TIME_LENGTH_1;
+        var timeOut = configuration.getTimeoutLow();
         var unit = MINUTES;
 
         try {
@@ -739,7 +748,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         if (type.equals(BasicFileAttributes.class)) {
             @SuppressWarnings("unchecked")
-            var a = (A) S3BasicFileAttributes.get(s3Path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1));
+            var a = (A) S3BasicFileAttributes.get(s3Path, Duration.ofMinutes(configuration.getTimeoutLow()));
             return a;
         } else {
             throw new UnsupportedOperationException("cannot read attributes of type: " + type);
@@ -776,7 +785,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
 
         var attributesFilter = attributesFilterFor(attributes);
-        return S3BasicFileAttributes.get(s3Path, Duration.ofMinutes(TimeOutUtils.TIMEOUT_TIME_LENGTH_1)).asMap(attributesFilter);
+        return S3BasicFileAttributes.get(s3Path, Duration.ofMinutes(configuration.getTimeoutLow())).asMap(attributesFilter);
     }
 
     /**
@@ -788,6 +797,15 @@ public class S3FileSystemProvider extends FileSystemProvider {
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException("s3 file attributes cannot be modified by this class");
+    }
+
+    /**
+     * Set custom configuration. This configuration is referred to for API timeouts
+     *
+     * @param configuration    The new configuration containing the timeout info
+     */
+    public void setConfiguration(S3NioSpiConfiguration configuration) {
+        this.configuration = configuration;
     }
 
     /**
@@ -835,7 +853,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
     boolean exists(S3AsyncClient s3Client, S3Path path) throws InterruptedException, TimeoutException {
         try {
             s3Client.headObject(HeadObjectRequest.builder().bucket(path.bucketName()).key(path.getKey()).build())
-                .get(TIMEOUT_TIME_LENGTH_1, MINUTES);
+                .get(configuration.getTimeoutLow(), MINUTES);
             return true;
         } catch (ExecutionException | NoSuchKeyException e) {
             logger.debug("Could not retrieve object head information", e);

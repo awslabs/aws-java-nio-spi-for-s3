@@ -19,3 +19,6 @@ target
 
 # directory used for API break checks
 /.palantir/
+
+# sdkman files
+.sdkmanrc

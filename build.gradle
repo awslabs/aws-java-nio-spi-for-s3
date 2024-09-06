@@ -26,7 +26,7 @@ repositories {
 
 group = 'software.amazon.nio.s3'
 archivesBaseName = 'nio-spi-for-s3'
-version = '2.0.3-dev'
+version = '2.0.5'
 
 java {
     withSourcesJar()
@@ -52,9 +52,9 @@ sourceSets {
 }
 
 dependencies {
-    implementation 'io.reactivex.rxjava3:rxjava:3.1.8'
+    implementation 'io.reactivex.rxjava3:rxjava:3.1.9'
 
-    implementation platform('software.amazon.awssdk:bom:2.26.7')
+    implementation platform('software.amazon.awssdk:bom:2.27.17')
 
     implementation('software.amazon.awssdk:s3') {
         exclude group: 'software.amazon.awssdk', module: 'apache-client'
@@ -62,12 +62,12 @@ dependencies {
     implementation('software.amazon.awssdk:s3-transfer-manager') {
         exclude group: 'software.amazon.awssdk', module: 'apache-client'
     }
-    implementation 'software.amazon.awssdk.crt:aws-crt:0.29.25'
-    implementation 'org.slf4j:slf4j-api:2.0.13'
+    implementation 'software.amazon.awssdk.crt:aws-crt:0.30.9'
+    implementation 'org.slf4j:slf4j-api:2.0.16'
     implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
 
     examplesImplementation project
-    examplesImplementation 'org.slf4j:slf4j-api:2.0.13'
+    examplesImplementation 'org.slf4j:slf4j-api:2.0.16'
 }
 
 publishing {
@@ -131,9 +131,9 @@ testing {
         integrationTest(JvmTestSuite) {
             dependencies {
                 implementation project
-                implementation 'org.testcontainers:junit-jupiter:1.19.8'
-                implementation 'org.testcontainers:localstack:1.19.8'
-                implementation 'org.testcontainers:testcontainers:1.19.8'
+                implementation 'org.testcontainers:junit-jupiter:1.20.1'
+                implementation 'org.testcontainers:localstack:1.20.1'
+                implementation 'org.testcontainers:testcontainers:1.20.1'
             }
         }
         withType(JvmTestSuite).configureEach {
@@ -146,11 +146,11 @@ testing {
                 }
             }
             dependencies {
-                implementation 'org.assertj:assertj-core:3.26.0'
-                implementation 'org.mockito:mockito-core:5.12.0'
-                implementation 'org.mockito:mockito-junit-jupiter:5.12.0'
+                implementation 'org.assertj:assertj-core:3.26.3'
+                implementation 'org.mockito:mockito-core:5.13.0'
+                implementation 'org.mockito:mockito-junit-jupiter:5.13.0'
                 implementation 'com.github.stefanbirkner:system-lambda:1.2.1'
-                implementation 'ch.qos.logback:logback-classic:1.5.6'
+                implementation 'ch.qos.logback:logback-classic:1.5.7'
             }
         }
     }
