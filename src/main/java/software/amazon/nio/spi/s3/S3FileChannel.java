@@ -632,8 +632,7 @@ public class S3FileChannel extends FileChannel {
      */
     @Override
     public FileLock lock(long position, long size, boolean shared) throws IOException {
-        // todo implement this
-        return null;
+        throw new IOException(new UnsupportedOperationException("S3 does not support file locks"));
     }
 
     /**
@@ -689,8 +688,7 @@ public class S3FileChannel extends FileChannel {
      */
     @Override
     public FileLock tryLock(long position, long size, boolean shared) throws IOException {
-        // todo implement this
-        return null;
+        throw new IOException(new UnsupportedOperationException("S3 does not support file locks"));
     }
 
     /**
@@ -710,7 +708,6 @@ public class S3FileChannel extends FileChannel {
      */
     @Override
     protected void implCloseChannel() throws IOException {
-        // todo notify all threads holding locks
         byteChannel.close();
     }
 }
