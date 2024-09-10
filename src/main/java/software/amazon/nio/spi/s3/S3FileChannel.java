@@ -8,7 +8,6 @@ package software.amazon.nio.spi.s3;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
-import java.nio.ReadOnlyBufferException;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ClosedChannelException;
@@ -39,7 +38,7 @@ public class S3FileChannel extends FileChannel {
      * read.  Otherwise this method behaves exactly as specified in the {@link
      * ReadableByteChannel} interface. </p>
      *
-     * @param dst
+     * @param dst the destination to read bytes into.
      */
     @Override
     public int read(ByteBuffer dst) throws IOException {
@@ -486,82 +485,30 @@ public class S3FileChannel extends FileChannel {
     }
 
     /**
-     * Maps a region of this channel's file directly into memory.
+     * This method is not supported by this implementation, and the
+     * {@link IOException} thrown always includes the message "This library current doesn't support MappedByteBuffers".
      *
-     * <p> A region of a file may be mapped into memory in one of three modes:
-     * </p>
+     * @param mode
+     *         One of the constants {@link MapMode#READ_ONLY READ_ONLY}, {@link
+     *         MapMode#READ_WRITE READ_WRITE}, or {@link MapMode#PRIVATE
+     *         PRIVATE} defined in the {@link MapMode} class, according to
+     *         whether the file is to be mapped read-only, read/write, or
+     *         privately (copy-on-write), respectively
      *
-     * <ul>
+     * @param position
+     *         The position within the file at which the mapped region
+     *         is to start; must be non-negative
      *
-     *   <li><p> <i>Read-only:</i> Any attempt to modify the resulting buffer
-     *   will cause a {@link ReadOnlyBufferException} to be thrown.
-     *   ({@link MapMode#READ_ONLY MapMode.READ_ONLY}) </p></li>
+     * @param size
+     *         The size of the region to be mapped; must be non-negative and
+     *         no greater than {@link java.lang.Integer#MAX_VALUE}
      *
-     *   <li><p> <i>Read/write:</i> Changes made to the resulting buffer will
-     *   eventually be propagated to the file; they may or may not be made
-     *   visible to other programs that have mapped the same file.  ({@link
-     *   MapMode#READ_WRITE MapMode.READ_WRITE}) </p></li>
-     *
-     *   <li><p> <i>Private:</i> Changes made to the resulting buffer will not
-     *   be propagated to the file and will not be visible to other programs
-     *   that have mapped the same file; instead, they will cause private
-     *   copies of the modified portions of the buffer to be created.  ({@link
-     *   MapMode#PRIVATE MapMode.PRIVATE}) </p></li>
-     *
-     * </ul>
-     *
-     * <p> For a read-only mapping, this channel must have been opened for
-     * reading; for a read/write or private mapping, this channel must have
-     * been opened for both reading and writing.
-     *
-     * <p> The {@link MappedByteBuffer <i>mapped byte buffer</i>}
-     * returned by this method will have a position of zero and a limit and
-     * capacity of {@code size}; its mark will be undefined.  The buffer and
-     * the mapping that it represents will remain valid until the buffer itself
-     * is garbage-collected.
-     *
-     * <p> A mapping, once established, is not dependent upon the file channel
-     * that was used to create it.  Closing the channel, in particular, has no
-     * effect upon the validity of the mapping.
-     *
-     * <p> Many of the details of memory-mapped files are inherently dependent
-     * upon the underlying operating system and are therefore unspecified.  The
-     * behavior of this method when the requested region is not completely
-     * contained within this channel's file is unspecified.  Whether changes
-     * made to the content or size of the underlying file, by this program or
-     * another, are propagated to the buffer is unspecified.  The rate at which
-     * changes to the buffer are propagated to the file is unspecified.
-     *
-     * <p> For most operating systems, mapping a file into memory is more
-     * expensive than reading or writing a few tens of kilobytes of data via
-     * the usual {@link #read read} and {@link #write write} methods.  From the
-     * standpoint of performance it is generally only worth mapping relatively
-     * large files into memory.  </p>
-     *
-     * @param mode     One of the constants {@link MapMode#READ_ONLY READ_ONLY}, {@link
-     *                 MapMode#READ_WRITE READ_WRITE}, or {@link MapMode#PRIVATE
-     *                 PRIVATE} defined in the {@link MapMode} class, according to
-     *                 whether the file is to be mapped read-only, read/write, or
-     *                 privately (copy-on-write), respectively
-     * @param position The position within the file at which the mapped region
-     *                 is to start; must be non-negative
-     * @param size     The size of the region to be mapped; must be non-negative and
-     *                 no greater than {@link Integer#MAX_VALUE}
-     * @return The mapped byte buffer
-     * @throws NonReadableChannelException If the {@code mode} is {@link MapMode#READ_ONLY READ_ONLY} but
-     *                                     this channel was not opened for reading
-     * @throws NonWritableChannelException If the {@code mode} is {@link MapMode#READ_WRITE READ_WRITE} or
-     *                                     {@link MapMode#PRIVATE PRIVATE} but this channel was not opened
-     *                                     for both reading and writing
-     * @throws IllegalArgumentException    If the preconditions on the parameters do not hold
-     * @throws IOException                 If some other I/O error occurs
-     * @see MapMode
-     * @see MappedByteBuffer
+     * @return Never returns, always throws an exception
+     * @throws IOException Always throws an exception
      */
     @Override
     public MappedByteBuffer map(MapMode mode, long position, long size) throws IOException {
-        // todo implement this
-        return null;
+        throw new IOException(new NotYetImplementedException("This library current doesn't support MappedByteBuffers"));
     }
 
     /**
