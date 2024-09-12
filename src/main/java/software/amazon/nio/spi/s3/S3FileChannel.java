@@ -447,6 +447,10 @@ public class S3FileChannel extends FileChannel {
      */
     @Override
     public int read(ByteBuffer dst, long position) throws IOException {
+        if (position < 0) {
+            throw new IllegalArgumentException("file position must be non-negative");
+        }
+        byteChannel.position(position);
         return byteChannel.read(dst);
     }
 
