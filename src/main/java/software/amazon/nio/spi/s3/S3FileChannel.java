@@ -61,12 +61,16 @@ public class S3FileChannel extends FileChannel {
      */
     @Override
     public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
-        int bytesRead = 0;
+        int totalBytesRead = 0;
         for (int i = offset; i < offset + length; i++) {
             ByteBuffer dst = dsts[i];
-            bytesRead += read(dst);
+            int bytesRead = read(dst);
+            if (bytesRead == -1) {
+                break;
+            }
+            totalBytesRead += bytesRead;
         }
-        return bytesRead;
+        return totalBytesRead;
     }
 
     /**
