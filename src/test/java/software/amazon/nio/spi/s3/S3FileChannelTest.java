@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -156,5 +157,21 @@ public class S3FileChannelTest {
         s3FileChannel.close();
         verify(s3SeekableByteChannel).close();
         verifyNoMoreInteractions(s3SeekableByteChannel);
+    }
+
+    @Test
+    public void testMap() throws IOException {
+        assertThrowsExactly(
+                IOException.class,
+                () -> s3FileChannel.map(FileChannel.MapMode.READ_ONLY, 0, 0),
+                "This library current doesn't support MappedByteBuffers");
+    }
+
+    @Test
+    public void testLock() {
+        assertThrowsExactly(
+                IOException.class,
+                () -> s3FileChannel.lock(),
+                "S3 does not support file locks");
     }
 }
