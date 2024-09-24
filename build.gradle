@@ -54,7 +54,7 @@ sourceSets {
 dependencies {
     implementation 'io.reactivex.rxjava3:rxjava:3.1.9'
 
-    implementation platform('software.amazon.awssdk:bom:2.28.1')
+    implementation platform('software.amazon.awssdk:bom:2.28.6')
 
     implementation('software.amazon.awssdk:s3') {
         exclude group: 'software.amazon.awssdk', module: 'apache-client'
