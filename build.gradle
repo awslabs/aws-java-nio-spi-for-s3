@@ -16,7 +16,7 @@ plugins {
     id 'jacoco-report-aggregation'
     id 'checkstyle'
     id 'com.github.johnrengelman.shadow' version '7.1.2'
-    id 'com.palantir.revapi' version '1.8.0'
+    id 'org.revapi.revapi-gradle-plugin' version '1.8.0'
 }
 
 repositories {
