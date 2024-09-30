@@ -12,6 +12,8 @@ import static software.amazon.nio.spi.s3.util.TimeOutUtils.logAndGenerateExcepti
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.channels.FileChannel;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.AccessMode;
@@ -47,6 +49,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
@@ -805,6 +808,50 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     public void setConfiguration(S3NioSpiConfiguration configuration) {
         this.configuration = configuration;
+    }
+
+    /**
+     * @param path    the path of the file to open or create
+     * @param options options specifying how the file is opened
+     * @param attrs   an optional list of file attributes to set atomically when
+     *                creating the file. Currently, ignored.
+     * @return a new {@code FileChannel} object representing the specified file
+     * @throws IOException if an I/O error occurs
+     */
+    @Override
+    public FileChannel newFileChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs)
+            throws IOException {
+
+        S3FileSystem fs = (S3FileSystem) getFileSystem(path.toUri());
+        S3SeekableByteChannel s3SeekableByteChannel = new S3SeekableByteChannel((S3Path) path, fs.client(), options);
+        return new S3FileChannel(s3SeekableByteChannel);
+    }
+
+    /**
+     * Create an {@code AsynchronousFileChannel} to the specified path
+     * @param path
+     *          the path of the file to open or create
+     * @param options
+     *          options specifying how the file is opened
+     * @param executor
+     *          the thread pool or {@code null} to associate the channel with
+     *          the default thread pool
+     * @param attrs
+     *          an optional list of file attributes to set atomically when
+     *          creating the file
+     *
+     * @return a new {@code AsynchronousFileChannel} object representing the specified file
+     * @throws IOException if a problem occurs while creating the channel
+     */
+    @Override
+    public AsynchronousFileChannel newAsynchronousFileChannel(Path path,
+                                                              Set<? extends OpenOption> options,
+                                                              ExecutorService executor,
+                                                              FileAttribute<?>... attrs) throws IOException {
+        S3FileSystem fs = (S3FileSystem) getFileSystem(path.toUri());
+        S3AsyncClient s3Client = fs.client();
+        var byteChannel = new S3SeekableByteChannel((S3Path) path, s3Client, options);
+        return new AsyncS3FileChannel(byteChannel);
     }
 
     void closeFileSystem(FileSystem fs) {
