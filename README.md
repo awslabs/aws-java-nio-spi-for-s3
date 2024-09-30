@@ -179,7 +179,7 @@ Each fragment is downloaded concurrently on a unique thread.
 |parameter|description|
 |---------|-----------|
 |**aws.region**|specifies the default region for API calls|
-|**aws.accessKey**|specifies the key id to use for authentication|
+|**aws.accessKeyId**|specifies the key id to use for authentication|
 |**aws.secretAccessKey**|specifies the secret to use for authentication|
 |**s3.spi.read.fragment-number**|buffer asynchronously prefetches `n` sequential fragments from S3 (currently 50)|
 |**s3.spi.read.fragment-size**|size of each fragment (currently 5MB)|
