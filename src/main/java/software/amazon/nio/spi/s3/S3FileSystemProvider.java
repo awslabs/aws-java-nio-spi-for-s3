@@ -841,15 +841,17 @@ public class S3FileSystemProvider extends FileSystemProvider {
      *          creating the file
      *
      * @return a new {@code AsynchronousFileChannel} object representing the specified file
-     * @throws IOException
+     * @throws IOException if a problem occurs while creating the channel
      */
     @Override
     public AsynchronousFileChannel newAsynchronousFileChannel(Path path,
                                                               Set<? extends OpenOption> options,
                                                               ExecutorService executor,
                                                               FileAttribute<?>... attrs) throws IOException {
-        // TODO implement me
-        return null;
+        S3FileSystem fs = (S3FileSystem) getFileSystem(path.toUri());
+        S3AsyncClient s3Client = fs.client();
+        var byteChannel = new S3SeekableByteChannel((S3Path) path, s3Client, options);
+        return new AsyncS3FileChannel(byteChannel);
     }
 
     void closeFileSystem(FileSystem fs) {
