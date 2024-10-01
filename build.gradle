@@ -148,7 +148,7 @@ testing {
             dependencies {
                 implementation 'org.assertj:assertj-core:3.26.3'
                 implementation 'org.mockito:mockito-core:5.14.1'
-                implementation 'org.mockito:mockito-junit-jupiter:5.13.0'
+                implementation 'org.mockito:mockito-junit-jupiter:5.14.1'
                 implementation 'com.github.stefanbirkner:system-lambda:1.2.1'
                 implementation 'ch.qos.logback:logback-classic:1.5.8'
             }
