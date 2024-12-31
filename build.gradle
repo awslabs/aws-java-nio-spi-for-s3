@@ -146,7 +146,7 @@ testing {
                 }
             }
             dependencies {
-                implementation 'org.assertj:assertj-core:3.26.3'
+                implementation 'org.assertj:assertj-core:3.27.0'
                 implementation 'org.mockito:mockito-core:5.14.2'
                 implementation 'org.mockito:mockito-junit-jupiter:5.14.2'
                 implementation 'com.github.stefanbirkner:system-lambda:1.2.1'
