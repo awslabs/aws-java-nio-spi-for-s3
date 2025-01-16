@@ -98,17 +98,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
     static final String SCHEME = "s3";
     private static final Map<String, S3FileSystem> FS_CACHE = new ConcurrentHashMap<>();
 
-    /**
-     * This variable holds the configuration for the S3 NIO Service Provider Interface (SPI).
-     * It is used to manage and handle the configuration details required for interaction
-     * with S3 NIO services.
-     *
-     * @deprecated This variable is deprecated and may be removed in future versions.
-     *             Consider using updated configuration mechanisms if available.
-     */
-    @Deprecated
-    protected S3NioSpiConfiguration configuration = new S3NioSpiConfiguration();
-
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
     /**
@@ -393,11 +382,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
             directoryKey = directoryKey + PATH_SEPARATOR;
         }
 
-        var timeOut = configuration.getTimeoutLow();
+        var s3FileSystem = s3Directory.getFileSystem();
+        var timeOut = s3FileSystem.getConfiguration().getTimeoutLow();
         final var unit = MINUTES;
 
         try {
-            s3Directory.getFileSystem().client().putObject(
+            s3FileSystem.client().putObject(
                 PutObjectRequest.builder()
                     .bucket(s3Directory.bucketName())
                     .key(directoryKey)
@@ -426,9 +416,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final var prefix = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
         final var bucketName = s3Path.bucketName();
 
-        final var s3Client = s3Path.getFileSystem().client();
+        final var s3FileSystem = s3Path.getFileSystem();
+        final var s3Client = s3FileSystem.client();
 
-        var timeOut = configuration.getTimeoutLow();
+        var timeOut = s3FileSystem.getConfiguration().getTimeoutLow();
         final var unit = MINUTES;
         try {
             var keys = s3Path.isDirectory() ?
@@ -479,10 +470,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
         var s3SourcePath = checkPath(source);
         var s3TargetPath = checkPath(target);
 
-        final var s3Client = s3SourcePath.getFileSystem().client();
+        final var s3FileSystem = s3SourcePath.getFileSystem();
+        final var s3Client = s3FileSystem.client();
         final var sourceBucket = s3SourcePath.bucketName();
 
-        final var timeOut = configuration.getTimeoutHigh();
+        final var timeOut = s3FileSystem.getConfiguration().getTimeoutHigh();
         final var unit = MINUTES;
 
         var fileExistsAndCannotReplace = cannotReplaceAndFileExistsCheck(options, s3Client);
@@ -654,7 +646,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final var s3Path = checkPath(path.toRealPath(NOFOLLOW_LINKS));
         final var response = getCompletableFutureForHead(s3Path);
 
-        var timeOut = configuration.getTimeoutLow();
+        var timeOut = s3Path.getFileSystem().getConfiguration().getTimeoutLow();
         var unit = MINUTES;
 
         try {
@@ -758,8 +750,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
         var s3Path = checkPath(path);
 
         if (type.equals(BasicFileAttributes.class)) {
+            var timeoutLow = s3Path.getFileSystem().getConfiguration().getTimeoutLow();
             @SuppressWarnings("unchecked")
-            var a = (A) S3BasicFileAttributes.get(s3Path, Duration.ofMinutes(configuration.getTimeoutLow()));
+            var a = (A) S3BasicFileAttributes.get(s3Path, Duration.ofMinutes(timeoutLow));
             return a;
         } else {
             throw new UnsupportedOperationException("cannot read attributes of type: " + type);
@@ -795,8 +788,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
             return Collections.emptyMap();
         }
 
+        var timeoutLow = s3Path.getFileSystem().getConfiguration().getTimeoutLow();
         var attributesFilter = attributesFilterFor(attributes);
-        return S3BasicFileAttributes.get(s3Path, Duration.ofMinutes(configuration.getTimeoutLow())).asMap(attributesFilter);
+        return S3BasicFileAttributes.get(s3Path, Duration.ofMinutes(timeoutLow)).asMap(attributesFilter);
     }
 
     /**
@@ -808,19 +802,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException("s3 file attributes cannot be modified by this class");
-    }
-
-    /**
-     * Set custom configuration. This configuration is referred to for API timeouts.
-     *
-     * @param configuration    The new configuration containing the timeout info
-     *
-     * @deprecated This method is deprecated and may be removed in future versions.
-     *
-     */
-    @Deprecated
-    public void setConfiguration(S3NioSpiConfiguration configuration) {
-        this.configuration = configuration;
     }
 
     /**
@@ -894,8 +875,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
     boolean exists(S3AsyncClient s3Client, S3Path path) throws InterruptedException, TimeoutException {
         try {
+            var timeoutLow = path.getFileSystem().getConfiguration().getTimeoutLow();
             s3Client.headObject(HeadObjectRequest.builder().bucket(path.bucketName()).key(path.getKey()).build())
-                .get(configuration.getTimeoutLow(), MINUTES);
+                .get(timeoutLow, MINUTES);
             return true;
         } catch (ExecutionException | NoSuchKeyException e) {
             logger.debug("Could not retrieve object head information", e);
