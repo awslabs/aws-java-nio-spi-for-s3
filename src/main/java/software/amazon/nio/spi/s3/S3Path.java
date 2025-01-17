@@ -75,7 +75,7 @@ class S3Path implements Path {
             throw new IllegalArgumentException("first element of the path may not be null");
         }
 
-        var configuration = fsForBucket.configuration();
+        var configuration = fsForBucket.getConfiguration();
 
         first = first.trim();
 
@@ -660,9 +660,9 @@ class S3Path implements Path {
         var elements = path.iterator();
 
         var uri = new StringBuilder(fileSystem.provider().getScheme() + "://");
-        var endpoint = fileSystem.configuration().getEndpoint();
+        var endpoint = fileSystem.getConfiguration().getEndpoint();
         if (!endpoint.isEmpty()) {
-            uri.append(fileSystem.configuration().getEndpoint()).append(PATH_SEPARATOR);
+            uri.append(fileSystem.getConfiguration().getEndpoint()).append(PATH_SEPARATOR);
         }
         uri.append(bucketName());
         elements.forEachRemaining(

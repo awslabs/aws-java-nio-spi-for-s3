@@ -387,7 +387,7 @@ public class S3FileSystem extends FileSystem {
      *
      * @return the configuration object for this file system
      */
-    S3NioSpiConfiguration configuration() {
+    public S3NioSpiConfiguration getConfiguration() {
         return configuration;
     }
 

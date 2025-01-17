@@ -53,7 +53,7 @@ class S3SeekableByteChannel implements SeekableByteChannel {
             throw new IOException("The SYNC/DSYNC options is not supported");
         }
 
-        var config = s3Path.getFileSystem().configuration();
+        var config = s3Path.getFileSystem().getConfiguration();
         if (options.contains(StandardOpenOption.WRITE)) {
             LOGGER.debug("using S3WritableByteChannel as write delegate for path '{}'", s3Path.toUri());
             readDelegate = null;
