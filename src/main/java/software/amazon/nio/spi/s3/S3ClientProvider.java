@@ -8,6 +8,7 @@ package software.amazon.nio.spi.s3;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Duration;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
@@ -77,6 +78,11 @@ public class S3ClientProvider {
         var credentials = configuration.getCredentials();
         if (credentials != null) {
             asyncClientBuilder.credentialsProvider(() -> credentials);
+        }
+
+        var region = configuration.getRegion();
+        if (region != null) {
+            asyncClientBuilder.region(Region.of(region));
         }
 
         return asyncClientBuilder.forcePathStyle(configuration.getForcePathStyle());
