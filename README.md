@@ -396,6 +396,10 @@ HTML output of the reports can be found at:
 HTML output of the test reports can be found at `build/reports/tests/test/index.html` and test coverage reports are
 found at `build/reports/jacoco/test/html/index.html`
 
+## Feedback
+
+We always want to hear more about how people use the package, what they like about it and how we can improve. [Your feedback](https://github.com/awslabs/aws-java-nio-spi-for-s3/discussions/606) helps us build a better product.
+
 ## Contributing
 
 We encourage community contributions via pull requests. Please refer to our [code of conduct](./CODE_OF_CONDUCT.md) and
