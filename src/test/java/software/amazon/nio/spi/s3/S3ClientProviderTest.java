@@ -18,7 +18,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3ServiceClientConfiguration;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 @ExtendWith(MockitoExtension.class)
@@ -75,6 +77,26 @@ public class S3ClientProviderTest {
 
         // assert it is not the closed client
         assertNotSame(s3Client, s3Client2);
+    }
+
+    @Test
+    public void testRegionIsPropagated() {
+        // expect a non-standard region
+        final var expectedRegion = Region.AP_SOUTHEAST_2;
+
+        // set it in the provider
+        provider.configuration.withRegion(expectedRegion.id());
+
+        try (final var s3Client = provider.generateClient("test-bucket")) {
+            // get the actual one from the created client
+            assertNotNull(s3Client);
+            final var configuration = s3Client.serviceClientConfiguration();
+            assertNotNull(configuration);
+            final var actualRegion = configuration.region();
+
+            // assert it is as expected
+            assertSame(expectedRegion, actualRegion);
+        }
     }
 
     @Test
