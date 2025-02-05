@@ -35,8 +35,8 @@ public class S3XFileSystemProviderTest {
 
         var fs = path.getFileSystem();
         then(fs.provider()).isInstanceOf(S3XFileSystemProvider.class);
-        then(fs.configuration().getEndpoint()).isEqualTo("myendpoint");
-        then(fs.configuration().getBucketName()).isEqualTo("mybucket");
+        then(fs.getConfiguration().getEndpoint()).isEqualTo("myendpoint");
+        then(fs.getConfiguration().getBucketName()).isEqualTo("mybucket");
         then(path.getKey()).isEqualTo("myfolder");
     }
 
@@ -75,12 +75,12 @@ public class S3XFileSystemProviderTest {
             fs.client();
             fs.close();
 
-            then(fs.configuration().getBucketName()).isEqualTo("bucket");
-            then(fs.configuration().getEndpoint()).isEqualTo("some.where.com:1010");
+            then(fs.getConfiguration().getBucketName()).isEqualTo("bucket");
+            then(fs.getConfiguration().getEndpoint()).isEqualTo("some.where.com:1010");
 
             verify(BUILDER).endpointOverride(URI.create("https://some.where.com:1010"));
-            then(fs.configuration().getCredentials().accessKeyId()).isEqualTo("urikey");
-            then(fs.configuration().getCredentials().secretAccessKey()).isEqualTo("urisecret");
+            then(fs.getConfiguration().getCredentials().accessKeyId()).isEqualTo("urikey");
+            then(fs.getConfiguration().getCredentials().secretAccessKey()).isEqualTo("urisecret");
 
         });
     }

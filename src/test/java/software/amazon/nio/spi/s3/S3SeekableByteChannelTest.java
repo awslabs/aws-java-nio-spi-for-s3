@@ -160,8 +160,8 @@ public class S3SeekableByteChannelTest {
     // test that the S3SeekableByteChannel uses the buffer size from the configuration set for the FileSystem
     @Test
     public void testBufferSize() throws IOException {
-        fs.configuration().withMaxFragmentSize(10000);
-        fs.configuration().withMaxFragmentNumber(10);
+        fs.getConfiguration().withMaxFragmentSize(10000);
+        fs.getConfiguration().withMaxFragmentNumber(10);
         try(var channel = (S3SeekableByteChannel) fs.provider().newByteChannel(path, Set.of(READ))) {
             assertEquals(10000, ((S3ReadAheadByteChannel) channel.getReadDelegate()).getMaxFragmentSize());
             assertEquals(10, ((S3ReadAheadByteChannel) channel.getReadDelegate()).getMaxNumberFragments());

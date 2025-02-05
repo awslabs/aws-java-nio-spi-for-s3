@@ -52,7 +52,7 @@ public class S3BasicFileAttributesTest {
             S3FileSystem fs = mock();
             FileSystemProvider provider = mock();
             when(fs.provider()).thenReturn(provider);
-            when(fs.configuration()).thenReturn(new S3NioSpiConfiguration());
+            when(fs.getConfiguration()).thenReturn(new S3NioSpiConfiguration());
             when(provider.getScheme()).thenReturn("s3");
 
             var directory = S3Path.getPath(fs, "/somedirectory/");
@@ -130,7 +130,7 @@ public class S3BasicFileAttributesTest {
             when(fs.provider()).thenReturn(provider);
             when(provider.getScheme()).thenReturn("s3");
 
-            when(fs.configuration()).thenReturn(new S3NioSpiConfiguration());
+            when(fs.getConfiguration()).thenReturn(new S3NioSpiConfiguration());
 
             when(fs.client()).thenReturn(mockClient);
 
@@ -217,7 +217,7 @@ public class S3BasicFileAttributesTest {
 
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
-        when(fs.configuration()).thenReturn(new S3NioSpiConfiguration());
+        when(fs.getConfiguration()).thenReturn(new S3NioSpiConfiguration());
 
         S3AsyncClient mockClient = mock();
         when(fs.client()).thenReturn(mockClient);

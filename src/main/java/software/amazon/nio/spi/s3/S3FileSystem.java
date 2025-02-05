@@ -387,8 +387,24 @@ public class S3FileSystem extends FileSystem {
      *
      * @return the configuration object for this file system
      */
-    S3NioSpiConfiguration configuration() {
+    public S3NioSpiConfiguration getConfiguration() {
         return configuration;
+    }
+
+    /**
+     * Returns the configuration object passed in the constructor or created
+     * by default.
+     *
+     * @return the configuration object for this file system
+     *
+     * @deprecated This method is deprecated and may be removed in a future release.
+     *   Use {@link #getConfiguration()} instead to retrieve the configuration object,
+     *   as it provides the same functionality with better naming conventions that
+     *   align with standard practices.
+     */
+    @Deprecated
+    public S3NioSpiConfiguration configuration() {
+        return getConfiguration();
     }
 
     /**
