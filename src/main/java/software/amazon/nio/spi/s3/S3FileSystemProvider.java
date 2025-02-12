@@ -98,6 +98,15 @@ public class S3FileSystemProvider extends FileSystemProvider {
     static final String SCHEME = "s3";
     private static final Map<String, S3FileSystem> FS_CACHE = new ConcurrentHashMap<>();
 
+    /**
+     * This variable holds the configuration for the S3 NIO Service Provider Interface (SPI).
+     * It is used to manage and handle the configuration details required for interaction
+     * with S3 NIO services.
+     *
+     * @deprecated This variable is deprecated and may be removed in future versions.
+     *             Consider using updated configuration mechanisms if available.
+     */
+    @Deprecated
     protected S3NioSpiConfiguration configuration = new S3NioSpiConfiguration();
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
@@ -802,10 +811,14 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     * Set custom configuration. This configuration is referred to for API timeouts
+     * Set custom configuration. This configuration is referred to for API timeouts.
      *
      * @param configuration    The new configuration containing the timeout info
+     *
+     * @deprecated This method is deprecated and may be removed in future versions.
+     *
      */
+    @Deprecated
     public void setConfiguration(S3NioSpiConfiguration configuration) {
         this.configuration = configuration;
     }
