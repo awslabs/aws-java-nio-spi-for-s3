@@ -17,6 +17,7 @@ plugins {
     id 'checkstyle'
     id 'com.github.johnrengelman.shadow' version '7.1.2'
     id 'org.revapi.revapi-gradle-plugin' version '1.8.0'
+    id 'eclipse'
 }
 
 repositories {
