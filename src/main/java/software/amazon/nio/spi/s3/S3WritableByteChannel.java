@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SeekableByteChannel;
-import java.nio.channels.WritableByteChannel;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -24,7 +23,7 @@ import java.util.concurrent.TimeoutException;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 
-class S3WritableByteChannel implements WritableByteChannel {
+class S3WritableByteChannel implements SeekableByteChannel {
     private final S3Path path;
     private final Path tempFile;
     private final SeekableByteChannel channel;
@@ -109,5 +108,31 @@ class S3WritableByteChannel implements WritableByteChannel {
             throw new ClosedChannelException();
         }
         s3TransferUtil.uploadLocalFile(path, tempFile);
+    }
+
+    @Override
+    public long position() throws IOException {
+        return channel.position();
+    }
+
+    @Override
+    public SeekableByteChannel position(long newPosition) throws IOException {
+        channel.position(newPosition);
+        return this;
+    }
+
+    @Override
+    public int read(ByteBuffer dst) throws IOException {
+        return channel.read(dst);
+    }
+
+    @Override
+    public long size() throws IOException {
+        return channel.size();
+    }
+
+    @Override
+    public SeekableByteChannel truncate(long size) throws IOException {
+        throw new UnsupportedOperationException("Currently not supported");
     }
 }
