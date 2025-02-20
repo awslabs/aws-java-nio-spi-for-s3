@@ -27,6 +27,7 @@ class S3SeekableByteChannel implements SeekableByteChannel {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SeekableByteChannel.class);
 
+    private final Set<? extends OpenOption> options;
     private long position;
     private final S3Path path;
     private final ReadableByteChannel readDelegate;
@@ -44,11 +45,9 @@ class S3SeekableByteChannel implements SeekableByteChannel {
         position = startAt;
         path = s3Path;
         closed = false;
+        this.options = options;
         s3Path.getFileSystem().registerOpenChannel(this);
 
-        if (options.contains(StandardOpenOption.WRITE) && options.contains(StandardOpenOption.READ)) {
-            throw new IOException("This channel does not support read and write access simultaneously");
-        }
         if (options.contains(StandardOpenOption.SYNC) || options.contains(StandardOpenOption.DSYNC)) {
             throw new IOException("The SYNC/DSYNC options is not supported");
         }
@@ -86,6 +85,10 @@ class S3SeekableByteChannel implements SeekableByteChannel {
     public int read(ByteBuffer dst) throws IOException {
         validateOpen();
 
+        if (options.contains(StandardOpenOption.WRITE) && options.contains(StandardOpenOption.READ)) {
+            return writeDelegate.read(dst);
+        }
+
         if (readDelegate == null) {
             throw new NonReadableChannelException();
         }
@@ -115,9 +118,6 @@ class S3SeekableByteChannel implements SeekableByteChannel {
             throw new NonWritableChannelException();
         }
 
-        var length = src.remaining();
-        this.position += length;
-
         return writeDelegate.write(src);
     }
 
@@ -131,6 +131,10 @@ class S3SeekableByteChannel implements SeekableByteChannel {
     @Override
     public long position() throws IOException {
         validateOpen();
+
+        if (writeDelegate != null) {
+            return writeDelegate.position();
+        }
 
         synchronized (this) {
             return position;
@@ -170,7 +174,12 @@ class S3SeekableByteChannel implements SeekableByteChannel {
             throw new ClosedChannelException();
         }
 
-        // this is only valid to read channels
+        if (writeDelegate != null) {
+            writeDelegate.position(newPosition);
+            return this;
+        }
+
+        // this is only valid to read-only channels
         if (readDelegate == null) {
             throw new NonReadableChannelException();
         }
