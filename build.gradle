@@ -143,6 +143,10 @@ testing {
                 all {
                     testTask.configure {
                         systemProperty "aws.region",  "us-east-1"
+                        testLogging {
+                            events = ['FAILED', 'SKIPPED']
+                            exceptionFormat = 'full'
+                        }
                     }
                 }
             }
