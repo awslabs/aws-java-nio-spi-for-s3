@@ -110,7 +110,18 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * Create a new, empty configuration
      */
     public S3NioSpiConfiguration() {
-        this(new HashMap<>());
+        this(systemProperties());
+    }
+
+    private static Map<String, ?> systemProperties() {
+        var map = new HashMap<String, Object>();
+        var properties = System.getProperties();
+        for (var name : properties.stringPropertyNames()) {
+            if (name.startsWith("aws.") || name.startsWith("s3.")) {
+                map.put(name, properties.getProperty(name));
+            }
+        }
+        return map;
     }
 
     /**
