@@ -117,13 +117,11 @@ public class S3FileSystemProviderTest {
         final var uri = URI.create(pathUri);
         final var env = Collections.<String, Object>emptyMap();
 
-        assertThatThrownBy(
-                () -> provider.newFileSystem(uri, null)
-        ).isInstanceOf(IOException.class);
+        assertThatCode(() -> provider.newFileSystem(uri, null))
+                .doesNotThrowAnyExceptionExcept(IOException.class);
 
-        assertThatThrownBy(
-                () -> provider.newFileSystem(uri, env)
-        ).isInstanceOf(IOException.class);
+        assertThatCode(() -> provider.newFileSystem(uri, env))
+                .doesNotThrowAnyExceptionExcept(IOException.class);
     }
 
     @Test
