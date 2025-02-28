@@ -165,7 +165,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         }
 
         @SuppressWarnings("unchecked")
-        var envMap = (Map<String, Object>) env;
+        var envMap = (env != null) ? (Map<String, Object>) env : Collections.<String, Object>emptyMap();
 
         var info = fileSystemInfo(uri);
         var config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
