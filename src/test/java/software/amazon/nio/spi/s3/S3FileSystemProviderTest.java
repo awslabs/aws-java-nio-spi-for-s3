@@ -113,6 +113,18 @@ public class S3FileSystemProviderTest {
     }
 
     @Test
+    public void newFileSystemUri() {
+        final var uri = URI.create(pathUri);
+        final var env = Collections.<String, Object>emptyMap();
+
+        assertThatCode(() -> provider.newFileSystem(uri, null))
+                .doesNotThrowAnyExceptionExcept(IOException.class);
+
+        assertThatCode(() -> provider.newFileSystem(uri, env))
+                .doesNotThrowAnyExceptionExcept(IOException.class);
+    }
+
+    @Test
     public void getFileSystem() {
         assertThatCode(() -> provider.getFileSystem(null))
                 .as("missing argument check!")
