@@ -14,6 +14,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -25,6 +26,8 @@ import java.util.stream.Stream;
 
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
+import static java.nio.file.StandardOpenOption.READ;
+import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.Collections.emptySet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -64,6 +67,31 @@ class S3WritableByteChannelTest {
         var file = S3Path.getPath(fs, "somefile");
         assertThatThrownBy(() -> new S3WritableByteChannel(file, mock(), mock(), emptySet()))
                 .isInstanceOf(NoSuchFileException.class);
+    }
+
+    @Test
+    @DisplayName("S3WritableByteChannel is a SeekableByteChannel")
+    void shouldBeSeekable() throws InterruptedException, TimeoutException, IOException {
+        S3FileSystemProvider provider = mock();
+        when(provider.exists(any(S3AsyncClient.class), any())).thenReturn(true);
+
+        S3FileSystem fs = mock();
+        when(fs.provider()).thenReturn(provider);
+
+        var file = S3Path.getPath(fs, "somefile");
+        var channel = new S3WritableByteChannel(file, mock(), mock(), Set.of(READ, WRITE));
+        assertThat(channel.size()).isZero();
+        assertThat(channel.position()).isZero();
+        channel.write(ByteBuffer.wrap(new byte[] { 1, 2, 3, 4 }));
+        assertThat(channel.position()).isEqualTo(4);
+        assertThat(channel.position(2)).isSameAs(channel);
+        channel.write(ByteBuffer.wrap(new byte[] { 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 }));
+        assertThat(channel.size()).isEqualTo(12);
+        assertThat(channel.position(3)).isSameAs(channel);
+        ByteBuffer buffer = ByteBuffer.allocate(6);
+        channel.read(buffer);
+        assertThat(buffer.array()).contains(4, 5, 6, 7, 8, 9);
+        assertThatThrownBy(() -> channel.truncate(6)).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @ParameterizedTest(name = "can be instantiated when file exists ({0}) and open options are {1}")

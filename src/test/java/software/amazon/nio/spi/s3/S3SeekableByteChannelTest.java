@@ -106,7 +106,9 @@ public class S3SeekableByteChannelTest {
         when(mockClient.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class))).thenReturn(CompletableFuture.supplyAsync(() ->
                 PutObjectResponse.builder().build()));
         try(var channel = new S3SeekableByteChannel(path, mockClient, Set.<OpenOption>of(CREATE, WRITE))){
-            channel.write(ByteBuffer.allocate(1));
+            assertEquals(0L, channel.size());
+            channel.write(ByteBuffer.allocate(12));
+            assertEquals(12L, channel.size());
         }
     }
 
