@@ -137,7 +137,7 @@ testing {
             }
         }
         withType(JvmTestSuite).configureEach {
-            useJUnitJupiter('5.10.0')
+            useJUnitJupiter('5.11.4')
             targets {
                 all {
                     testTask.configure {
@@ -150,7 +150,7 @@ testing {
                 implementation 'org.mockito:mockito-core:5.16.0'
                 implementation 'org.mockito:mockito-junit-jupiter:5.16.0'
                 implementation 'com.github.stefanbirkner:system-lambda:1.2.1'
-                implementation 'ch.qos.logback:logback-classic:1.5.17'
+                runtimeOnly 'ch.qos.logback:logback-classic:1.5.17'
             }
         }
     }
