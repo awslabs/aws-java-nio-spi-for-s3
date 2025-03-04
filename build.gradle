@@ -147,10 +147,10 @@ testing {
             }
             dependencies {
                 implementation 'org.assertj:assertj-core:3.27.3'
-                implementation 'org.mockito:mockito-core:5.15.2'
-                implementation 'org.mockito:mockito-junit-jupiter:5.15.2'
+                implementation 'org.mockito:mockito-core:5.16.0'
+                implementation 'org.mockito:mockito-junit-jupiter:5.16.0'
                 implementation 'com.github.stefanbirkner:system-lambda:1.2.1'
-                implementation 'ch.qos.logback:logback-classic:1.5.16'
+                implementation 'ch.qos.logback:logback-classic:1.5.17'
             }
         }
     }
