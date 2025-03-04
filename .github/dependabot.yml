@@ -9,3 +9,13 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    groups:
+      aws-dependencies:
+        patterns:
+          - "software.amazon.*"
+      test-dependencies:
+        patterns:
+          - "org.testcontainers*"
+          - "org.assertj*"
+          - "org.mockito*"
+          - "ch.qos.logback*"
