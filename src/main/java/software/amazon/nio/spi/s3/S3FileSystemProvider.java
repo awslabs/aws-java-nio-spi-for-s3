@@ -835,8 +835,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
     public FileChannel newFileChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs)
             throws IOException {
 
-        S3FileSystem fs = (S3FileSystem) getFileSystem(path.toUri());
-        S3SeekableByteChannel s3SeekableByteChannel = new S3SeekableByteChannel((S3Path) path, fs.client(), options);
+        S3Path p = (S3Path) path;
+        S3FileSystem fs = p.getFileSystem();
+        S3SeekableByteChannel s3SeekableByteChannel = new S3SeekableByteChannel(p, fs.client(), options);
         return new S3FileChannel(s3SeekableByteChannel);
     }
 
