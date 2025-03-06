@@ -95,9 +95,17 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      */
     public static final Long S3_SPI_TIMEOUT_HIGH_DEFAULT = TimeOutUtils.TIMEOUT_TIME_LENGTH_5;
     /**
-     * The default value of the credentials property
+     * The name of the credentials property
      */
     public static final String S3_SPI_CREDENTIALS_PROPERTY = "s3.spi.credentials";
+    /**
+     * The name of the S3 object integrity check property
+     */
+    public static final String S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY = "s3.integrity-check-algorithm";
+    /**
+     * The default value of the S3 object integrity check property
+     */
+    public static final String S3_INTEGRITY_CHECK_ALGORITHM_DEFAULT = "disabled";
 
     private static final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
 
@@ -131,6 +139,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         put(S3_SPI_TIMEOUT_LOW_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_LOW_DEFAULT));
         put(S3_SPI_TIMEOUT_MEDIUM_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_MEDIUM_DEFAULT));
         put(S3_SPI_TIMEOUT_HIGH_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_HIGH_DEFAULT));
+        put(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, S3_INTEGRITY_CHECK_ALGORITHM_DEFAULT);
 
         //
         // With the below we pick existing environment variables and system
@@ -383,6 +392,22 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     }
 
     /**
+     * Get the value of the Integrity Check Algorithm
+     *
+     * @param algorithm the new value; can be null
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withIntegrityCheckAlgorithm(String algorithm) {
+        if (algorithm == null) {
+            put(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, S3_INTEGRITY_CHECK_ALGORITHM_DEFAULT);
+        } else {
+            put(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, algorithm);
+        }
+
+        return this;
+    }
+
+    /**
      * Get the value of the Maximum Fragment Size
      *
      * @return the configured value or the default if not overridden
@@ -509,6 +534,15 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     public Long getTimeoutHigh() {
         return Long.parseLong((String) getOrDefault(S3_SPI_TIMEOUT_HIGH_PROPERTY,
                                                             String.valueOf(S3_SPI_TIMEOUT_HIGH_DEFAULT)));
+    }
+
+    /**
+     * Get the value of the Integrity Check Algorithm
+     *
+     * @return the configured value or the default if not overridden
+     */
+    public String getIntegrityCheckAlgorithm() {
+        return (String) getOrDefault(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, S3_INTEGRITY_CHECK_ALGORITHM_DEFAULT);
     }
 
     /**
