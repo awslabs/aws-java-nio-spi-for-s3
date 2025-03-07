@@ -121,6 +121,22 @@ public class S3FileSystem extends FileSystem {
     }
 
     /**
+     * Returns the implementation for creating a checksum to check the integrity of an object uploaded to S3.
+     *
+     * @return integrity check implementation
+     */
+    S3ObjectIntegrityCheck integrityCheck() {
+        var algorithm = configuration.getIntegrityCheckAlgorithm();
+        if (algorithm.equalsIgnoreCase("CRC32C")) {
+            return new Crc32cFileIntegrityCheck();
+        }
+        if (algorithm.equalsIgnoreCase("CRC64NVME")) {
+            return new Crc64nvmeFileIntegrityCheck();
+        }
+        return DisabledFileIntegrityCheck.INSTANCE;
+    }
+
+    /**
      * Tells whether this file system is open.
      *
      * <p> File systems created by the default provider are always open.

@@ -5,6 +5,7 @@
 
 package software.amazon.nio.spi.s3;
 
+import static com.github.stefanbirkner.systemlambda.SystemLambda.*;
 import static org.assertj.core.api.Assertions.*;
 import static software.amazon.nio.spi.s3.Containers.*;
 
@@ -19,6 +20,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 @DisplayName("Files$newByteChannel* should read and write on S3")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -69,6 +72,36 @@ public class FilesNewByteChannelTest {
             // verify
             assertThat(dst.array()).isEqualTo(text.getBytes());
         }
+
+        assertThat(path).hasContent(text);
+    }
+
+    @Test
+    @DisplayName("newByteChannel with CRC32C integrity check")
+    public void newByteChannel_withIntegrityCheck_CRC32C() throws Exception {
+        var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/" + bucketName + "/bc-integrity-check.txt"));
+
+        String text = "we test the integrity check when closing the byte channel";
+        withEnvironmentVariable(S3NioSpiConfiguration.S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, "CRC32C").execute(() -> {
+            try (var channel = Files.newByteChannel(path, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
+                channel.write(ByteBuffer.wrap(text.getBytes()));
+            }
+        });
+
+        assertThat(path).hasContent(text);
+    }
+
+    @Test
+    @DisplayName("newByteChannel with CRC64NVME integrity check")
+    public void newByteChannel_withIntegrityCheck_CRC64NVME() throws Exception {
+        var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/" + bucketName + "/bc-integrity-check.txt"));
+
+        String text = "we test the integrity check when closing the byte channel";
+        withEnvironmentVariable(S3NioSpiConfiguration.S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, "CRC64NVME").execute(() -> {
+            try (var channel = Files.newByteChannel(path, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
+                channel.write(ByteBuffer.wrap(text.getBytes()));
+            }
+        });
 
         assertThat(path).hasContent(text);
     }

@@ -57,6 +57,7 @@ public class S3NioSpiConfigurationTest {
         then(config.getTimeoutLow()).isEqualTo(S3_SPI_TIMEOUT_LOW_DEFAULT);
         then(config.getTimeoutMedium()).isEqualTo(S3_SPI_TIMEOUT_MEDIUM_DEFAULT);
         then(config.getTimeoutHigh()).isEqualTo(S3_SPI_TIMEOUT_HIGH_DEFAULT);
+        then(config.getIntegrityCheckAlgorithm()).isEqualTo(S3_INTEGRITY_CHECK_ALGORITHM_DEFAULT);
     }
 
     @Test
@@ -278,6 +279,27 @@ public class S3NioSpiConfigurationTest {
         then(config).contains(entry(S3_SPI_TIMEOUT_HIGH_PROPERTY, "7"));
         then(config.getTimeoutHigh()).isEqualTo(7L);
         then(config.withTimeoutHigh(8L).getTimeoutHigh()).isEqualTo(8L);
+    }
+
+    @Test
+    public void withAndGetIntegrityCheckAlgorithm() throws Exception {
+        then(config).contains(entry(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, "disabled"));
+        then(config.withIntegrityCheckAlgorithm("CRC32C")).isSameAs(config);
+        then(config).contains(entry(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, "CRC32C"));
+        then(config.getIntegrityCheckAlgorithm()).isEqualTo("CRC32C");
+        then(config.withIntegrityCheckAlgorithm("CRC64NVME").getIntegrityCheckAlgorithm()).isEqualTo("CRC64NVME");
+
+        var map = new HashMap<String, String>();
+        map.put(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, "1212");
+        var c = new S3NioSpiConfiguration(map);
+
+        then(c.getIntegrityCheckAlgorithm()).isEqualTo("1212");
+
+        withEnvironmentVariable("S3_INTEGRITY_CHECK_ALGORITHM", "CRC32C")
+            .execute(() -> then(new S3NioSpiConfiguration().getIntegrityCheckAlgorithm()).isEqualTo("CRC32C"));
+
+        withEnvironmentVariable("S3_INTEGRITY_CHECK_ALGORITHM", "CRC64NVME")
+            .execute(() -> then(new S3NioSpiConfiguration().getIntegrityCheckAlgorithm()).isEqualTo("CRC64NVME"));
     }
 
 }

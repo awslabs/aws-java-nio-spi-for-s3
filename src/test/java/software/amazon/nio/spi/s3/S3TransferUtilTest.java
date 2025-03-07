@@ -38,7 +38,7 @@ class S3TransferUtilTest {
         final S3AsyncClient client = mock();
         when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class))).thenReturn(completedFuture(PutObjectResponse.builder().build()));
 
-        var util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES);
+        var util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES, DisabledFileIntegrityCheck.INSTANCE);
         var tmpFile = Files.createTempFile(null, null);
         assertThatCode(() -> util.uploadLocalFile(file, tmpFile)).doesNotThrowAnyException();
     }
@@ -63,7 +63,7 @@ class S3TransferUtilTest {
             })
         );
 
-        var util = new S3TransferUtil(client, 1L, TimeUnit.MILLISECONDS);
+        var util = new S3TransferUtil(client, 1L, TimeUnit.MILLISECONDS, DisabledFileIntegrityCheck.INSTANCE);
         var tmpFile = Files.createTempFile(null, null);
         assertThatThrownBy(() -> util.uploadLocalFile(file, tmpFile))
                 .isInstanceOf(IOException.class)
