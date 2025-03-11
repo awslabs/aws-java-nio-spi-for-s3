@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,6 +107,11 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * The default value of the S3 object integrity check property
      */
     public static final String S3_INTEGRITY_CHECK_ALGORITHM_DEFAULT = "disabled";
+    /**
+     * Allowed algorithms of the S3 object integrity check property
+     */
+    public static final Set<String> S3_INTEGRITY_CHECK_ALGORITHM_ALLOWED = Set.of(
+        "CRC32", "CRC32C", "CRC64NVME", S3_INTEGRITY_CHECK_ALGORITHM_DEFAULT.toUpperCase());
 
     private static final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
 
@@ -403,6 +409,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         } else {
             put(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, algorithm);
         }
+        validateIntegrityAlgorithm(algorithm);
 
         return this;
     }
@@ -542,7 +549,15 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * @return the configured value or the default if not overridden
      */
     public String getIntegrityCheckAlgorithm() {
-        return (String) getOrDefault(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, S3_INTEGRITY_CHECK_ALGORITHM_DEFAULT);
+        String algorithm = (String) getOrDefault(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, S3_INTEGRITY_CHECK_ALGORITHM_DEFAULT);
+        validateIntegrityAlgorithm(algorithm);
+        return algorithm;
+    }
+
+    private void validateIntegrityAlgorithm(String algorithm) {
+        if (!S3_INTEGRITY_CHECK_ALGORITHM_ALLOWED.contains(algorithm.toUpperCase())) {
+            throw new UnsupportedOperationException("unknown integrity check algorithm '" + algorithm + "'");
+        }
     }
 
     /**

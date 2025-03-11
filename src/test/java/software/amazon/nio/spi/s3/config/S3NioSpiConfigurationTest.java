@@ -15,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.BDDAssertions.entry;
 
 import static org.assertj.core.api.BDDAssertions.then;
+import static org.assertj.core.api.BDDAssertions.thenExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -290,16 +291,24 @@ public class S3NioSpiConfigurationTest {
         then(config.withIntegrityCheckAlgorithm("CRC64NVME").getIntegrityCheckAlgorithm()).isEqualTo("CRC64NVME");
 
         var map = new HashMap<String, String>();
-        map.put(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, "1212");
+        map.put(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, "invalid");
         var c = new S3NioSpiConfiguration(map);
 
-        then(c.getIntegrityCheckAlgorithm()).isEqualTo("1212");
+        thenExceptionOfType(UnsupportedOperationException.class)
+            .isThrownBy(() -> c.getIntegrityCheckAlgorithm())
+            .withMessage("unknown integrity check algorithm 'invalid'");
+
+        thenExceptionOfType(UnsupportedOperationException.class)
+            .isThrownBy(() -> c.withIntegrityCheckAlgorithm("unknown algorithm"))
+            .withMessage("unknown integrity check algorithm 'unknown algorithm'");
 
         withEnvironmentVariable("S3_INTEGRITY_CHECK_ALGORITHM", "CRC32C")
             .execute(() -> then(new S3NioSpiConfiguration().getIntegrityCheckAlgorithm()).isEqualTo("CRC32C"));
 
         withEnvironmentVariable("S3_INTEGRITY_CHECK_ALGORITHM", "CRC64NVME")
             .execute(() -> then(new S3NioSpiConfiguration().getIntegrityCheckAlgorithm()).isEqualTo("CRC64NVME"));
+
+        then(new S3NioSpiConfiguration(Map.of(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, "CRC32")).getIntegrityCheckAlgorithm()).isEqualTo("CRC32");
     }
 
 }

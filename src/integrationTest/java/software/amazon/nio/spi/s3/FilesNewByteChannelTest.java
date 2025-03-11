@@ -21,8 +21,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
-import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
-
 @DisplayName("Files$newByteChannel* should read and write on S3")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class FilesNewByteChannelTest {
@@ -77,33 +75,57 @@ public class FilesNewByteChannelTest {
     }
 
     @Test
-    @DisplayName("newByteChannel with CRC32C integrity check")
-    public void newByteChannel_withIntegrityCheck_CRC32C() throws Exception {
-        var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/" + bucketName + "/bc-integrity-check.txt"));
-
+    @DisplayName("newByteChannel with CRC32 integrity check")
+    public void newByteChannel_withIntegrityCheck_CRC32() throws Exception {
         String text = "we test the integrity check when closing the byte channel";
-        withEnvironmentVariable(S3NioSpiConfiguration.S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, "CRC32C").execute(() -> {
+
+        withEnvironmentVariable("S3_INTEGRITY_CHECK_ALGORITHM", "CRC32").execute(() -> {
+            var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/" + bucketName + "/bc-integrity-check.txt"));
             try (var channel = Files.newByteChannel(path, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
                 channel.write(ByteBuffer.wrap(text.getBytes()));
             }
-        });
 
-        assertThat(path).hasContent(text);
+            assertThat(path).hasContent(text);
+        });
+    }
+
+    @Test
+    @DisplayName("newByteChannel with CRC32C integrity check")
+    public void newByteChannel_withIntegrityCheck_CRC32C() throws Exception {
+        String text = "we test the integrity check when closing the byte channel";
+
+        withEnvironmentVariable("S3_INTEGRITY_CHECK_ALGORITHM", "CRC32C").execute(() -> {
+            var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/" + bucketName + "/bc-integrity-check.txt"));
+            try (var channel = Files.newByteChannel(path, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
+                channel.write(ByteBuffer.wrap(text.getBytes()));
+            }
+
+            assertThat(path).hasContent(text);
+        });
     }
 
     @Test
     @DisplayName("newByteChannel with CRC64NVME integrity check")
     public void newByteChannel_withIntegrityCheck_CRC64NVME() throws Exception {
-        var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/" + bucketName + "/bc-integrity-check.txt"));
-
         String text = "we test the integrity check when closing the byte channel";
-        withEnvironmentVariable(S3NioSpiConfiguration.S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, "CRC64NVME").execute(() -> {
+
+        withEnvironmentVariable("S3_INTEGRITY_CHECK_ALGORITHM", "CRC64NVME").execute(() -> {
+            var path = (S3Path) Paths.get(URI.create(localStackConnectionEndpoint() + "/" + bucketName + "/bc-integrity-check.txt"));
             try (var channel = Files.newByteChannel(path, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
                 channel.write(ByteBuffer.wrap(text.getBytes()));
             }
-        });
 
-        assertThat(path).hasContent(text);
+            assertThat(path).hasContent(text);
+        });
+    }
+
+    @Test
+    @DisplayName("newByteChannel with invalid integrity check")
+    public void newByteChannel_withIntegrityCheck_invalid() throws Exception {
+        withEnvironmentVariable("S3_INTEGRITY_CHECK_ALGORITHM", "invalid").execute(() -> {
+            var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/" + bucketName + "/int-check-algo-test.txt"));
+            assertThatThrownBy(() -> Files.newByteChannel(path)).hasMessage("unknown integrity check algorithm 'invalid'");
+        });
     }
 
 }

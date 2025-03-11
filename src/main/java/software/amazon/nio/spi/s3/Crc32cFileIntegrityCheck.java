@@ -13,7 +13,7 @@ import java.nio.file.Path;
 import software.amazon.awssdk.crt.checksums.CRC32C;
 import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.utils.internal.Base16;
+import software.amazon.awssdk.utils.BinaryUtils;
 
 class Crc32cFileIntegrityCheck implements S3ObjectIntegrityCheck {
     private final byte[] buffer = new byte[16 * 1024];
@@ -31,7 +31,7 @@ class Crc32cFileIntegrityCheck implements S3ObjectIntegrityCheck {
             }
             checksumBuffer.putInt((int) checksum.getValue());
             builder.checksumAlgorithm(ChecksumAlgorithm.CRC32_C);
-            builder.checksumCRC32C(Base16.encodeAsString(checksumBuffer.array()));
+            builder.checksumCRC32C(BinaryUtils.toBase64(checksumBuffer.array()));
         } catch (IOException cause) {
             throw new UncheckedIOException(cause);
         }
