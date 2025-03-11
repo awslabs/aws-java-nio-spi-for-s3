@@ -23,8 +23,8 @@ abstract class Containers {
 
     static {
         LOCAL_STACK_CONTAINER = new LocalStackContainer(
-            DockerImageName.parse("localstack/localstack:2.3.2")
-        ).withServices(S3).withEnv("PROVIDER_OVERRIDE_S3", "v3");
+            DockerImageName.parse("localstack/localstack:4.2")
+        ).withServices(S3);
         LOCAL_STACK_CONTAINER.start();
         System.setProperty(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, "http");
     }

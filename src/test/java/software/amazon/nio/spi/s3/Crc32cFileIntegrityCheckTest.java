@@ -26,7 +26,7 @@ class Crc32cFileIntegrityCheckTest {
         Files.writeString(file, "hello world!", CREATE_NEW);
         var putObjectRequest = PutObjectRequest.builder();
         integrityCheck.addChecksumToRequest(file, putObjectRequest);
-        assertThat(putObjectRequest.build().checksumCRC32C()).isEqualTo("49CB5777");
+        assertThat(putObjectRequest.build().checksumCRC32C()).isEqualTo("SctXdw==");
     }
 
 }
