@@ -17,16 +17,16 @@ import org.junit.jupiter.api.io.TempDir;
 
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-class Crc64nvmeFileIntegrityCheckTest {
+class Crc32FileIntegrityCheckTest {
 
     @Test
     void test(@TempDir Path tempDir) throws IOException {
-        var integrityCheck = new Crc64nvmeFileIntegrityCheck();
+        var integrityCheck = new Crc32FileIntegrityCheck();
         var file = tempDir.resolve("test");
         Files.writeString(file, "hello world!", CREATE_NEW);
         var putObjectRequest = PutObjectRequest.builder();
         integrityCheck.addChecksumToRequest(file, putObjectRequest);
-        assertThat(putObjectRequest.build().checksumCRC64NVME()).isEqualTo("2RYNH6jkGOM=");
+        assertThat(putObjectRequest.build().checksumCRC32()).isEqualTo("A7TCbQ==");
     }
 
 }

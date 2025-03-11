@@ -898,7 +898,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
             s3Client.headObject(HeadObjectRequest.builder().bucket(path.bucketName()).key(path.getKey()).build())
                 .get(configuration.getTimeoutLow(), MINUTES);
             return true;
-        } catch (ExecutionException | NoSuchKeyException e) {
+        } catch (NoSuchKeyException e) {
+            return false;
+        } catch (ExecutionException e) {
             logger.debug("Could not retrieve object head information", e);
             return false;
         }
