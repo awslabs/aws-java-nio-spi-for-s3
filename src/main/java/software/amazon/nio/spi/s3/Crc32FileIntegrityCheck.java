@@ -10,15 +10,15 @@ import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import software.amazon.awssdk.crt.checksums.CRC64NVME;
+import software.amazon.awssdk.crt.checksums.CRC32;
 import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.utils.BinaryUtils;
 
-class Crc64nvmeFileIntegrityCheck implements S3ObjectIntegrityCheck {
+class Crc32FileIntegrityCheck implements S3ObjectIntegrityCheck {
     private final byte[] buffer = new byte[16 * 1024];
-    private final CRC64NVME checksum = new CRC64NVME();
-    private final ByteBuffer checksumBuffer = ByteBuffer.allocate(Long.BYTES);
+    private final CRC32 checksum = new CRC32();
+    private final ByteBuffer checksumBuffer = ByteBuffer.allocate(Integer.BYTES);
 
     @Override
     public void addChecksumToRequest(Path file, PutObjectRequest.Builder builder) {
@@ -29,9 +29,9 @@ class Crc64nvmeFileIntegrityCheck implements S3ObjectIntegrityCheck {
             while ((len = in.read(buffer)) != -1) {
                 checksum.update(buffer, 0, len);
             }
-            checksumBuffer.putLong(checksum.getValue());
-            builder.checksumAlgorithm(ChecksumAlgorithm.CRC64_NVME);
-            builder.checksumCRC64NVME(BinaryUtils.toBase64(checksumBuffer.array()));
+            checksumBuffer.putInt((int) checksum.getValue());
+            builder.checksumAlgorithm(ChecksumAlgorithm.CRC32);
+            builder.checksumCRC32(BinaryUtils.toBase64(checksumBuffer.array()));
         } catch (IOException cause) {
             throw new UncheckedIOException(cause);
         }

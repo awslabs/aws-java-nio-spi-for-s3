@@ -127,6 +127,9 @@ public class S3FileSystem extends FileSystem {
      */
     S3ObjectIntegrityCheck integrityCheck() {
         var algorithm = configuration.getIntegrityCheckAlgorithm();
+        if (algorithm.equalsIgnoreCase("CRC32")) {
+            return new Crc32FileIntegrityCheck();
+        }
         if (algorithm.equalsIgnoreCase("CRC32C")) {
             return new Crc32cFileIntegrityCheck();
         }
