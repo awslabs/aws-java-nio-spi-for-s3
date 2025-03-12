@@ -51,7 +51,7 @@ class S3WritableByteChannel implements SeekableByteChannel {
                 throw new FileAlreadyExistsException("File at path:" + path + " already exists");
             }
 
-            tempFile = Files.createTempFile("aws-s3-nio-", ".tmp");
+            tempFile = path.getFileSystem().createTempFile(path);
             // this complicated download handling is the result of
             // avoiding an existence check with a head-object request
             if (!options.contains(StandardOpenOption.CREATE_NEW)) {
