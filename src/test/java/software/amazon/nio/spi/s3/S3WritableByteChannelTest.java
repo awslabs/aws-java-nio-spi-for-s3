@@ -21,6 +21,8 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Set;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
@@ -32,11 +34,13 @@ import static java.util.Collections.emptySet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class S3WritableByteChannelTest {
@@ -56,17 +60,68 @@ class S3WritableByteChannelTest {
     }
 
     @Test
-    @DisplayName("when file does not exist and constructor is invoked without option `CREATE_NEW` nor `CREATE` should throw NoSuchFileException")
-    void whenFileDoesNotExistsAndNoCreateNewShouldThrowNoSuchFileException() throws InterruptedException, TimeoutException {
-        S3FileSystemProvider provider = mock();
-        when(provider.exists(any(S3AsyncClient.class), any())).thenReturn(false);
-
-        S3FileSystem fs = mock();
+    @DisplayName("when file does not exist and constructor is invoked the option `CREATE` option")
+    void whenFileDoesNotExistsAndCreateOptionIsPresent() throws Exception {
+        var provider = mock(S3FileSystemProvider.class);
+        var fs = mock(S3FileSystem.class);
         when(fs.provider()).thenReturn(provider);
-
         var file = S3Path.getPath(fs, "somefile");
-        assertThatThrownBy(() -> new S3WritableByteChannel(file, mock(), mock(), emptySet()))
-                .isInstanceOf(NoSuchFileException.class);
+        var s3Client = mock(S3AsyncClient.class);
+        var transferManager = mock(S3TransferUtil.class);
+        var exception = new CompletionException(S3Exception.builder().statusCode(404).build());
+        doThrow(exception).when(transferManager).downloadToLocalFile(any(S3Path.class), any(Path.class));
+
+        try (var channel = new S3WritableByteChannel(file, s3Client, transferManager, Set.of(CREATE))) {
+            assertThat(channel.position()).isZero();
+        }
+    }
+
+    @Test
+    @DisplayName("when file does not exist and constructor is invoked without option `CREATE_NEW` nor `CREATE` should throw NoSuchFileException")
+    void whenFileDoesNotExistsAndNoCreateShouldThrowNoSuchFileException() throws Exception {
+        var provider = mock(S3FileSystemProvider.class);
+        var fs = mock(S3FileSystem.class);
+        when(fs.provider()).thenReturn(provider);
+        var file = S3Path.getPath(fs, "somefile");
+        var s3Client = mock(S3AsyncClient.class);
+        var transferManager = mock(S3TransferUtil.class);
+        var exception = new CompletionException(S3Exception.builder().statusCode(404).build());
+        doThrow(exception).when(transferManager).downloadToLocalFile(any(S3Path.class), any(Path.class));
+
+        assertThatThrownBy(() -> new S3WritableByteChannel(file, s3Client, transferManager, emptySet()))
+            .isInstanceOf(NoSuchFileException.class);
+    }
+
+    @Test
+    @DisplayName("when file the download fails due to an invalid request")
+    void whenFileDownloadFailsDueToInvalidRequestTheExceptionShouldBePropagated() throws InterruptedException, TimeoutException, ExecutionException {
+        var provider = mock(S3FileSystemProvider.class);
+        var fs = mock(S3FileSystem.class);
+        when(fs.provider()).thenReturn(provider);
+        var file = S3Path.getPath(fs, "somefile");
+        var s3Client = mock(S3AsyncClient.class);
+        var transferManager = mock(S3TransferUtil.class);
+        var exception = new CompletionException(S3Exception.builder().statusCode(400).message("Invalid Request").build());
+        doThrow(exception).when(transferManager).downloadToLocalFile(any(S3Path.class), any(Path.class));
+
+        assertThatThrownBy(() -> new S3WritableByteChannel(file, s3Client, transferManager, emptySet()))
+            .isEqualTo(exception);
+    }
+
+    @Test
+    @DisplayName("when file the download fails for an unknown reason")
+    void whenFileDownloadFailsForUnknownReasonTheExceptionShouldBePropagated() throws InterruptedException, TimeoutException, ExecutionException {
+        var provider = mock(S3FileSystemProvider.class);
+        var fs = mock(S3FileSystem.class);
+        when(fs.provider()).thenReturn(provider);
+        var file = S3Path.getPath(fs, "somefile");
+        var s3Client = mock(S3AsyncClient.class);
+        var transferManager = mock(S3TransferUtil.class);
+        var exception = new CompletionException(new RuntimeException("unknown error"));
+        doThrow(exception).when(transferManager).downloadToLocalFile(any(S3Path.class), any(Path.class));
+
+        assertThatThrownBy(() -> new S3WritableByteChannel(file, s3Client, transferManager, emptySet()))
+            .isEqualTo(exception);
     }
 
     @Test
