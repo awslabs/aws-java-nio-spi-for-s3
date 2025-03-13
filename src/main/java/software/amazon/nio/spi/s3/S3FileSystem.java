@@ -9,6 +9,7 @@ import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.channels.Channel;
 import java.nio.file.ClosedFileSystemException;
 import java.nio.file.DirectoryStream;
@@ -56,6 +57,7 @@ public class S3FileSystem extends FileSystem {
 
     // private S3AsyncClient client;
     private final S3NioSpiConfiguration configuration;
+    private final Path temporaryDirectory;
 
     /**
      * Create a filesystem that represents the bucket specified by the URI
@@ -64,6 +66,20 @@ public class S3FileSystem extends FileSystem {
      * @param config   the configuration to use; can be null to use a default configuration
      */
     S3FileSystem(S3FileSystemProvider provider, S3NioSpiConfiguration config) {
+        this(provider, config, createTemporaryDirectory());
+    }
+
+    /**
+     * Create a filesystem that represents the bucket specified by the URI
+     *
+     * @param provider
+     *            the provider to be used with this fileSystem
+     * @param config
+     *            the configuration to use; can be null to use a default configuration
+     * @param temporaryDirectory
+     *            the local temporary directory for the S3 object
+     */
+    S3FileSystem(S3FileSystemProvider provider, S3NioSpiConfiguration config, Path temporaryDirectory) {
         configuration = (config == null) ? new S3NioSpiConfiguration() : config;
         bucketName = configuration.getBucketName();
 
@@ -82,6 +98,15 @@ public class S3FileSystem extends FileSystem {
 
         clientProvider = new S3ClientProvider(configuration);
         this.provider = provider;
+        this.temporaryDirectory = temporaryDirectory;
+    }
+
+    static Path createTemporaryDirectory() {
+        try {
+            return Files.createTempDirectory("aws-s3-nio-");
+        } catch (IOException cause) {
+            throw new UncheckedIOException(cause);
+        }
     }
 
     /**
@@ -486,6 +511,25 @@ public class S3FileSystem extends FileSystem {
         assert !closedChannel.isOpen();
 
         return openChannels.remove(closedChannel);
+    }
+
+    /**
+     * Creates a new local temporary file for an S3 object.
+     *
+     * @return new local temporary file
+     */
+    Path createTempFile(S3Path path) throws IOException {
+        if (path.isDirectory()) {
+            throw new IllegalArgumentException("path must be a file");
+        }
+        if (path.getNameCount() == 1) {
+            Path newPath = temporaryDirectory.resolve(path.getFileName().toString());
+            return Files.createFile(newPath);
+        }
+        Path parent = temporaryDirectory.resolve(path.getParent().toString());
+        Files.createDirectories(parent);
+        Path newPath = parent.resolve(path.getFileName().toString());
+        return Files.createFile(newPath);
     }
 
     /**

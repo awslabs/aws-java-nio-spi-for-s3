@@ -16,10 +16,13 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -47,12 +50,13 @@ class S3WritableByteChannelTest {
 
     @Test
     @DisplayName("when file exists and constructor is invoked with option `CREATE_NEW` should throw FileAlreadyExistsException")
-    void whenFileExistsAndCreateNewShouldThrowFileAlreadyExistsException() throws InterruptedException, TimeoutException {
+    void whenFileExistsAndCreateNewShouldThrowFileAlreadyExistsException() throws InterruptedException, TimeoutException, IOException {
         S3FileSystemProvider provider = mock();
         when(provider.exists(any(S3AsyncClient.class), any())).thenReturn(true);
 
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
+        when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
 
         var file = S3Path.getPath(fs, "somefile");
         assertThatThrownBy(() -> new S3WritableByteChannel(file, mock(), mock(), Set.of(CREATE_NEW)))
@@ -65,6 +69,7 @@ class S3WritableByteChannelTest {
         var provider = mock(S3FileSystemProvider.class);
         var fs = mock(S3FileSystem.class);
         when(fs.provider()).thenReturn(provider);
+        when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
         var file = S3Path.getPath(fs, "somefile");
         var s3Client = mock(S3AsyncClient.class);
         var transferManager = mock(S3TransferUtil.class);
@@ -82,6 +87,7 @@ class S3WritableByteChannelTest {
         var provider = mock(S3FileSystemProvider.class);
         var fs = mock(S3FileSystem.class);
         when(fs.provider()).thenReturn(provider);
+        when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
         var file = S3Path.getPath(fs, "somefile");
         var s3Client = mock(S3AsyncClient.class);
         var transferManager = mock(S3TransferUtil.class);
@@ -94,10 +100,11 @@ class S3WritableByteChannelTest {
 
     @Test
     @DisplayName("when file the download fails due to an invalid request")
-    void whenFileDownloadFailsDueToInvalidRequestTheExceptionShouldBePropagated() throws InterruptedException, TimeoutException, ExecutionException {
+    void whenFileDownloadFailsDueToInvalidRequestTheExceptionShouldBePropagated() throws InterruptedException, TimeoutException, ExecutionException, IOException {
         var provider = mock(S3FileSystemProvider.class);
         var fs = mock(S3FileSystem.class);
         when(fs.provider()).thenReturn(provider);
+        when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
         var file = S3Path.getPath(fs, "somefile");
         var s3Client = mock(S3AsyncClient.class);
         var transferManager = mock(S3TransferUtil.class);
@@ -110,10 +117,11 @@ class S3WritableByteChannelTest {
 
     @Test
     @DisplayName("when file the download fails for an unknown reason")
-    void whenFileDownloadFailsForUnknownReasonTheExceptionShouldBePropagated() throws InterruptedException, TimeoutException, ExecutionException {
+    void whenFileDownloadFailsForUnknownReasonTheExceptionShouldBePropagated() throws InterruptedException, TimeoutException, ExecutionException, IOException {
         var provider = mock(S3FileSystemProvider.class);
         var fs = mock(S3FileSystem.class);
         when(fs.provider()).thenReturn(provider);
+        when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
         var file = S3Path.getPath(fs, "somefile");
         var s3Client = mock(S3AsyncClient.class);
         var transferManager = mock(S3TransferUtil.class);
@@ -132,6 +140,7 @@ class S3WritableByteChannelTest {
 
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
+        when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
 
         var file = S3Path.getPath(fs, "somefile");
         var channel = new S3WritableByteChannel(file, mock(), mock(), Set.of(READ, WRITE));
@@ -158,6 +167,7 @@ class S3WritableByteChannelTest {
 
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
+        when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
 
         var file = S3Path.getPath(fs, "somefile");
         new S3WritableByteChannel(file, mock(), mock(), openOptions).close();
@@ -171,6 +181,7 @@ class S3WritableByteChannelTest {
 
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
+        when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
 
         var file = S3Path.getPath(fs, "somefile");
         try(var channel = new S3WritableByteChannel(file, mock(), mock(), Set.of(CREATE))){
@@ -186,6 +197,7 @@ class S3WritableByteChannelTest {
 
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
+        when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
 
         var file = S3Path.getPath(fs, "somefile");
         var channel = new S3WritableByteChannel(file, mock(), mock(), Set.of(CREATE));
@@ -198,16 +210,20 @@ class S3WritableByteChannelTest {
     void tmpFileIsCleanedUpAfterClose(@TempDir Path tempDir) throws InterruptedException, TimeoutException, IOException {
         S3FileSystemProvider provider = mock();
         when(provider.exists(any(S3AsyncClient.class), any())).thenReturn(false);
-        S3FileSystem fs = mock();
-        when(fs.provider()).thenReturn(provider);
-        var file = S3Path.getPath(fs, "somefile");
+        var fs = new S3FileSystem(provider, null, tempDir);
+        var file1 = S3Path.getPath(fs, "file1");
+        var file2 = S3Path.getPath(fs, "dir1/file2");
+        var file3 = S3Path.getPath(fs, "dir1/dir2/file3");
 
-        var channel = new S3WritableByteChannel(file, mock(), mock(), Set.of(CREATE));
+        var channel1 = new S3WritableByteChannel(file1, mock(), mock(), Set.of(CREATE));
+        var channel2 = new S3WritableByteChannel(file2, mock(), mock(), Set.of(CREATE));
+        var channel3 = new S3WritableByteChannel(file3, mock(), mock(), Set.of(CREATE));
 
-        var countAfterOpening = countTemporaryFiles(tempDir);
-        channel.close();
-        var countAfterClosing = countTemporaryFiles(tempDir);
-        assertThat(countAfterClosing).isLessThan(countAfterOpening);
+        assertThat(countTemporaryFiles(tempDir)).isEqualTo(3);
+        channel1.close();
+        channel2.close();
+        channel3.close();
+        assertThat(countTemporaryFiles(tempDir)).isZero();
     }
 
     @Test
@@ -217,6 +233,7 @@ class S3WritableByteChannelTest {
         when(provider.exists(any(S3AsyncClient.class), any())).thenReturn(false);
         S3FileSystem fs = mock();
         when(fs.provider()).thenReturn(provider);
+        when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
         var file = S3Path.getPath(fs, "somefile");
 
         S3TransferUtil utilMock = mock();
@@ -229,11 +246,17 @@ class S3WritableByteChannelTest {
     }
 
     private long countTemporaryFiles(Path tempDir) throws IOException {
-        try (var list = Files.list(tempDir.getParent())) {
-            return list
-                    .filter((path) -> path.getFileName().toString().contains("aws-s3-nio-"))
-                    .count();
-        }
+        var visitor = new SimpleFileVisitor<Path>() {
+            int fileCount = 0;
+
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                fileCount++;
+                return super.visitFile(file, attrs);
+            }
+        };
+        Files.walkFileTree(tempDir, visitor);
+        return visitor.fileCount;
     }
 
     private Stream<Arguments> acceptedFileExistsAndOpenOptions() {

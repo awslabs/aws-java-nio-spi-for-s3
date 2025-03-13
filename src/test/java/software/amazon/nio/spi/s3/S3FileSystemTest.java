@@ -6,20 +6,20 @@
 package software.amazon.nio.spi.s3;
 
 import static org.assertj.core.api.BDDAssertions.then;
+import static org.assertj.core.api.BDDAssertions.thenThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.lenient;
 import static software.amazon.nio.spi.s3.Constants.PATH_SEPARATOR;
-import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
 
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
-import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,7 +27,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 @ExtendWith(MockitoExtension.class)
 public class S3FileSystemTest {
@@ -43,8 +42,6 @@ public class S3FileSystemTest {
         provider = new S3FileSystemProvider();
         s3FileSystem = (S3FileSystem) provider.getFileSystem(s3Uri);
         s3FileSystem.clientProvider = new FixedS3ClientProvider(mockClient);
-        lenient().when(mockClient.headObject(anyConsumer())).thenReturn(
-                CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
     }
 
     @AfterEach
@@ -122,6 +119,41 @@ public class S3FileSystemTest {
     public void getPathMatcher() {
         assertEquals(FileSystems.getDefault().getPathMatcher("glob:*.*").getClass(),
                 s3FileSystem.getPathMatcher("glob:*.*").getClass());
+    }
+
+    @Test
+    void createTempFile() throws IOException {
+        var temporaryDirectory = s3FileSystemTemporaryDirectory();
+
+        thenThrownBy(() -> s3FileSystem.createTempFile(S3Path.getPath(s3FileSystem, "/dir/")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("path must be a file");
+        thenThrownBy(() -> s3FileSystem.createTempFile(S3Path.getPath(s3FileSystem, "/dir1/dir2/dir3/")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("path must be a file");
+
+        var key1 = "file1";
+        var tempFile1 = s3FileSystem.createTempFile(S3Path.getPath(s3FileSystem, key1));
+        then(tempFile1).exists().isEqualTo(temporaryDirectory.resolve(key1));
+
+        var key2 = "/file2";
+        var tempFile2 = s3FileSystem.createTempFile(S3Path.getPath(s3FileSystem, key2));
+        then(tempFile2).exists().isEqualTo(temporaryDirectory.resolve(key2.substring(1)));
+
+        var key3 = "/dir1/dir2/file3";
+        var tempFile3 = s3FileSystem.createTempFile(S3Path.getPath(s3FileSystem, key3));
+        then(tempFile3).exists().isEqualTo(temporaryDirectory.resolve(key3.substring(1)));
+
+        var key4 = "dir1/dir2/file4";
+        var tempFile4 = s3FileSystem.createTempFile(S3Path.getPath(s3FileSystem, key4));
+        then(tempFile4).exists().isEqualTo(temporaryDirectory.resolve(key4));
+    }
+
+    private Path s3FileSystemTemporaryDirectory() throws IOException {
+        var tempFile0 = s3FileSystem.createTempFile(S3Path.getPath(s3FileSystem, "file0"));
+        var temporaryDirectory = tempFile0.getParent();
+        Files.delete(tempFile0);
+        return temporaryDirectory;
     }
 
     @Test
