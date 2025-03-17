@@ -11,11 +11,13 @@ import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import software.amazon.awssdk.core.FileTransformerConfiguration;
+import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
-import software.amazon.awssdk.transfer.s3.model.DownloadFileRequest;
 import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
 final class S3TransferUtil {
@@ -31,23 +33,23 @@ final class S3TransferUtil {
         this.integrityCheck = integrityCheck;
     }
 
-    void downloadToLocalFile(S3Path path, Path destination) throws InterruptedException, ExecutionException, TimeoutException {
-        try (var s3TransferManager = S3TransferManager.builder().s3Client(client).build()) {
-            var downloadCompletableFuture = s3TransferManager.downloadFile(
-                DownloadFileRequest.builder()
-                    .getObjectRequest(GetObjectRequest.builder()
-                        .bucket(path.bucketName())
-                        .key(path.getKey())
-                        .build())
-                    .destination(destination)
-                    .build()
-            ).completionFuture();
+    void downloadToLocalFile(S3Path path, Path destination, S3OpenOption... options)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        var getObjectRequest = GetObjectRequest.builder()
+            .bucket(path.bucketName())
+            .key(path.getKey());
+        for (var option : options) {
+            option.apply(getObjectRequest);
+        }
+        var transformerConfig = FileTransformerConfiguration.defaultCreateOrReplaceExisting();
+        var responseTransformer = AsyncResponseTransformer.<GetObjectResponse>toFile(destination, transformerConfig);
+        var downloadCompletableFuture = client.getObject(getObjectRequest.build(), responseTransformer)
+            .toCompletableFuture();
 
-            if (timeout != null && timeUnit != null) {
-                downloadCompletableFuture.get(timeout, timeUnit);
-            } else {
-                downloadCompletableFuture.join();
-            }
+        if (timeout != null && timeUnit != null) {
+            downloadCompletableFuture.get(timeout, timeUnit);
+        } else {
+            downloadCompletableFuture.join();
         }
     }
 

@@ -34,6 +34,7 @@ import static java.nio.file.StandardOpenOption.CREATE_NEW;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.Collections.emptySet;
+import static java.util.concurrent.CompletableFuture.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -41,12 +42,47 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@SuppressWarnings("unchecked")
 class S3WritableByteChannelTest {
+
+    @Test
+    @DisplayName("when file exists and constructor is invoked with an S3 specific open option")
+    void whenFileExistsAndS3OpenOptionIsApplied() throws Exception {
+        var provider = mock(S3FileSystemProvider.class);
+        var fs = mock(S3FileSystem.class);
+        when(fs.provider()).thenReturn(provider);
+        when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
+        var file = S3Path.getPath(fs, "somefile");
+        var client = mock(S3AsyncClient.class);
+        when(client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class)))
+            .thenReturn(completedFuture(GetObjectResponse.builder().build()));
+        when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+            .thenReturn(completedFuture(PutObjectResponse.builder().build()));
+        var transferManager = new S3TransferUtil(client, null, null, DisabledFileIntegrityCheck.INSTANCE);
+
+        var option1 =  mock(S3OpenOption.class);
+        var option2 =  mock(S3OpenOption.class);
+        try (var channel = new S3WritableByteChannel(file, client, transferManager, Set.of(CREATE, option1, option2))) {
+            assertThat(channel.position()).isZero();
+        }
+        verify(option1, times(1)).apply(any(GetObjectRequest.Builder.class));
+        verify(option2, times(1)).apply(any(GetObjectRequest.Builder.class));
+        verify(client, times(1)).getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class));
+        verify(client, times(1)).putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class));
+        verifyNoMoreInteractions(client);
+    }
 
     @Test
     @DisplayName("when file exists and constructor is invoked with option `CREATE_NEW` should throw FileAlreadyExistsException")
@@ -59,7 +95,8 @@ class S3WritableByteChannelTest {
         when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
 
         var file = S3Path.getPath(fs, "somefile");
-        assertThatThrownBy(() -> new S3WritableByteChannel(file, mock(), mock(), Set.of(CREATE_NEW)))
+        var client = mock(S3AsyncClient.class);
+        assertThatThrownBy(() -> new S3WritableByteChannel(file, client, mock(), Set.of(CREATE_NEW)))
                 .isInstanceOf(FileAlreadyExistsException.class);
     }
 

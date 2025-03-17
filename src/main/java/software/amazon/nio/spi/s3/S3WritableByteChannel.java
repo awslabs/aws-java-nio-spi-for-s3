@@ -15,12 +15,13 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -52,25 +53,8 @@ class S3WritableByteChannel implements SeekableByteChannel {
             }
 
             tempFile = path.getFileSystem().createTempFile(path);
-            // this complicated download handling is the result of
-            // avoiding an existence check with a head-object request
             if (!options.contains(StandardOpenOption.CREATE_NEW)) {
-                try {
-                    s3TransferUtil.downloadToLocalFile(path, tempFile);
-                } catch (CompletionException e) {
-                    var cause = e.getCause();
-                    if (!(cause instanceof S3Exception)) {
-                        throw e;
-                    }
-                    var s3e = (S3Exception) cause;
-                    if (s3e.statusCode() != 404) {
-                        throw e;
-                    }
-                    if (!options.contains(StandardOpenOption.CREATE)) {
-                        throw new NoSuchFileException("File at path " + path + " does not exist yet");
-                    }
-                    // gracefully handle the file creation
-                }
+                downloadToLocalFile(path, s3TransferUtil, options);
             }
 
             channel = Files.newByteChannel(this.tempFile, removeCreateNew(options));
@@ -83,10 +67,38 @@ class S3WritableByteChannel implements SeekableByteChannel {
         this.open = true;
     }
 
+    private void downloadToLocalFile(S3Path path, S3TransferUtil s3TransferUtil, Set<? extends OpenOption> options)
+            throws InterruptedException, ExecutionException, TimeoutException, NoSuchFileException {
+        // this complicated download handling is the result of
+        // avoiding an existence check with a head-object request
+        try {
+            var s3OpenOptions = options.stream()
+                .flatMap(o -> o instanceof S3OpenOption
+                    ? Stream.of((S3OpenOption) o)
+                    : Stream.empty())
+                .toArray(S3OpenOption[]::new);
+            s3TransferUtil.downloadToLocalFile(path, tempFile, s3OpenOptions);
+        } catch (CompletionException e) {
+            var cause = e.getCause();
+            if (!(cause instanceof S3Exception)) {
+                throw e;
+            }
+            var s3e = (S3Exception) cause;
+            if (s3e.statusCode() != 404) {
+                throw e;
+            }
+            if (!options.contains(StandardOpenOption.CREATE)) {
+                throw new NoSuchFileException("File at path " + path + " does not exist yet");
+            }
+            // gracefully handle the file creation
+        }
+    }
+
     private @NonNull Set<? extends OpenOption> removeCreateNew(Set<? extends OpenOption> options) {
-        var auxOptions = new HashSet<>(options);
-        auxOptions.remove(StandardOpenOption.CREATE_NEW);
-        return Set.copyOf(auxOptions);
+        return options.stream()
+            .filter(o -> o != StandardOpenOption.CREATE_NEW)
+            .filter(o -> !(o instanceof S3OpenOption))
+            .collect(Collectors.toSet());
     }
 
     @Override
