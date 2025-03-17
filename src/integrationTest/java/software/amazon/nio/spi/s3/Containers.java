@@ -11,6 +11,13 @@ import org.testcontainers.utility.DockerImageName;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -27,6 +34,32 @@ abstract class Containers {
         ).withServices(S3);
         LOCAL_STACK_CONTAINER.start();
         System.setProperty(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, "http");
+    }
+
+    static Instant lastLogEntryTime = Instant.now();
+    static List<String> getLoggedS3HttpRequests() {
+        var logs = Containers.LOCAL_STACK_CONTAINER.getLogs();
+        var pattern = Pattern.compile("(?<time>[^ ]+) .*AWS s3.(?<operationName>\\w+) => (?<responseStatus>\\d+)");
+        var times = new ArrayList<Instant>();
+        times.add(lastLogEntryTime);
+        var filteredLogEntries = Arrays.stream(logs.split("\n"))
+            .flatMap(line -> {
+                var m = pattern.matcher(line);
+                if (!m.find()) {
+                    return Stream.empty();
+                }
+                var time = Instant.parse(m.group("time") + "Z");
+                times.add(time);
+                if (!lastLogEntryTime.isBefore(time)) {
+                    return Stream.empty();
+                }
+                String operationName = m.group("operationName");
+                String responseStatus = m.group("responseStatus");
+                return Stream.of(operationName + " => " + responseStatus);
+            })
+            .collect(Collectors.toList());
+        lastLogEntryTime = times.get(times.size() - 1);
+        return filteredLogEntries;
     }
 
     public static void createBucket(String name) {

@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -102,10 +103,10 @@ public class S3SeekableByteChannelTest {
 
     @Test
     public void write() throws IOException {
-        var exception = S3Exception.builder().statusCode(404).build();
-        when(mockClient.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenThrow(exception);
-        when(mockClient.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class))).thenReturn(CompletableFuture.supplyAsync(() ->
-                PutObjectResponse.builder().build()));
+        when(mockClient.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class)))
+            .thenThrow(new CompletionException(S3Exception.builder().statusCode(404).build()));
+        when(mockClient.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+            .thenReturn(CompletableFuture.completedFuture(PutObjectResponse.builder().build()));
         try(var channel = new S3SeekableByteChannel(path, mockClient, Set.<OpenOption>of(CREATE, WRITE), DisabledFileIntegrityCheck.INSTANCE)){
             assertEquals(0L, channel.size());
             channel.write(ByteBuffer.allocate(12));
