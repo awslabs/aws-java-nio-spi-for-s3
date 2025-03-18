@@ -109,9 +109,12 @@ class S3WritableByteChannelTest {
         when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
         var file = S3Path.getPath(fs, "somefile");
         var s3Client = mock(S3AsyncClient.class);
-        var transferManager = mock(S3TransferUtil.class);
+        var transferManager = new S3TransferUtil(s3Client, null, null, DisabledFileIntegrityCheck.INSTANCE);
         var exception = new CompletionException(S3Exception.builder().statusCode(404).build());
-        doThrow(exception).when(transferManager).downloadToLocalFile(any(S3Path.class), any(Path.class));
+        when(s3Client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class)))
+            .thenThrow(exception);
+        when(s3Client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+            .thenReturn(completedFuture(PutObjectResponse.builder().build()));
 
         try (var channel = new S3WritableByteChannel(file, s3Client, transferManager, Set.of(CREATE))) {
             assertThat(channel.position()).isZero();
@@ -127,9 +130,9 @@ class S3WritableByteChannelTest {
         when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
         var file = S3Path.getPath(fs, "somefile");
         var s3Client = mock(S3AsyncClient.class);
-        var transferManager = mock(S3TransferUtil.class);
+        var transferManager = new S3TransferUtil(s3Client, null, null, DisabledFileIntegrityCheck.INSTANCE);
         var exception = new CompletionException(S3Exception.builder().statusCode(404).build());
-        doThrow(exception).when(transferManager).downloadToLocalFile(any(S3Path.class), any(Path.class));
+        doThrow(exception).when(s3Client).getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class));
 
         assertThatThrownBy(() -> new S3WritableByteChannel(file, s3Client, transferManager, emptySet()))
             .isInstanceOf(NoSuchFileException.class);
@@ -144,12 +147,14 @@ class S3WritableByteChannelTest {
         when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
         var file = S3Path.getPath(fs, "somefile");
         var s3Client = mock(S3AsyncClient.class);
-        var transferManager = mock(S3TransferUtil.class);
+        var transferManager = new S3TransferUtil(s3Client, null, null, DisabledFileIntegrityCheck.INSTANCE);
         var exception = new CompletionException(S3Exception.builder().statusCode(400).message("Invalid Request").build());
-        doThrow(exception).when(transferManager).downloadToLocalFile(any(S3Path.class), any(Path.class));
+        doThrow(exception).when(s3Client).getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class));
 
         assertThatThrownBy(() -> new S3WritableByteChannel(file, s3Client, transferManager, emptySet()))
-            .isEqualTo(exception);
+            .isInstanceOf(IOException.class)
+            .hasMessage("Could not read from path: somefile")
+            .hasCause(exception);
     }
 
     @Test
@@ -161,12 +166,14 @@ class S3WritableByteChannelTest {
         when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
         var file = S3Path.getPath(fs, "somefile");
         var s3Client = mock(S3AsyncClient.class);
-        var transferManager = mock(S3TransferUtil.class);
+        var transferManager = new S3TransferUtil(s3Client, null, null, DisabledFileIntegrityCheck.INSTANCE);
         var exception = new CompletionException(new RuntimeException("unknown error"));
-        doThrow(exception).when(transferManager).downloadToLocalFile(any(S3Path.class), any(Path.class));
+        doThrow(exception).when(s3Client).getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class));
 
         assertThatThrownBy(() -> new S3WritableByteChannel(file, s3Client, transferManager, emptySet()))
-            .isEqualTo(exception);
+            .isInstanceOf(IOException.class)
+            .hasMessage("Could not read from path: somefile")
+            .hasCause(exception);
     }
 
     @Test
