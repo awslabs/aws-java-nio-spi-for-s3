@@ -5,6 +5,7 @@
 
 package software.amazon.nio.spi.s3;
 
+import static java.util.concurrent.CompletableFuture.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -13,6 +14,7 @@ import static org.mockito.Mockito.when;
 import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
 
 import java.io.IOException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.attribute.FileTime;
 import java.nio.file.spi.FileSystemProvider;
 import java.time.Duration;
@@ -32,6 +34,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
@@ -207,6 +210,24 @@ public class S3BasicFileAttributesTest {
                     Arguments.of(Named.of("lastAccessTime", lastAccessTimeGetter))
             );
         }
+    }
+
+    @Test
+    @DisplayName("When a 404 status code is returned, a NoSuchFileException should be thrown")
+    void copyThrowsNoSuchFileException() {
+        var provider = mock(FileSystemProvider.class);
+        var fs = mock(S3FileSystem.class);
+        when(fs.provider()).thenReturn(provider);
+        when(fs.getConfiguration()).thenReturn(new S3NioSpiConfiguration());
+
+        var client = mock(S3AsyncClient.class);
+        when(fs.client()).thenReturn(client);
+        var exception = S3Exception.builder().statusCode(404).build();
+        when(client.headObject(anyConsumer())).thenReturn(failedFuture(exception));
+
+        assertThatThrownBy(() -> S3BasicFileAttributes.get(S3Path.getPath(fs, "somefile"), Duration.ofMillis(1)))
+            .isInstanceOf(NoSuchFileException.class)
+            .hasMessage("somefile");
     }
 
     @Test
