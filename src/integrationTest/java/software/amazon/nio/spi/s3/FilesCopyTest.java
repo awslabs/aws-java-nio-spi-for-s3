@@ -10,11 +10,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static software.amazon.nio.spi.s3.Containers.putObject;
+import static org.assertj.core.api.Assertions.*;
+import static software.amazon.nio.spi.s3.Containers.*;
 
 @DisplayName("Files$copy should load file contents from localstack")
 public class FilesCopyTest {
@@ -31,5 +34,17 @@ public class FilesCopyTest {
         var copiedFile = Files.copy(path, tempDir.resolve("sample-file-local.txt"));
 
         assertThat(copiedFile).hasContent("some content");
+    }
+
+    @Test
+    @DisplayName("when copying a non-existent file a NoSuchFileException is thrown")
+    void fileCopyShouldThrowNoSuchFileException() throws IOException {
+        Containers.createBucket("some-bucket");
+
+        var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/some-bucket/non-existent-file.txt"));
+
+        assertThatThrownBy(() -> Files.copy(path, tempDir.resolve("target.txt")))
+            .isInstanceOf(NoSuchFileException.class)
+            .hasMessage(path.toString());
     }
 }

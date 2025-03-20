@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.time.Duration;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 /**
  * Representation of {@link BasicFileAttributes} for an S3 object
@@ -243,6 +245,13 @@ class S3BasicFileAttributes implements BasicFileAttributes {
                     "that was not handled successfully by the S3Client's configured RetryConditions",
                 e.getCause().toString(), path.toUri());
             logger.error(errMsg);
+            var cause = e.getCause();
+            if (cause instanceof S3Exception) {
+                var s3e = (S3Exception) cause;
+                if (s3e.statusCode() == 404) {
+                    throw new NoSuchFileException(path.toString());
+                }
+            }
             throw new IOException(errMsg, e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
