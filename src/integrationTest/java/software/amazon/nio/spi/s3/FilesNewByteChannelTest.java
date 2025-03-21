@@ -77,6 +77,41 @@ public class FilesNewByteChannelTest {
     }
 
     @Test
+    @DisplayName("newByteChannel with If-Match header fails")
+    void newByteChannel_READ_WRITE_preventConcurrentOverwrite_withConcurrency() throws IOException {
+        var path = putObject(bucketName, "bc-read-write-test.txt", "abc");
+
+        var channel1 = Files.newByteChannel(path, READ, WRITE, S3OpenOption.preventConcurrentOverwrite());
+        channel1.write(ByteBuffer.wrap("def".getBytes()));
+
+        try (var channel2 = Files.newByteChannel(path, READ, WRITE, S3OpenOption.preventConcurrentOverwrite())) {
+            channel2.write(ByteBuffer.wrap("ghi".getBytes()));
+        }
+
+        assertThatThrownBy(() -> channel1.close())
+            .isInstanceOf(IOException.class)
+            .hasMessage("PutObject => 412; " + path + "; At least one of the pre-conditions you specified did not hold");
+
+        assertThat(path).hasContent("ghi");
+    }
+
+    @Test
+    @DisplayName("newByteChannel with If-Match header succeeds")
+    void newByteChannel_READ_WRITE_preventConcurrentOverwrite_withoutConcurrency() throws IOException {
+        var path = putObject(bucketName, "bc-read-write-test.txt", "abc");
+
+        var preventConcurrentOverwrite = S3OpenOption.preventConcurrentOverwrite();
+        try (var channel = Files.newByteChannel(path, READ, WRITE, preventConcurrentOverwrite)) {
+
+            // write
+            channel.position(0);
+            channel.write(ByteBuffer.wrap("def".getBytes()));
+        }
+
+        assertThat(path).hasContent("def");
+    }
+
+    @Test
     @DisplayName("newByteChannel with RANGE header to avoid HEAD request")
     public void newByteChannel_useRangeHeader_avoidHeadRequest() throws IOException {
         String content = "xyz";

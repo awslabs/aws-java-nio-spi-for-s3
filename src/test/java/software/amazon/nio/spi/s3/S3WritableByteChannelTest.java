@@ -286,7 +286,7 @@ class S3WritableByteChannelTest {
         // this close() call should be a no-op
         channel.close();
 
-        verify(utilMock, times(1)).uploadLocalFile(any(), any());
+        verify(utilMock, times(1)).uploadLocalFile(any(), any(), any());
     }
 
     private long countTemporaryFiles(Path tempDir) throws IOException {
