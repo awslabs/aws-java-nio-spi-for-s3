@@ -53,7 +53,9 @@ class S3TransferUtilTest {
         var option2 = mock(S3OpenOption.class);
         assertThatCode(() -> util.downloadToLocalFile(file, tmpFile, Set.of(option1, option2))).doesNotThrowAnyException();
         verify(option1, times(1)).apply(any(GetObjectRequest.Builder.class));
+        verify(option1, times(1)).consume(any(GetObjectResponse.class));
         verify(option2, times(1)).apply(any(GetObjectRequest.Builder.class));
+        verify(option2, times(1)).consume(any(GetObjectResponse.class));
     }
 
     @Test
@@ -192,6 +194,28 @@ class S3TransferUtilTest {
     }
 
     @Test
+    @DisplayName("upload should succeed (with open options)")
+    void uploadFileCompletesSuccessfully_withOpenOption() throws IOException {
+        var file = mock(S3Path.class);
+        when(file.bucketName()).thenReturn("a");
+        when(file.getKey()).thenReturn("a");
+
+        var client = mock(S3AsyncClient.class);
+        when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+            .thenReturn(completedFuture(PutObjectResponse.builder().build()));
+
+        var util = new S3TransferUtil(client, null, null, DisabledFileIntegrityCheck.INSTANCE);
+        var tmpFile = Files.createTempFile(null, null);
+        var option1 = mock(S3OpenOption.class);
+        var option2 = mock(S3OpenOption.class);
+        assertThatCode(() -> util.uploadLocalFile(file, tmpFile, Set.of(option1, option2))).doesNotThrowAnyException();
+        verify(option1, times(1)).apply(any(PutObjectRequest.Builder.class));
+        verify(option1, times(1)).consume(any(PutObjectResponse.class));
+        verify(option2, times(1)).apply(any(PutObjectRequest.Builder.class));
+        verify(option2, times(1)).consume(any(PutObjectResponse.class));
+    }
+
+    @Test
     @DisplayName("upload should succeed (without timeout spec)")
     void uploadFileCompletesSuccessfully_withoutTimeout() throws IOException {
         S3Path file = mock();
@@ -203,7 +227,7 @@ class S3TransferUtilTest {
 
         var util = new S3TransferUtil(client, null, null, DisabledFileIntegrityCheck.INSTANCE);
         var tmpFile = Files.createTempFile(null, null);
-        assertThatCode(() -> util.uploadLocalFile(file, tmpFile)).doesNotThrowAnyException();
+        assertThatCode(() -> util.uploadLocalFile(file, tmpFile, Set.of())).doesNotThrowAnyException();
     }
 
     @Test
@@ -218,7 +242,7 @@ class S3TransferUtilTest {
 
         var util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES, DisabledFileIntegrityCheck.INSTANCE);
         var tmpFile = Files.createTempFile(null, null);
-        assertThatCode(() -> util.uploadLocalFile(file, tmpFile)).doesNotThrowAnyException();
+        assertThatCode(() -> util.uploadLocalFile(file, tmpFile, Set.of())).doesNotThrowAnyException();
     }
 
     @Test
@@ -235,9 +259,9 @@ class S3TransferUtilTest {
 
         var util = new S3TransferUtil(client, 1L, TimeUnit.SECONDS, DisabledFileIntegrityCheck.INSTANCE);
         var tmpFile = Files.createTempFile(null, null);
-        assertThatCode(() -> util.uploadLocalFile(file, tmpFile))
+        assertThatCode(() -> util.uploadLocalFile(file, tmpFile, Set.of()))
             .isInstanceOf(IOException.class)
-            .hasMessage("Could not write to path: somefile")
+            .hasMessage("PutObject => 400; somefile; ")
             .hasCause(exception);
     }
 
@@ -255,7 +279,7 @@ class S3TransferUtilTest {
 
         var util = new S3TransferUtil(client, 1L, TimeUnit.SECONDS, DisabledFileIntegrityCheck.INSTANCE);
         var tmpFile = Files.createTempFile(null, null);
-        assertThatCode(() -> util.uploadLocalFile(file, tmpFile))
+        assertThatCode(() -> util.uploadLocalFile(file, tmpFile, Set.of()))
             .isInstanceOf(IOException.class)
             .hasMessage("Could not write to path: somefile")
             .hasCause(exception);
@@ -276,7 +300,7 @@ class S3TransferUtilTest {
 
         var util = new S3TransferUtil(client, 1L, TimeUnit.MILLISECONDS, DisabledFileIntegrityCheck.INSTANCE);
         var tmpFile = Files.createTempFile(null, null);
-        assertThatThrownBy(() -> util.uploadLocalFile(file, tmpFile))
+        assertThatThrownBy(() -> util.uploadLocalFile(file, tmpFile, Set.of()))
             .isInstanceOf(IOException.class)
             .hasCauseInstanceOf(TimeoutException.class);
     }

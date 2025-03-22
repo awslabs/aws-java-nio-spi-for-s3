@@ -24,6 +24,7 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 final class S3TransferUtil {
@@ -56,10 +57,14 @@ final class S3TransferUtil {
             var responseTransformer = AsyncResponseTransformer.<GetObjectResponse>toFile(destination, transformerConfig);
             var downloadCompletableFuture = client.getObject(getObjectRequest.build(), responseTransformer);
 
+            GetObjectResponse getObjectResponse;
             if (timeout != null && timeUnit != null) {
-                downloadCompletableFuture.get(timeout, timeUnit);
+                getObjectResponse = downloadCompletableFuture.get(timeout, timeUnit);
             } else {
-                downloadCompletableFuture.join();
+                getObjectResponse = downloadCompletableFuture.join();
+            }
+            for (var option : s3OpenOptions) {
+                option.consume(getObjectResponse);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -84,19 +89,31 @@ final class S3TransferUtil {
         }
     }
 
-    void uploadLocalFile(S3Path path, Path localFile) throws IOException {
+    void uploadLocalFile(S3Path path, Path localFile, Set<? extends OpenOption> options) throws IOException {
+        var s3OpenOptions = options.stream()
+            .flatMap(o -> o instanceof S3OpenOption
+                ? Stream.of((S3OpenOption) o)
+                : Stream.empty())
+            .toArray(S3OpenOption[]::new);
         try {
             var putObjectRequest = PutObjectRequest.builder()
                 .bucket(path.bucketName())
                 .key(path.getKey())
                 .contentType(Files.probeContentType(localFile));
             integrityCheck.addChecksumToRequest(localFile, putObjectRequest);
+            for (var option : s3OpenOptions) {
+                option.apply(putObjectRequest);
+            }
             var uploadCompletableFuture = client.putObject(putObjectRequest.build(), AsyncRequestBody.fromFile(localFile));
 
+            PutObjectResponse putObjectResponse;
             if (timeout != null && timeUnit != null) {
-                uploadCompletableFuture.get(timeout, timeUnit);
+                putObjectResponse = uploadCompletableFuture.get(timeout, timeUnit);
             } else {
-                uploadCompletableFuture.join();
+                putObjectResponse = uploadCompletableFuture.join();
+            }
+            for (var option : s3OpenOptions) {
+                option.consume(putObjectResponse);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -104,7 +121,14 @@ final class S3TransferUtil {
         } catch (TimeoutException | ExecutionException e) {
             throw new IOException("Could not write to path: " + path, e);
         } catch (CompletionException e) {
-            throw new IOException("Could not write to path: " + path, e);
+            var cause = e.getCause();
+            if (!(cause instanceof S3Exception)) {
+                throw new IOException("Could not write to path: " + path, e);
+            }
+            var s3e = (S3Exception) cause;
+            var code = s3e.statusCode();
+            var message = s3e.awsErrorDetails() == null ? "" : s3e.awsErrorDetails().errorMessage();
+            throw new IOException("PutObject => " + code + "; " + path + "; " + message, e);
         }
     }
 }

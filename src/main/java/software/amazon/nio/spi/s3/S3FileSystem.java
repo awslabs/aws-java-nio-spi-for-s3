@@ -522,13 +522,20 @@ public class S3FileSystem extends FileSystem {
         if (path.isDirectory()) {
             throw new IllegalArgumentException("path must be a file");
         }
+        String filename = path.getFileName().toString();
         if (path.getNameCount() == 1) {
-            Path newPath = temporaryDirectory.resolve(path.getFileName().toString());
+            Path newPath = temporaryDirectory.resolve(filename);
+            newPath = Files.exists(newPath)
+                ? temporaryDirectory.resolve(filename + "-" + System.nanoTime())
+                : newPath;
             return Files.createFile(newPath);
         }
         Path parent = temporaryDirectory.resolve(path.getParent().toString());
         Files.createDirectories(parent);
-        Path newPath = parent.resolve(path.getFileName().toString());
+        Path newPath = parent.resolve(filename);
+        newPath = Files.exists(newPath)
+            ? parent.resolve(filename + "-" + System.nanoTime())
+            : newPath;
         return Files.createFile(newPath);
     }
 
