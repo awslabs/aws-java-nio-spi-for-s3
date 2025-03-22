@@ -8,6 +8,7 @@ package software.amazon.nio.spi.s3;
 import software.amazon.awssdk.annotations.NotThreadSafe;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 /**
  * Sets an HTTP <code>If-Match</code> header for the {@link PutObjectRequest} with the previously read ETag from the
@@ -35,5 +36,10 @@ class S3PreventConcurrentOverwrite extends S3OpenOption {
     @Override
     protected void consume(GetObjectResponse getObjectResponse) {
         eTag = getObjectResponse.eTag();
+    }
+
+    @Override
+    protected void consume(PutObjectResponse putObjectResponse) {
+        eTag = putObjectResponse.eTag();
     }
 }
