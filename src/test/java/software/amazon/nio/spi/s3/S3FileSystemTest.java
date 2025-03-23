@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import java.util.Collections;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -83,8 +84,10 @@ public class S3FileSystemTest {
     public void getAndSetClientProvider() {
         final var P1 = new S3ClientProvider(null);
         final var P2 = new S3ClientProvider(null);
-        s3FileSystem.clientProvider(P1); then(s3FileSystem.clientProvider()).isSameAs(P1);
-        s3FileSystem.clientProvider(P2); then(s3FileSystem.clientProvider()).isSameAs(P2);
+        s3FileSystem.clientProvider(P1);
+        then(s3FileSystem.clientProvider()).isSameAs(P1);
+        s3FileSystem.clientProvider(P2);
+        then(s3FileSystem.clientProvider()).isSameAs(P2);
     }
 
     @Test
@@ -147,6 +150,28 @@ public class S3FileSystemTest {
         var key4 = "dir1/dir2/file4";
         var tempFile4 = s3FileSystem.createTempFile(S3Path.getPath(s3FileSystem, key4));
         then(tempFile4).exists().isEqualTo(temporaryDirectory.resolve(key4));
+    }
+
+    @DisplayName("An S3 object can be opened with multiple channels, so we need to enable multiple temporary files.")
+    @Test
+    void createTempFile_alreadyExists() throws IOException {
+        var temporaryDirectory = s3FileSystemTemporaryDirectory();
+
+        var key = "somefile";
+        var path = S3Path.getPath(s3FileSystem, key);
+        then(s3FileSystem.createTempFile(path))
+            .exists()
+            .isRegularFile()
+            .isEqualTo(temporaryDirectory.resolve(key));
+
+        var tempFile = s3FileSystem.createTempFile(path);
+        then(tempFile)
+            .exists()
+            .isRegularFile()
+            .isNotEqualTo(temporaryDirectory.resolve(key));
+        then(tempFile.toString())
+            .startsWith(temporaryDirectory.resolve(key).toString())
+            .containsPattern("\\-\\d+$");
     }
 
     private Path s3FileSystemTemporaryDirectory() throws IOException {

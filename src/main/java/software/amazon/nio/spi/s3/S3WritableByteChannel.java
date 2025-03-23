@@ -26,6 +26,7 @@ class S3WritableByteChannel implements SeekableByteChannel {
     private final Path tempFile;
     private final SeekableByteChannel channel;
     private final S3TransferUtil s3TransferUtil;
+    private final Set<? extends OpenOption> options;
 
     private boolean open;
 
@@ -39,6 +40,7 @@ class S3WritableByteChannel implements SeekableByteChannel {
         Objects.requireNonNull(client);
         this.s3TransferUtil = s3TransferUtil;
         this.path = path;
+        this.options = options;
 
         try {
             var fileSystemProvider = (S3FileSystemProvider) path.getFileSystem().provider();
@@ -87,7 +89,7 @@ class S3WritableByteChannel implements SeekableByteChannel {
             return;
         }
 
-        s3TransferUtil.uploadLocalFile(path, tempFile);
+        s3TransferUtil.uploadLocalFile(path, tempFile, options);
         Files.deleteIfExists(tempFile);
 
         open = false;
@@ -102,7 +104,7 @@ class S3WritableByteChannel implements SeekableByteChannel {
         if (!open) {
             throw new ClosedChannelException();
         }
-        s3TransferUtil.uploadLocalFile(path, tempFile);
+        s3TransferUtil.uploadLocalFile(path, tempFile, options);
     }
 
     @Override

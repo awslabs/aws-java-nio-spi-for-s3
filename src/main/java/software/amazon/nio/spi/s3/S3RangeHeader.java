@@ -10,7 +10,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 /**
  * Sets a HTTP <code>Range</code> header for a {@link GetObjectRequest}.
  */
-class S3RangeHeader implements S3OpenOption {
+class S3RangeHeader extends S3OpenOption {
     private final String range;
 
     S3RangeHeader(int start, int end) {
