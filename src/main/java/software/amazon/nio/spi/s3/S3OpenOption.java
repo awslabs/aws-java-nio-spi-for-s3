@@ -18,7 +18,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 public abstract class S3OpenOption implements OpenOption {
 
     /**
-     * Sets an HTTP <code>If-Match</code> header for the {@link PutObjectRequest} with the previously read ETag from the
+     * Sets an HTTP <code>If-Match</code> header for the {@link PutObjectRequest} with a previously read ETag from the
      * {@link GetObjectResponse}.
      *
      * <p>
@@ -36,14 +36,14 @@ public abstract class S3OpenOption implements OpenOption {
     }
 
     /**
-     * Sets a HTTP <code>Range</code> header for a {@link GetObjectRequest}, e.g. <code>Range: bytes=0-100</code>.
+     * Sets an HTTP <code>Range</code> header for a {@link GetObjectRequest}, e.g. <code>Range: bytes=0-100</code>.
      */
     public static S3OpenOption range(int end) {
         return new S3RangeHeader(0, end);
     }
 
     /**
-     * Sets a HTTP <code>Range</code> header for a {@link GetObjectRequest}, e.g. <code>Range: bytes=50-100</code>.
+     * Sets an HTTP <code>Range</code> header for a {@link GetObjectRequest}, e.g. <code>Range: bytes=50-100</code>.
      */
     public static S3OpenOption range(int start, int end) {
         return new S3RangeHeader(start, end);

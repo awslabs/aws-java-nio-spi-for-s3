@@ -11,7 +11,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 /**
- * Sets an HTTP <code>If-Match</code> header for the {@link PutObjectRequest} with the previously read ETag from the
+ * Sets an HTTP <code>If-Match</code> header for the {@link PutObjectRequest} with a previously read ETag from the
  * {@link GetObjectResponse}.
  *
  * <p>
