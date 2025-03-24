@@ -17,6 +17,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.FileTransformerConfiguration;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
@@ -25,7 +26,6 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
-import software.amazon.awssdk.services.s3.model.S3Exception;
 
 final class S3TransferUtil {
     private final S3ObjectIntegrityCheck integrityCheck;
@@ -75,12 +75,12 @@ final class S3TransferUtil {
             // This complicated download handling is the result of omitting an existence check
             // with a head object request, instead we look for a 404 status code if available.
             var cause = e.getCause();
-            if (!(cause instanceof S3Exception)) {
+            if (!(cause instanceof AwsServiceException)) {
                 throw new IOException("Could not read from path: " + path, e);
             }
-            var s3e = (S3Exception) cause;
+            var s3e = (AwsServiceException) cause;
             if (s3e.statusCode() != 404) {
-                throw new IOException("Could not read from path: " + path, e);
+                throw new S3TransferException("GetObject", path, s3e);
             }
             if (!options.contains(StandardOpenOption.CREATE)) {
                 throw new NoSuchFileException(path.toString());
@@ -122,13 +122,11 @@ final class S3TransferUtil {
             throw new IOException("Could not write to path: " + path, e);
         } catch (CompletionException e) {
             var cause = e.getCause();
-            if (!(cause instanceof S3Exception)) {
+            if (!(cause instanceof AwsServiceException)) {
                 throw new IOException("Could not write to path: " + path, e);
             }
-            var s3e = (S3Exception) cause;
-            var code = s3e.statusCode();
-            var message = s3e.awsErrorDetails() == null ? "" : s3e.awsErrorDetails().errorMessage();
-            throw new IOException("PutObject => " + code + "; " + path + "; " + message, e);
+            var s3e = (AwsServiceException) cause;
+            throw new S3TransferException("PutObject", path, s3e);
         }
     }
 }

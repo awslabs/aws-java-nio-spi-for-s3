@@ -152,9 +152,9 @@ class S3WritableByteChannelTest {
         doThrow(exception).when(s3Client).getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class));
 
         assertThatThrownBy(() -> new S3WritableByteChannel(file, s3Client, transferManager, emptySet()))
-            .isInstanceOf(IOException.class)
-            .hasMessage("Could not read from path: somefile")
-            .hasCause(exception);
+            .isInstanceOf(S3TransferException.class)
+            .hasMessage("GetObject => 400; somefile")
+            .hasCause(exception.getCause());
     }
 
     @Test
