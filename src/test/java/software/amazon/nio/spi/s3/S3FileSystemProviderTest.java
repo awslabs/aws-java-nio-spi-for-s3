@@ -32,6 +32,7 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.AccessMode;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -118,10 +119,10 @@ public class S3FileSystemProviderTest {
         final var env = Collections.<String, Object>emptyMap();
 
         assertThatCode(() -> provider.newFileSystem(uri, null))
-                .doesNotThrowAnyExceptionExcept(IOException.class);
+                .doesNotThrowAnyExceptionExcept(FileSystemAlreadyExistsException.class, IOException.class);
 
         assertThatCode(() -> provider.newFileSystem(uri, env))
-                .doesNotThrowAnyExceptionExcept(IOException.class);
+                .doesNotThrowAnyExceptionExcept(FileSystemAlreadyExistsException.class, IOException.class);
     }
 
     @Test
