@@ -483,6 +483,9 @@ public class S3FileChannel extends FileChannel {
      */
     @Override
     public int write(ByteBuffer src, long position) throws IOException {
+        if (position < 0) {
+            throw new IllegalArgumentException("position is negative");
+        }
         synchronized (byteChannel) {
             var originalPosition = byteChannel.position();
             byteChannel.position(position);
