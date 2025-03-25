@@ -328,7 +328,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         final var s3Path = checkPath(path);
         final var fs = s3Path.getFileSystem();
-        final var channel = new S3SeekableByteChannel(s3Path, fs.client(), options, fs.integrityCheck());
+        final var channel = new S3SeekableByteChannel(s3Path, fs.client(), fs.appendConfiguredOpenOptions(options));
 
         fs.registerOpenChannel(channel);
 
@@ -837,7 +837,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         S3Path p = (S3Path) path;
         S3FileSystem fs = p.getFileSystem();
-        S3SeekableByteChannel s3SeekableByteChannel = new S3SeekableByteChannel(p, fs.client(), options, fs.integrityCheck());
+        Set<? extends OpenOption> withConfiguredOptions = fs.appendConfiguredOpenOptions(options);
+        S3SeekableByteChannel s3SeekableByteChannel = new S3SeekableByteChannel(p, fs.client(), withConfiguredOptions);
         return new S3FileChannel(s3SeekableByteChannel);
     }
 
@@ -864,7 +865,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
                                                               FileAttribute<?>... attrs) throws IOException {
         S3FileSystem fs = (S3FileSystem) getFileSystem(path.toUri());
         S3AsyncClient s3Client = fs.client();
-        var byteChannel = new S3SeekableByteChannel((S3Path) path, s3Client, options, fs.integrityCheck());
+        var byteChannel = new S3SeekableByteChannel((S3Path) path, s3Client, fs.appendConfiguredOpenOptions(options));
         return new AsyncS3FileChannel(byteChannel);
     }
 

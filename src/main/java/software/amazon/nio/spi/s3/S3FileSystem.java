@@ -18,6 +18,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.WatchService;
@@ -26,6 +27,7 @@ import java.nio.file.spi.FileSystemProvider;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -146,22 +148,33 @@ public class S3FileSystem extends FileSystem {
     }
 
     /**
+     * Creates a new set of {@link OpenOption}s that contain file system wide configured options.
+     *
+     * @return integrity check implementation
+     */
+    Set<? extends OpenOption> appendConfiguredOpenOptions(Set<? extends OpenOption> options) {
+        var newOptions = new HashSet<OpenOption>(options);
+        integrityCheck().ifPresent(newOptions::add);
+        return newOptions;
+    }
+
+    /**
      * Returns the implementation for creating a checksum to check the integrity of an object uploaded to S3.
      *
      * @return integrity check implementation
      */
-    S3ObjectIntegrityCheck integrityCheck() {
+    Optional<S3ObjectIntegrityCheck> integrityCheck() {
         var algorithm = configuration.getIntegrityCheckAlgorithm();
         if (algorithm.equalsIgnoreCase("CRC32")) {
-            return new Crc32FileIntegrityCheck();
+            return Optional.of(new Crc32FileIntegrityCheck());
         }
         if (algorithm.equalsIgnoreCase("CRC32C")) {
-            return new Crc32cFileIntegrityCheck();
+            return Optional.of(new Crc32cFileIntegrityCheck());
         }
         if (algorithm.equalsIgnoreCase("CRC64NVME")) {
-            return new Crc64nvmeFileIntegrityCheck();
+            return Optional.of(new Crc64nvmeFileIntegrityCheck());
         }
-        return DisabledFileIntegrityCheck.INSTANCE;
+        return Optional.empty();
     }
 
     /**
