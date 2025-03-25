@@ -6,6 +6,9 @@
 package software.amazon.nio.spi.s3;
 
 import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.util.Set;
+import java.util.stream.Collectors;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -16,6 +19,19 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
  * {@link GetObjectRequest}.
  */
 public abstract class S3OpenOption implements OpenOption {
+
+    /**
+     * Removes all {@link S3OpenOption}s from the given set.
+     *
+     * @param options
+     *            options that may contain {@link S3OpenOption}s
+     * @return new set of filtered options
+     */
+    static Set<? extends OpenOption> exclude(Set<? extends OpenOption> options) {
+        return options.stream()
+            .filter(o -> !(o instanceof S3OpenOption))
+            .collect(Collectors.toSet());
+    }
 
     /**
      * Sets an HTTP <code>If-Match</code> header for the {@link PutObjectRequest} with a previously read ETag from the
@@ -35,6 +51,40 @@ public abstract class S3OpenOption implements OpenOption {
      */
     public static S3OpenOption preventConcurrentOverwrite() {
         return new S3PreventConcurrentOverwrite();
+    }
+
+    /**
+     * This open options prevents the {@link PutObjectRequest} when the content of the local temporary file has not
+     * changed.
+     *
+     * <p>
+     * This is meant to be used while opening a {@code FileChannel} or {@code SeekableByteChannel}. When opening the
+     * channel, a checksum is calculated for the downloaded file and stored. When closing the channel (or while calling
+     * <code>FileChannel.force</code>) a checksum is calculated again and compared to the previously stored one. If the
+     * checksum matches, no {@link PutObjectRequest} is performed.
+     *
+     * @param checksumAlgorithm
+     *            the algorithm to calculate a checksum
+     * @return new instance
+     */
+    public static S3OpenOption putOnlyIfModified(S3ObjectIntegrityCheck checksumAlgorithm) {
+        return new S3PutOnlyIfModified(checksumAlgorithm);
+    }
+
+    /**
+     * This open options prevents the {@link PutObjectRequest} when the content of the local temporary file has not
+     * changed.
+     *
+     * <p>
+     * This is meant to be used while opening a {@code FileChannel} or {@code SeekableByteChannel}. When opening the
+     * channel, a checksum is calculated for the downloaded file and stored. When closing the channel (or while calling
+     * <code>FileChannel.force</code>) a checksum is calculated again and compared to the previously stored one. If the
+     * checksum matches, no {@link PutObjectRequest} is performed.
+     *
+     * @return new instance
+     */
+    public static S3OpenOption putOnlyIfModified() {
+        return new S3PutOnlyIfModified(new Crc32FileIntegrityCheck());
     }
 
     /**
@@ -75,8 +125,10 @@ public abstract class S3OpenOption implements OpenOption {
      *
      * @param putObjectRequest
      *            put object request
+     * @param file
+     *            file in which the content is saved locally
      */
-    protected void apply(PutObjectRequest.Builder putObjectRequest) {
+    protected void apply(PutObjectRequest.Builder putObjectRequest, Path file) {
     }
 
     /**
@@ -84,8 +136,10 @@ public abstract class S3OpenOption implements OpenOption {
      *
      * @param getObjectResponse
      *            get object response
+     * @param file
+     *            file in which the content is saved locally
      */
-    protected void consume(GetObjectResponse getObjectResponse) {
+    protected void consume(GetObjectResponse getObjectResponse, Path file) {
     }
 
     /**
@@ -93,7 +147,20 @@ public abstract class S3OpenOption implements OpenOption {
      *
      * @param putObjectResponse
      *            put object response
+     * @param file
+     *            file in which the content is saved locally
      */
-    protected void consume(PutObjectResponse putObjectResponse) {
+    protected void consume(PutObjectResponse putObjectResponse, Path file) {
+    }
+
+    /**
+     * Whether the {@link PutObjectRequest} should not be made.
+     *
+     * @param file
+     *            file in which the content is saved locally
+     * @return <code>true</code> if the upload should not be performed
+     */
+    protected boolean preventPutObjectRequest(Path file) {
+        return false;
     }
 }

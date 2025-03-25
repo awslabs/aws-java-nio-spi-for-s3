@@ -70,7 +70,7 @@ class S3WritableByteChannelTest {
             .thenReturn(completedFuture(GetObjectResponse.builder().build()));
         when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
             .thenReturn(completedFuture(PutObjectResponse.builder().build()));
-        var transferManager = new S3TransferUtil(client, null, null, DisabledFileIntegrityCheck.INSTANCE);
+        var transferManager = new S3TransferUtil(client, null, null);
 
         var option1 =  mock(S3OpenOption.class);
         var option2 =  mock(S3OpenOption.class);
@@ -109,7 +109,7 @@ class S3WritableByteChannelTest {
         when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
         var file = S3Path.getPath(fs, "somefile");
         var s3Client = mock(S3AsyncClient.class);
-        var transferManager = new S3TransferUtil(s3Client, null, null, DisabledFileIntegrityCheck.INSTANCE);
+        var transferManager = new S3TransferUtil(s3Client, null, null);
         var exception = new CompletionException(S3Exception.builder().statusCode(404).build());
         when(s3Client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class)))
             .thenThrow(exception);
@@ -130,7 +130,7 @@ class S3WritableByteChannelTest {
         when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
         var file = S3Path.getPath(fs, "somefile");
         var s3Client = mock(S3AsyncClient.class);
-        var transferManager = new S3TransferUtil(s3Client, null, null, DisabledFileIntegrityCheck.INSTANCE);
+        var transferManager = new S3TransferUtil(s3Client, null, null);
         var exception = new CompletionException(S3Exception.builder().statusCode(404).build());
         doThrow(exception).when(s3Client).getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class));
 
@@ -147,7 +147,7 @@ class S3WritableByteChannelTest {
         when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
         var file = S3Path.getPath(fs, "somefile");
         var s3Client = mock(S3AsyncClient.class);
-        var transferManager = new S3TransferUtil(s3Client, null, null, DisabledFileIntegrityCheck.INSTANCE);
+        var transferManager = new S3TransferUtil(s3Client, null, null);
         var exception = new CompletionException(S3Exception.builder().statusCode(400).message("Invalid Request").build());
         doThrow(exception).when(s3Client).getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class));
 
@@ -166,7 +166,7 @@ class S3WritableByteChannelTest {
         when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
         var file = S3Path.getPath(fs, "somefile");
         var s3Client = mock(S3AsyncClient.class);
-        var transferManager = new S3TransferUtil(s3Client, null, null, DisabledFileIntegrityCheck.INSTANCE);
+        var transferManager = new S3TransferUtil(s3Client, null, null);
         var exception = new CompletionException(new RuntimeException("unknown error"));
         doThrow(exception).when(s3Client).getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class));
 

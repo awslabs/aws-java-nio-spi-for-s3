@@ -49,6 +49,86 @@ public class FilesNewByteChannelTest {
     }
 
     @Test
+    @DisplayName("newByteChannel with If-Match header fails")
+    void newByteChannel_preventConcurrentOverwrite_withConcurrency() throws IOException {
+        var path = putObject(bucketName, "bc-read-write-test.txt", "abc");
+
+        var channel1 = Files.newByteChannel(path, READ, WRITE, S3OpenOption.preventConcurrentOverwrite());
+        channel1.write(ByteBuffer.wrap("def".getBytes()));
+
+        try (var channel2 = Files.newByteChannel(path, READ, WRITE, S3OpenOption.preventConcurrentOverwrite())) {
+            channel2.write(ByteBuffer.wrap("ghi".getBytes()));
+        }
+
+        assertThatThrownBy(() -> channel1.close())
+            .isInstanceOf(IOException.class)
+            .hasMessage("PutObject => 412; " + path + "; At least one of the pre-conditions you specified did not hold");
+
+        assertThat(path).hasContent("ghi");
+    }
+
+    @Test
+    @DisplayName("newByteChannel with If-Match header succeeds")
+    void newByteChannel_preventConcurrentOverwrite_withoutConcurrency() throws IOException {
+        var path = putObject(bucketName, "bc-read-write-test.txt", "abc");
+
+        var preventConcurrentOverwrite = S3OpenOption.preventConcurrentOverwrite();
+        try (var channel = Files.newByteChannel(path, READ, WRITE, preventConcurrentOverwrite)) {
+
+            // write
+            channel.position(0);
+            channel.write(ByteBuffer.wrap("def".getBytes()));
+        }
+
+        assertThat(path).hasContent("def");
+    }
+
+    @Test
+    @DisplayName("newByteChannel with `PutOnlyIfModified` option and no write operation is performed")
+    public void newByteChannel_putOnlyIfModified_noWrite() throws IOException {
+        String content = "abc";
+        var path = putObject(bucketName, "bc-putOnlyIfModified-test.txt", content);
+        assertThat(Containers.getLoggedS3HttpRequests()).containsExactly("PutObject => 200");
+
+        try (var channel = Files.newByteChannel(path, READ, WRITE, S3OpenOption.putOnlyIfModified())) {
+            assertThat(Containers.getLoggedS3HttpRequests()).containsExactly("HeadObject => 200", "GetObject => 206");
+
+            channel.write(ByteBuffer.wrap(content.getBytes()));
+        }
+        assertThat(Containers.getLoggedS3HttpRequests()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("newByteChannel with `PutOnlyIfModified` option and file contents have changed")
+    public void newByteChannel_putOnlyIfModified_writeWithChange() throws IOException {
+        String content = "abc";
+        var path = putObject(bucketName, "bc-putOnlyIfModified-test.txt", content);
+        assertThat(Containers.getLoggedS3HttpRequests()).containsExactly("PutObject => 200");
+
+        try (var channel = Files.newByteChannel(path, READ, WRITE, S3OpenOption.putOnlyIfModified())) {
+            assertThat(Containers.getLoggedS3HttpRequests()).containsExactly("HeadObject => 200", "GetObject => 206");
+
+            channel.write(ByteBuffer.wrap("def".getBytes()));
+        }
+        assertThat(Containers.getLoggedS3HttpRequests()).containsExactly("PutObject => 200");
+    }
+
+    @Test
+    @DisplayName("newByteChannel with `PutOnlyIfModified` option and no file contents have changed")
+    public void newByteChannel_putOnlyIfModified_writeWithoutChange() throws IOException {
+        String content = "abc";
+        var path = putObject(bucketName, "bc-putOnlyIfModified-test.txt", content);
+        assertThat(Containers.getLoggedS3HttpRequests()).containsExactly("PutObject => 200");
+
+        try (var channel = Files.newByteChannel(path, READ, WRITE, S3OpenOption.putOnlyIfModified())) {
+            assertThat(Containers.getLoggedS3HttpRequests()).containsExactly("HeadObject => 200", "GetObject => 206");
+
+            channel.write(ByteBuffer.wrap(content.getBytes()));
+        }
+        assertThat(Containers.getLoggedS3HttpRequests()).isEmpty();
+    }
+
+    @Test
     @DisplayName("newByteChannel with READ and WRITE is supported")
     public void newByteChannel_READ_WRITE() throws IOException {
         var path = putObject(bucketName, "bc-read-write-test.txt", "xyz");
@@ -74,41 +154,6 @@ public class FilesNewByteChannelTest {
         }
 
         assertThat(path).hasContent(text);
-    }
-
-    @Test
-    @DisplayName("newByteChannel with If-Match header fails")
-    void newByteChannel_READ_WRITE_preventConcurrentOverwrite_withConcurrency() throws IOException {
-        var path = putObject(bucketName, "bc-read-write-test.txt", "abc");
-
-        var channel1 = Files.newByteChannel(path, READ, WRITE, S3OpenOption.preventConcurrentOverwrite());
-        channel1.write(ByteBuffer.wrap("def".getBytes()));
-
-        try (var channel2 = Files.newByteChannel(path, READ, WRITE, S3OpenOption.preventConcurrentOverwrite())) {
-            channel2.write(ByteBuffer.wrap("ghi".getBytes()));
-        }
-
-        assertThatThrownBy(() -> channel1.close())
-            .isInstanceOf(IOException.class)
-            .hasMessage("PutObject => 412; " + path + "; At least one of the pre-conditions you specified did not hold");
-
-        assertThat(path).hasContent("ghi");
-    }
-
-    @Test
-    @DisplayName("newByteChannel with If-Match header succeeds")
-    void newByteChannel_READ_WRITE_preventConcurrentOverwrite_withoutConcurrency() throws IOException {
-        var path = putObject(bucketName, "bc-read-write-test.txt", "abc");
-
-        var preventConcurrentOverwrite = S3OpenOption.preventConcurrentOverwrite();
-        try (var channel = Files.newByteChannel(path, READ, WRITE, preventConcurrentOverwrite)) {
-
-            // write
-            channel.position(0);
-            channel.write(ByteBuffer.wrap("def".getBytes()));
-        }
-
-        assertThat(path).hasContent("def");
     }
 
     @Test

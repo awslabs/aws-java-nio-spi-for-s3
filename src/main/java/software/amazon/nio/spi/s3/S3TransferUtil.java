@@ -28,16 +28,14 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 final class S3TransferUtil {
-    private final S3ObjectIntegrityCheck integrityCheck;
     private final S3AsyncClient client;
     private final Long timeout;
     private final TimeUnit timeUnit;
 
-    S3TransferUtil(S3AsyncClient client, Long timeout, TimeUnit timeUnit, S3ObjectIntegrityCheck integrityCheck) {
+    S3TransferUtil(S3AsyncClient client, Long timeout, TimeUnit timeUnit) {
         this.client = client;
         this.timeout = timeout;
         this.timeUnit = timeUnit;
-        this.integrityCheck = integrityCheck;
     }
 
     void downloadToLocalFile(S3Path path, Path destination, Set<? extends OpenOption> options) throws IOException {
@@ -64,7 +62,7 @@ final class S3TransferUtil {
                 getObjectResponse = downloadCompletableFuture.join();
             }
             for (var option : s3OpenOptions) {
-                option.consume(getObjectResponse);
+                option.consume(getObjectResponse, destination);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -95,14 +93,18 @@ final class S3TransferUtil {
                 ? Stream.of((S3OpenOption) o)
                 : Stream.empty())
             .toArray(S3OpenOption[]::new);
+        for (var option : s3OpenOptions) {
+            if (option.preventPutObjectRequest(localFile)) {
+                return;
+            }
+        }
         try {
             var putObjectRequest = PutObjectRequest.builder()
                 .bucket(path.bucketName())
                 .key(path.getKey())
                 .contentType(Files.probeContentType(localFile));
-            integrityCheck.addChecksumToRequest(localFile, putObjectRequest);
             for (var option : s3OpenOptions) {
-                option.apply(putObjectRequest);
+                option.apply(putObjectRequest, localFile);
             }
             var uploadCompletableFuture = client.putObject(putObjectRequest.build(), AsyncRequestBody.fromFile(localFile));
 
@@ -113,7 +115,7 @@ final class S3TransferUtil {
                 putObjectResponse = uploadCompletableFuture.join();
             }
             for (var option : s3OpenOptions) {
-                option.consume(putObjectResponse);
+                option.consume(putObjectResponse, localFile);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
