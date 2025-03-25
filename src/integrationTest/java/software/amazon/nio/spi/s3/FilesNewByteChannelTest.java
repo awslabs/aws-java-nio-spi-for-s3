@@ -132,7 +132,7 @@ public class FilesNewByteChannelTest {
     @Test
     @DisplayName("newByteChannel with RANGE header to partially fetch object")
     public void newByteChannel_useRangeHeader_partiallyGet() throws IOException {
-        String content = "abcdef";
+        String content = "abcdefghi";
         var path = putObject(bucketName, "bc-range-test.txt", content);
         assertThat(Containers.getLoggedS3HttpRequests()).containsExactly("PutObject => 200");
 

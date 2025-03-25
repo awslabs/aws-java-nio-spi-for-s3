@@ -30,6 +30,8 @@ public abstract class S3OpenOption implements OpenOption {
      * <p>
      * If multiple conditional writes occur for the same object name, the first write operation to finish succeeds.
      * Amazon S3 then fails subsequent writes with a <code>412 Precondition Failed</code> response.
+     *
+     * @return new instance
      */
     public static S3OpenOption preventConcurrentOverwrite() {
         return new S3PreventConcurrentOverwrite();
@@ -37,6 +39,10 @@ public abstract class S3OpenOption implements OpenOption {
 
     /**
      * Sets an HTTP <code>Range</code> header for a {@link GetObjectRequest}, e.g. <code>Range: bytes=0-100</code>.
+     *
+     * @param end
+     *            exclusive end
+     * @return new instance
      */
     public static S3OpenOption range(int end) {
         return new S3RangeHeader(0, end);
@@ -44,6 +50,12 @@ public abstract class S3OpenOption implements OpenOption {
 
     /**
      * Sets an HTTP <code>Range</code> header for a {@link GetObjectRequest}, e.g. <code>Range: bytes=50-100</code>.
+     *
+     * @param start
+     *            first position (offset)
+     * @param end
+     *            last position (exclusive)
+     * @return new instance
      */
     public static S3OpenOption range(int start, int end) {
         return new S3RangeHeader(start, end);
