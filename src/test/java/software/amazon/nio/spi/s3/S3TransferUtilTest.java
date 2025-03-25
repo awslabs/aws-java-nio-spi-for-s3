@@ -117,9 +117,9 @@ class S3TransferUtilTest {
         var util = new S3TransferUtil(client, null, null, DisabledFileIntegrityCheck.INSTANCE);
         var tmpFile = Files.createTempFile(null, null);
         assertThatCode(() -> util.downloadToLocalFile(file, tmpFile, Set.of()))
-            .isInstanceOf(IOException.class)
-            .hasMessage("Could not read from path: somefile")
-            .hasCause(exception);
+            .isInstanceOf(S3TransferException.class)
+            .hasMessage("GetObject => 400; somefile")
+            .hasCause(exception.getCause());
     }
 
     @Test
@@ -260,9 +260,9 @@ class S3TransferUtilTest {
         var util = new S3TransferUtil(client, 1L, TimeUnit.SECONDS, DisabledFileIntegrityCheck.INSTANCE);
         var tmpFile = Files.createTempFile(null, null);
         assertThatCode(() -> util.uploadLocalFile(file, tmpFile, Set.of()))
-            .isInstanceOf(IOException.class)
-            .hasMessage("PutObject => 400; somefile; ")
-            .hasCause(exception);
+            .isInstanceOf(S3TransferException.class)
+            .hasMessage("PutObject => 400; somefile")
+            .hasCause(exception.getCause());
     }
 
     @Test
