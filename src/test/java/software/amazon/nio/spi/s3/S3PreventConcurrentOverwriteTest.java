@@ -5,46 +5,79 @@
 
 package software.amazon.nio.spi.s3;
 
-import static org.mockito.Mockito.*;
-
 import org.junit.jupiter.api.Test;
-
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
+import static org.mockito.Mockito.*;
+
 class S3PreventConcurrentOverwriteTest {
 
     @Test
-    void test_consume_GetObjectResponse() {
-        var preventConcurrentOverwrite = new S3PreventConcurrentOverwrite();
+    void apply_PutObjectRequest_SetsIfMatchHeader() {
+        // Given
+        S3PreventConcurrentOverwrite option = new S3PreventConcurrentOverwrite();
+        GetObjectResponse getResponse = GetObjectResponse.builder().eTag("test-etag").build();
+        option.consume(getResponse);
 
-        var eTag = "some.etag";
-        var getObjectResponse = mock(GetObjectResponse.class);
-        when(getObjectResponse.eTag()).thenReturn(eTag);
-        preventConcurrentOverwrite.consume(getObjectResponse);
-        verify(getObjectResponse, times(1)).eTag();
+        PutObjectRequest.Builder putBuilder = mock(PutObjectRequest.Builder.class);
+        when(putBuilder.ifMatch(anyString())).thenReturn(putBuilder);
 
-        var putObjectRequest = mock(PutObjectRequest.Builder.class);
-        preventConcurrentOverwrite.apply(putObjectRequest);
-        verify(putObjectRequest, times(1)).ifMatch(eTag);
+        // When
+        option.apply(putBuilder);
 
+        // Then
+        verify(putBuilder).ifMatch("test-etag");
     }
 
     @Test
-    void test_consume_PutObjectResponse() {
-        var preventConcurrentOverwrite = new S3PreventConcurrentOverwrite();
-
-        var eTag = "some-etag";
-        var putObjectResponse = mock(PutObjectResponse.class);
-        when(putObjectResponse.eTag()).thenReturn(eTag);
-        preventConcurrentOverwrite.consume(putObjectResponse);
-        verify(putObjectResponse, times(1)).eTag();
-
-        var putObjectRequest = mock(PutObjectRequest.Builder.class);
-        preventConcurrentOverwrite.apply(putObjectRequest);
-        verify(putObjectRequest, times(1)).ifMatch(eTag);
-
+    void consume_GetObjectResponse_StoresETag() {
+        // Given
+        S3PreventConcurrentOverwrite option = new S3PreventConcurrentOverwrite();
+        GetObjectResponse getResponse = GetObjectResponse.builder().eTag("test-etag").build();
+        
+        // When
+        option.consume(getResponse);
+        
+        // Then
+        PutObjectRequest.Builder putBuilder = mock(PutObjectRequest.Builder.class);
+        when(putBuilder.ifMatch(anyString())).thenReturn(putBuilder);
+        option.apply(putBuilder);
+        verify(putBuilder).ifMatch("test-etag");
     }
 
+    @Test
+    void consume_PutObjectResponse_StoresETag() {
+        // Given
+        S3PreventConcurrentOverwrite option = new S3PreventConcurrentOverwrite();
+        PutObjectResponse putResponse = PutObjectResponse.builder().eTag("new-etag").build();
+        
+        // When
+        option.consume(putResponse);
+        
+        // Then
+        PutObjectRequest.Builder putBuilder = mock(PutObjectRequest.Builder.class);
+        when(putBuilder.ifMatch(anyString())).thenReturn(putBuilder);
+        option.apply(putBuilder);
+        verify(putBuilder).ifMatch("new-etag");
+    }
+
+    @Test
+    void consume_UpdatesETagWhenCalledMultipleTimes() {
+        // Given
+        S3PreventConcurrentOverwrite option = new S3PreventConcurrentOverwrite();
+        GetObjectResponse getResponse = GetObjectResponse.builder().eTag("first-etag").build();
+        PutObjectResponse putResponse = PutObjectResponse.builder().eTag("second-etag").build();
+        
+        // When
+        option.consume(getResponse);
+        option.consume(putResponse);
+        
+        // Then
+        PutObjectRequest.Builder putBuilder = mock(PutObjectRequest.Builder.class);
+        when(putBuilder.ifMatch(anyString())).thenReturn(putBuilder);
+        option.apply(putBuilder);
+        verify(putBuilder).ifMatch("second-etag");
+    }
 }

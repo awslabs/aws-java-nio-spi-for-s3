@@ -15,10 +15,10 @@ class S3RangeHeader extends S3OpenOption {
 
     S3RangeHeader(int start, int end) {
         if (start < 0) {
-            throw new IllegalArgumentException("start must be nonnegative");
+            throw new IllegalArgumentException("start must be non-negative");
         }
         if (end < 0) {
-            throw new IllegalArgumentException("end must be nonnegative");
+            throw new IllegalArgumentException("end must be non-negative");
         }
         range = "bytes=" + start + "-" + end;
     }

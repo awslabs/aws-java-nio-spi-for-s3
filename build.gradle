@@ -181,3 +181,40 @@ checkstyle {
     toolVersion = '10.12.5'
     configDirectory.set(new File(projectDir, ".checkstyle"))
 }
+
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            element = 'CLASS'
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+            excludes = [
+                // Add any exclusion patterns here if needed
+                // 'com.example.excluded.**'
+
+                // temporary exclusions until I can improve coverage
+                    'software.amazon.nio.spi.s3.S3ReadAheadByteChannel',
+                    'software.amazon.nio.spi.s3.S3SeekableByteChannel',
+                    'software.amazon.nio.spi.s3.S3FileSystem',
+                    'software.amazon.nio.spi.s3.S3DirectoryStream',
+                    'software.amazon.nio.spi.s3.S3WritableByteChannel',
+                    'software.amazon.nio.spi.s3.S3FileSystemProvider',
+                    'software.amazon.nio.spi.s3.S3FileSystemProvider'
+            ]
+        }
+    }
+}
+
+// Make the check task depend on coverage verification
+check.dependsOn jacocoTestCoverageVerification
+
+// Ensure test coverage verification runs after tests
+jacocoTestCoverageVerification.dependsOn jacocoTestReport
