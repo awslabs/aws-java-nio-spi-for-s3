@@ -70,7 +70,7 @@ public class S3TransferException extends IOException {
 
     private static String message(String method, Path path, AwsServiceException cause) {
         String errorMessage = errorMessage(cause);
-        errorMessage = errorMessage.isEmpty() ? "" : "; " + errorMessage;
+        errorMessage = errorMessage == null || errorMessage.isEmpty() ? "" : "; " + errorMessage;
         return method + " => " + cause.statusCode() + "; " + path + errorMessage;
     }
 

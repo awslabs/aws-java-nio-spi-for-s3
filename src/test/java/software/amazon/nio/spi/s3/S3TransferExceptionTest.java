@@ -58,4 +58,29 @@ class S3TransferExceptionTest {
         assertThat(exception.requestId()).isNull();
         assertThat(exception.statusCode()).isEqualTo(0);
     }
+
+    @Test
+    void test_nullMessage() {
+        var fs = mock(S3FileSystem.class);
+        var provider = mock(FileSystemProvider.class);
+        when(fs.provider()).thenReturn(provider);
+        when(provider.getScheme()).thenReturn("s3");
+        var path = S3Path.getPath(fs, "somefile");
+        var cause = S3Exception.builder()
+            .awsErrorDetails(AwsErrorDetails.builder()
+                .errorCode("NullMessage")
+                .errorMessage(null)
+                .build())
+            .numAttempts(1)
+            .requestId("some-request")
+            .statusCode(400)
+            .build();
+        var exception = new S3TransferException("HeadObject", path, cause);
+        assertThat(exception).hasMessage("HeadObject => 400; somefile");
+        assertThat(exception.errorCode()).isEqualTo("NullMessage");
+        assertThat(exception.errorMessage()).isNull();
+        assertThat(exception.numAttempts()).isEqualTo(1);
+        assertThat(exception.requestId()).isEqualTo("some-request");
+        assertThat(exception.statusCode()).isEqualTo(400);
+    }
 }
