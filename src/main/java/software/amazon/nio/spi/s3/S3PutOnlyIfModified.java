@@ -41,6 +41,11 @@ class S3PutOnlyIfModified extends S3OpenOption {
     }
 
     @Override
+    public S3OpenOption newInstance() {
+        return new S3PutOnlyIfModified(algorithm);
+    }
+
+    @Override
     protected boolean preventPutObjectRequest(Path file) {
         return checksum == algorithm.calculateChecksum(file);
     }

@@ -39,6 +39,36 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 class S3TransferUtilTest {
 
     @Test
+    @DisplayName("download should succeed (with S3TransferManager but without timeout)")
+    void downloadFileCompletesSuccessfully_useTransferManager_withoutTimeout() throws IOException {
+        var file = mock(S3Path.class);
+
+        var client = mock(S3AsyncClient.class);
+        var responseFuture = completedFuture(GetObjectResponse.builder().build());
+        when(client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenReturn(responseFuture);
+
+        var util = new S3TransferUtil(client, null, null);
+        var tmpFile = Files.createTempFile(null, null);
+        var option = S3OpenOption.useTransferManager();
+        assertThatCode(() -> util.downloadToLocalFile(file, tmpFile, Set.of(option))).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("download should succeed (with S3TransferManager and timeout)")
+    void downloadFileCompletesSuccessfully_useTransferManager_withTimeout() throws IOException {
+        var file = mock(S3Path.class);
+
+        var client = mock(S3AsyncClient.class);
+        var responseFuture = completedFuture(GetObjectResponse.builder().build());
+        when(client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenReturn(responseFuture);
+
+        var util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES);
+        var tmpFile = Files.createTempFile(null, null);
+        var option = S3OpenOption.useTransferManager();
+        assertThatCode(() -> util.downloadToLocalFile(file, tmpFile, Set.of(option))).doesNotThrowAnyException();
+    }
+
+    @Test
     @DisplayName("download should succeed (with open options)")
     void downloadFileCompletesSuccessfully_withOpenOption() throws IOException {
         var file = mock(S3Path.class);
@@ -191,6 +221,40 @@ class S3TransferUtilTest {
             .isInstanceOf(IOException.class)
             .hasMessage("Could not read from path: somefile")
             .hasCause(exception);
+    }
+
+    @Test
+    @DisplayName("upload should succeed (with S3TransferManager but without timeout)")
+    void uploadFileCompletesSuccessfully_useTransferManager_withoutTimeout() throws IOException {
+        var file = mock(S3Path.class);
+        when(file.bucketName()).thenReturn("a");
+        when(file.getKey()).thenReturn("a");
+
+        var client = mock(S3AsyncClient.class);
+        when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+            .thenReturn(completedFuture(PutObjectResponse.builder().build()));
+
+        var util = new S3TransferUtil(client, null, null);
+        var tmpFile = Files.createTempFile(null, null);
+        var option = S3OpenOption.useTransferManager();
+        assertThatCode(() -> util.uploadLocalFile(file, tmpFile, Set.of(option))).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("upload should succeed (with S3TransferManager and timeout)")
+    void uploadFileCompletesSuccessfully_useTransferManager_withTimeout() throws IOException {
+        var file = mock(S3Path.class);
+        when(file.bucketName()).thenReturn("a");
+        when(file.getKey()).thenReturn("a");
+
+        var client = mock(S3AsyncClient.class);
+        when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+            .thenReturn(completedFuture(PutObjectResponse.builder().build()));
+
+        var util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES);
+        var tmpFile = Files.createTempFile(null, null);
+        var option = S3OpenOption.useTransferManager();
+        assertThatCode(() -> util.uploadLocalFile(file, tmpFile, Set.of(option))).doesNotThrowAnyException();
     }
 
     @Test

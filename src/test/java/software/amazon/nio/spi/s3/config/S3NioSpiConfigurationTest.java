@@ -10,6 +10,7 @@ import static com.github.stefanbirkner.systemlambda.SystemLambda.withEnvironment
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.BDDAssertions.entry;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.nio.spi.s3.S3OpenOption;
 
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.*;
 
@@ -309,6 +311,29 @@ public class S3NioSpiConfigurationTest {
             .execute(() -> then(new S3NioSpiConfiguration().getIntegrityCheckAlgorithm()).isEqualTo("CRC64NVME"));
 
         then(new S3NioSpiConfiguration(Map.of(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, "CRC32")).getIntegrityCheckAlgorithm()).isEqualTo("CRC32");
+    }
+
+    @Test
+    public void withAndGetOpenOptions() {
+        // by default `useTransferManager` is set
+        then(config).contains(entry(S3_OPEN_OPTIONS_PROPERTY, Set.of(S3OpenOption.useTransferManager())));
+        then(config.getOpenOptions()).containsExactly(S3OpenOption.useTransferManager());
+
+        // clear all default open options
+        then(config.withOpenOptions(Set.of())).isSameAs(config);
+        then(config).contains(entry(S3_OPEN_OPTIONS_PROPERTY, Set.of()));
+        then(config.getOpenOptions()).isEmpty();
+
+        // set `preventConcurrentOverwrite`
+        var option1 = S3OpenOption.preventConcurrentOverwrite();
+        var option2 = S3OpenOption.putOnlyIfModified();
+        var newOptions = Set.of(option1, option2);
+        then(config.withOpenOptions(newOptions)).isSameAs(config);
+        then(config.getOpenOptions()).hasSize(2);
+        config.getOpenOptions().forEach(o -> {
+            then(o).isInstanceOfAny(option1.getClass(), option2.getClass());
+            then(o).isNotInstanceOf(S3OpenOption.useTransferManager().getClass());
+        });
     }
 
 }
