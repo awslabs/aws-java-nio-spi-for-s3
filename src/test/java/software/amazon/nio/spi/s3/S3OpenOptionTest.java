@@ -13,8 +13,11 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.BDDAssertions.*;
 import static org.mockito.Mockito.*;
 
 class S3OpenOptionTest {
@@ -85,6 +88,32 @@ class S3OpenOptionTest {
     }
 
     @Test
+    void retainAll() {
+        // When
+        var option1 = StandardOpenOption.CREATE;
+        var option2 = S3OpenOption.preventConcurrentOverwrite();
+        var option3 = StandardOpenOption.WRITE;
+        var option4 = S3OpenOption.putOnlyIfModified();
+        var options = Set.of(option1, option2, option3, option4);
+
+        // Then
+        then(S3OpenOption.retainAll(options)).containsExactlyInAnyOrder(option2, option4);
+    }
+
+    @Test
+    void removeAll() {
+        // When
+        var option1 = StandardOpenOption.CREATE;
+        var option2 = S3OpenOption.preventConcurrentOverwrite();
+        var option3 = StandardOpenOption.WRITE;
+        var option4 = S3OpenOption.putOnlyIfModified();
+        var options = Set.of(option1, option2, option3, option4);
+
+        // Then
+        then(S3OpenOption.removeAll(options)).containsExactlyInAnyOrder(option1, option3);
+    }
+
+    @Test
     void apply_GetObjectRequest_DoesNotModifyByDefault() {
         // Given
         S3OpenOption option = new TestS3OpenOption();
@@ -144,6 +173,11 @@ class S3OpenOptionTest {
 
     // Test implementation of S3OpenOption
     private static class TestS3OpenOption extends S3OpenOption {
-        // Empty implementation for testing default behaviors
+        // implementation for testing default behaviors
+
+        @Override
+        public S3OpenOption copy() {
+            throw new UnsupportedOperationException();
+        }
     }
 }

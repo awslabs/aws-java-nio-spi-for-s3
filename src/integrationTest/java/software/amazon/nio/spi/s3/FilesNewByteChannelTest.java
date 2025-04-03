@@ -192,6 +192,25 @@ public class FilesNewByteChannelTest {
     }
 
     @Test
+    @DisplayName("newByteChannel with S3TransferManager")
+    public void newByteChannel_useTransferManager() throws IOException {
+        String content = "abcdefghi";
+        var path = putObject(bucketName, "bc-use-tm-test.txt", content);
+        assertThat(Containers.getLoggedS3HttpRequests()).containsExactly("PutObject => 200");
+
+        try (var channel = Files.newByteChannel(path, READ, WRITE, S3OpenOption.useTransferManager())) {
+            assertThat(Containers.getLoggedS3HttpRequests()).containsExactly("HeadObject => 200", "GetObject => 206");
+            ByteBuffer buffer = ByteBuffer.allocate(content.length());
+            channel.read(buffer);
+            assertThat(buffer.array()).isEqualTo(content.getBytes());
+
+            channel.write(ByteBuffer.wrap("jklm".getBytes()));
+        }
+        assertThat(Containers.getLoggedS3HttpRequests()).containsExactly("PutObject => 200");
+        assertThat(path).hasContent(content + "jklm");
+    }
+
+    @Test
     @DisplayName("newByteChannel with CRC32 integrity check")
     public void newByteChannel_withIntegrityCheck_CRC32() throws Exception {
         String text = "we test the integrity check when closing the byte channel";

@@ -155,6 +155,7 @@ public class S3FileSystem extends FileSystem {
     Set<? extends OpenOption> appendConfiguredOpenOptions(Set<? extends OpenOption> options) {
         var newOptions = new HashSet<OpenOption>(options);
         integrityCheck().ifPresent(newOptions::add);
+        configuration.getOpenOptions().forEach(newOptions::add);
         return newOptions;
     }
 

@@ -22,4 +22,9 @@ class Crc64nvmeFileIntegrityCheck extends S3ObjectIntegrityCheck {
         long checksum = calculateChecksum(file);
         putObjectRequest.checksumCRC64NVME(checksumToBase64String(checksum));
     }
+
+    @Override
+    public S3OpenOption copy() {
+        return new Crc64nvmeFileIntegrityCheck();
+    }
 }

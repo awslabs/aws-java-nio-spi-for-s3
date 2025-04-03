@@ -69,7 +69,7 @@ class S3SeekableByteChannel implements SeekableByteChannel {
             var transferUtil = new S3TransferUtil(s3Client, timeout, timeUnit);
             writeDelegate = new S3WritableByteChannel(s3Path, s3Client, transferUtil, options);
             position = 0L;
-        } else if (options.contains(StandardOpenOption.READ) || S3OpenOption.exclude(options).isEmpty()) {
+        } else if (options.contains(StandardOpenOption.READ) || S3OpenOption.removeAll(options).isEmpty()) {
             LOGGER.debug("using S3ReadAheadByteChannel as read delegate for path '{}'", s3Path.toUri());
             readDelegate =
                 new S3ReadAheadByteChannel(s3Path, config.getMaxFragmentSize(), config.getMaxFragmentNumber(), s3Client, this,

@@ -43,4 +43,9 @@ class S3PreventConcurrentOverwrite extends S3OpenOption {
     protected void consume(PutObjectResponse putObjectResponse, Path file) {
         eTag = putObjectResponse.eTag();
     }
+
+    @Override
+    public S3OpenOption copy() {
+        return new S3PreventConcurrentOverwrite();
+    }
 }

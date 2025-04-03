@@ -14,17 +14,26 @@ class S3RangeHeader extends S3OpenOption {
     private final String range;
 
     S3RangeHeader(int start, int end) {
+        this("bytes=" + start + "-" + end);
         if (start < 0) {
             throw new IllegalArgumentException("start must be non-negative");
         }
         if (end < 0) {
             throw new IllegalArgumentException("end must be non-negative");
         }
-        range = "bytes=" + start + "-" + end;
+    }
+
+    private S3RangeHeader(String range) {
+        this.range = range;
     }
 
     @Override
     public void apply(GetObjectRequest.Builder builder) {
         builder.range(range);
+    }
+
+    @Override
+    public S3OpenOption copy() {
+        return new S3RangeHeader(range);
     }
 }

@@ -22,4 +22,9 @@ class Crc32FileIntegrityCheck extends S3ObjectIntegrityCheck {
         int checksum = (int) calculateChecksum(file);
         putObjectRequest.checksumCRC32(checksumToBase64String(checksum));
     }
+
+    @Override
+    public S3OpenOption copy() {
+        return new Crc32FileIntegrityCheck();
+    }
 }

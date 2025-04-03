@@ -52,7 +52,7 @@ class S3WritableByteChannel implements SeekableByteChannel {
                 s3TransferUtil.downloadToLocalFile(path, tempFile, options);
             }
 
-            var localOptions = S3OpenOption.exclude(options);
+            var localOptions = S3OpenOption.removeAll(options);
             localOptions.remove(StandardOpenOption.CREATE_NEW);
             channel = Files.newByteChannel(this.tempFile, localOptions);
         } catch (InterruptedException e) {

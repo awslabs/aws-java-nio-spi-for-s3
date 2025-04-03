@@ -9,6 +9,7 @@ import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -19,19 +20,6 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
  * {@link GetObjectRequest}.
  */
 public abstract class S3OpenOption implements OpenOption {
-
-    /**
-     * Removes all {@link S3OpenOption}s from the given set.
-     *
-     * @param options
-     *            options that may contain {@link S3OpenOption}s
-     * @return new set of filtered options
-     */
-    static Set<? extends OpenOption> exclude(Set<? extends OpenOption> options) {
-        return options.stream()
-            .filter(o -> !(o instanceof S3OpenOption))
-            .collect(Collectors.toSet());
-    }
 
     /**
      * Sets an HTTP <code>If-Match</code> header for the {@link PutObjectRequest} with a previously read ETag from the
@@ -63,12 +51,10 @@ public abstract class S3OpenOption implements OpenOption {
      * <code>FileChannel.force</code>) a checksum is calculated again and compared to the previously stored one. If the
      * checksum matches, no {@link PutObjectRequest} is performed.
      *
-     * @param checksumAlgorithm
-     *            the algorithm to calculate a checksum
      * @return new instance
      */
-    public static S3OpenOption putOnlyIfModified(S3ObjectIntegrityCheck checksumAlgorithm) {
-        return new S3PutOnlyIfModified(checksumAlgorithm);
+    public static S3OpenOption putOnlyIfModified() {
+        return new S3PutOnlyIfModified(new Crc32FileIntegrityCheck());
     }
 
     /**
@@ -81,10 +67,12 @@ public abstract class S3OpenOption implements OpenOption {
      * <code>FileChannel.force</code>) a checksum is calculated again and compared to the previously stored one. If the
      * checksum matches, no {@link PutObjectRequest} is performed.
      *
+     * @param checksumAlgorithm
+     *            the algorithm to calculate a checksum
      * @return new instance
      */
-    public static S3OpenOption putOnlyIfModified() {
-        return new S3PutOnlyIfModified(new Crc32FileIntegrityCheck());
+    public static S3OpenOption putOnlyIfModified(S3ObjectIntegrityCheck checksumAlgorithm) {
+        return new S3PutOnlyIfModified(checksumAlgorithm);
     }
 
     /**
@@ -109,6 +97,53 @@ public abstract class S3OpenOption implements OpenOption {
      */
     public static S3OpenOption range(int start, int end) {
         return new S3RangeHeader(start, end);
+    }
+
+    /**
+     * Removes all {@link S3OpenOption}s from the given set.
+     *
+     * @param options
+     *            options that may contain {@link S3OpenOption}s
+     * @return new set of filtered options
+     */
+    static Set<OpenOption> removeAll(Set<? extends OpenOption> options) {
+        return options.stream()
+            .filter(o -> !(o instanceof S3OpenOption))
+            .collect(Collectors.toSet());
+    }
+
+    /**
+     * Retains all {@link S3OpenOption}s from the given set.
+     *
+     * @param options
+     *            options that may contain {@link S3OpenOption}s
+     * @return new set of filtered options
+     */
+    static Set<S3OpenOption> retainAll(Set<? extends OpenOption> options) {
+        return options.stream()
+            .flatMap(o -> o instanceof S3OpenOption
+                ? Stream.of((S3OpenOption) o)
+                : Stream.empty())
+            .collect(Collectors.toSet());
+    }
+
+    /**
+     * Enables the usage of the {@code S3TransferManager}.
+     *
+     * <p>
+     * This open options tells the implementation to use the {@code S3TransferManager} for {@code GetObjectRequest} or
+     * {@code PutObjectRequest} requests if applicable. It is meant to be used while opening a {@code FileChannel} or
+     * {@code SeekableByteChannel} on large S3 objects. For small objects (typically smaller than 8 MiB) the
+     * {@code GetObjectRequest} or {@code PutObjectRequest} operations are sufficient.
+     *
+     * <p>
+     * The {@code S3TransferManager} allows you to transfer a single object with enhanced throughput by leveraging
+     * multi-part upload and byte-range fetches to perform transfers in parallel.
+     *
+     * @return same instance
+     */
+    public static S3OpenOption useTransferManager() {
+        return S3UseTransferManager.INSTANCE;
     }
 
     /**
@@ -152,6 +187,13 @@ public abstract class S3OpenOption implements OpenOption {
      */
     protected void consume(PutObjectResponse putObjectResponse, Path file) {
     }
+
+    /**
+     * Creates a new instance unless it is thread-safe.
+     * 
+     * @return new instance
+     */
+    public abstract S3OpenOption copy();
 
     /**
      * Whether the {@link PutObjectRequest} should not be made.
