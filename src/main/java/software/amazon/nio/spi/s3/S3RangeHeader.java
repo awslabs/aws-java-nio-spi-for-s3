@@ -33,7 +33,7 @@ class S3RangeHeader extends S3OpenOption {
     }
 
     @Override
-    public S3OpenOption newInstance() {
+    public S3OpenOption copy() {
         return new S3RangeHeader(range);
     }
 }

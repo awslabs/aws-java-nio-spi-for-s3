@@ -41,7 +41,7 @@ class S3PutOnlyIfModified extends S3OpenOption {
     }
 
     @Override
-    public S3OpenOption newInstance() {
+    public S3OpenOption copy() {
         return new S3PutOnlyIfModified(algorithm);
     }
 

@@ -45,7 +45,7 @@ class S3PreventConcurrentOverwrite extends S3OpenOption {
     }
 
     @Override
-    public S3OpenOption newInstance() {
+    public S3OpenOption copy() {
         return new S3PreventConcurrentOverwrite();
     }
 }

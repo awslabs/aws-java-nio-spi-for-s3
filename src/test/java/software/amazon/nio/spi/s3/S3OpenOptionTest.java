@@ -176,7 +176,7 @@ class S3OpenOptionTest {
         // implementation for testing default behaviors
 
         @Override
-        public S3OpenOption newInstance() {
+        public S3OpenOption copy() {
             throw new UnsupportedOperationException();
         }
     }

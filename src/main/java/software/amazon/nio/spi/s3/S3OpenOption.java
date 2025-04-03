@@ -193,7 +193,7 @@ public abstract class S3OpenOption implements OpenOption {
      * 
      * @return new instance
      */
-    public abstract S3OpenOption newInstance();
+    public abstract S3OpenOption copy();
 
     /**
      * Whether the {@link PutObjectRequest} should not be made.

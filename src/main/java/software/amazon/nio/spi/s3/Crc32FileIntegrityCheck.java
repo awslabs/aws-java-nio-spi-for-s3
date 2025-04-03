@@ -24,7 +24,7 @@ class Crc32FileIntegrityCheck extends S3ObjectIntegrityCheck {
     }
 
     @Override
-    public S3OpenOption newInstance() {
+    public S3OpenOption copy() {
         return new Crc32FileIntegrityCheck();
     }
 }

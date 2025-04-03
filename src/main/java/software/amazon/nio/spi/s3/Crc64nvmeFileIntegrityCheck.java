@@ -24,7 +24,7 @@ class Crc64nvmeFileIntegrityCheck extends S3ObjectIntegrityCheck {
     }
 
     @Override
-    public S3OpenOption newInstance() {
+    public S3OpenOption copy() {
         return new Crc64nvmeFileIntegrityCheck();
     }
 }

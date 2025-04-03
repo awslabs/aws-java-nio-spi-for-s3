@@ -6,6 +6,7 @@
 package software.amazon.nio.spi.s3.config;
 
 import java.net.URI;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -432,10 +433,12 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      *            the new value; can be null
      * @return this instance
      */
-    public S3NioSpiConfiguration withOpenOptions(Set<S3OpenOption> options) {
+    public S3NioSpiConfiguration withOpenOptions(Collection<S3OpenOption> options) {
         if (options == null) {
             put(S3_OPEN_OPTIONS_PROPERTY, null);
         } else {
+            // verify an open option type appears only once
+            options.stream().collect(Collectors.toMap(o -> o.getClass().getName(), o -> o));
             put(S3_OPEN_OPTIONS_PROPERTY, Set.copyOf(options));
         }
         return this;
@@ -593,7 +596,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         @SuppressWarnings("unchecked")
         var options = (Set<S3OpenOption>) getOrDefault(S3_OPEN_OPTIONS_PROPERTY, Set.of());
         // make a defensive copy to ensure that the thread-safetyness is ensured for the consumers
-        return options.stream().map(S3OpenOption::newInstance).collect(Collectors.toSet());
+        return options.stream().map(S3OpenOption::copy).collect(Collectors.toSet());
     }
 
     private void validateIntegrityAlgorithm(String algorithm) {

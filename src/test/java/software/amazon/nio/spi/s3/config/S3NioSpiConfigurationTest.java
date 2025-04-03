@@ -8,15 +8,13 @@ import static com.github.stefanbirkner.systemlambda.SystemLambda.restoreSystemPr
 import static com.github.stefanbirkner.systemlambda.SystemLambda.withEnvironmentVariable;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.BDDAssertions.entry;
-
-import static org.assertj.core.api.BDDAssertions.then;
-import static org.assertj.core.api.BDDAssertions.thenExceptionOfType;
+import static org.assertj.core.api.BDDAssertions.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -334,6 +332,16 @@ public class S3NioSpiConfigurationTest {
             then(o).isInstanceOfAny(option1.getClass(), option2.getClass());
             then(o).isNotInstanceOf(S3OpenOption.useTransferManager().getClass());
         });
+    }
+
+    @Test
+    public void withAndGetOpenOptions_duplicateCheck() {
+        thenThrownBy(() -> config.withOpenOptions(List.of(S3OpenOption.useTransferManager(), S3OpenOption.useTransferManager())))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageStartingWith("Duplicate key software.amazon.nio.spi.s3.S3UseTransferManager");
+        thenThrownBy(() -> config.withOpenOptions(List.of(S3OpenOption.preventConcurrentOverwrite(), S3OpenOption.preventConcurrentOverwrite())))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageStartingWith("Duplicate key software.amazon.nio.spi.s3.S3PreventConcurrentOverwrite");
     }
 
 }

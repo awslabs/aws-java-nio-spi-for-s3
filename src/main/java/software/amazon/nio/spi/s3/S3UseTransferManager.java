@@ -23,7 +23,7 @@ class S3UseTransferManager extends S3OpenOption {
     }
 
     @Override
-    public S3OpenOption newInstance() {
+    public S3OpenOption copy() {
         return INSTANCE;
     }
 }
