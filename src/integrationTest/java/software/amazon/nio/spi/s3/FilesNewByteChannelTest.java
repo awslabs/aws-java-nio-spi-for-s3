@@ -84,6 +84,43 @@ public class FilesNewByteChannelTest {
     }
 
     @Test
+    @DisplayName("newByteChannel with `assumeObjectNotExists` fails when the S3 object already exists")
+    void newByteChannel_assumeObjectNotExists_failsIfExists() throws IOException {
+        var path = putObject(bucketName, "bc-poie-fie-test.txt", "abc");
+        assertThat(Containers.getLoggedS3HttpRequests()).containsExactly("PutObject => 200");
+
+        assertThatThrownBy(() -> Files.newByteChannel(path, READ, WRITE, S3OpenOption.assumeObjectNotExists()).close())
+            .isInstanceOf(S3TransferException.class)
+            .hasMessage("PutObject => 412; /bc-poie-fie-test.txt; At least one of the pre-conditions you specified did not hold");
+        assertThat(Containers.getLoggedS3HttpRequests()).containsExactly("PutObject => 412");
+    }
+
+    @Test
+    @DisplayName("newByteChannel with `assumeObjectNotExists` succeeds when the S3 object exists, but upload was suppressed due to the `putOnlyIfModified` option")
+    void newByteChannel_assumeObjectNotExists_putOnlyIfModified_succeedsIfExists() throws IOException {
+        var path = putObject(bucketName, "bc-poie-fie-test.txt", "abc");
+        assertThat(Containers.getLoggedS3HttpRequests()).containsExactly("PutObject => 200");
+
+        assertThatCode(() -> Files.newByteChannel(path, READ, WRITE, S3OpenOption.assumeObjectNotExists(), S3OpenOption.putOnlyIfModified()).close())
+            .doesNotThrowAnyException();
+        assertThat(Containers.getLoggedS3HttpRequests()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("newByteChannel with `assumeObjectNotExists` succeeds when the S3 object not exists")
+    void newByteChannel_assumeObjectNotExists_succeedsIfNotExists() throws IOException {
+        var path = Paths.get(URI.create(localStackConnectionEndpoint() + "/" + bucketName + "/bc-poie-sine-test.txt"));
+        assertThat(Containers.getLoggedS3HttpRequests()).isEmpty();
+
+        var assumeObjectNotExists = S3OpenOption.assumeObjectNotExists();
+        try (var channel = Files.newByteChannel(path, READ, WRITE, assumeObjectNotExists)) {
+            channel.write(ByteBuffer.wrap("abc".getBytes()));
+        }
+        assertThat(Containers.getLoggedS3HttpRequests()).containsExactly("PutObject => 200");
+        assertThat(path).hasContent("abc");
+    }
+
+    @Test
     @DisplayName("newByteChannel with `PutOnlyIfModified` option and no write operation is performed")
     public void newByteChannel_putOnlyIfModified_noWrite() throws IOException {
         String content = "abc";
