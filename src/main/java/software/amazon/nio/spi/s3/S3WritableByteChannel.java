@@ -44,11 +44,12 @@ class S3WritableByteChannel implements SeekableByteChannel {
             var fileSystemProvider = (S3FileSystemProvider) path.getFileSystem().provider();
 
             if (options.contains(StandardOpenOption.CREATE_NEW) && fileSystemProvider.exists(client, path)) {
-                throw new FileAlreadyExistsException("File at path:" + path + " already exists");
+                throw new FileAlreadyExistsException(path.toString());
             }
 
             tempFile = path.getFileSystem().createTempFile(path);
-            if (!options.contains(StandardOpenOption.CREATE_NEW)) {
+            if (!options.contains(StandardOpenOption.CREATE_NEW)
+                && !options.contains(S3AssumeObjectNotExists.INSTANCE)) {
                 s3TransferUtil.downloadToLocalFile(path, tempFile, options);
             }
 
