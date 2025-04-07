@@ -37,13 +37,9 @@ import static java.util.Collections.emptySet;
 import static java.util.concurrent.CompletableFuture.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.BDDAssertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -174,6 +170,43 @@ class S3WritableByteChannelTest {
             .isInstanceOf(IOException.class)
             .hasMessage("Could not read from path: somefile")
             .hasCause(exception);
+    }
+
+    @Test
+    @DisplayName("when option `CREATE_NEW` is present an exists check is performed")
+    void whenCreateNewOptionOptionIsPresentNoExistsCall() throws InterruptedException, TimeoutException, IOException {
+        var provider = mock(S3FileSystemProvider.class);
+        when(provider.exists(any(S3AsyncClient.class), any())).thenReturn(true);
+        var fs = mock(S3FileSystem.class);
+        when(fs.provider()).thenReturn(provider);
+        when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
+
+        var file = S3Path.getPath(fs, "somefile");
+        var client = mock(S3AsyncClient.class);
+        thenThrownBy(() -> new S3WritableByteChannel(file, client, mock(), Set.of(CREATE_NEW)))
+            .isInstanceOf(FileAlreadyExistsException.class)
+            .hasMessage(file.toString());
+        verify(provider, times(1)).exists(any(), any());
+    }
+
+    @Test
+    @DisplayName("when `assumeObjectNotExists` option is present no download should be performed")
+    void whenAssumeObjectNotExistsOptionIsPresentNoGetObjectOnlyPutObject() throws Exception {
+        var provider = mock(S3FileSystemProvider.class);
+        var fs = mock(S3FileSystem.class);
+        when(fs.provider()).thenReturn(provider);
+        when(fs.createTempFile(any(S3Path.class))).thenReturn(Files.createTempFile("", ""));
+        var file = S3Path.getPath(fs, "somefile");
+        var client = mock(S3AsyncClient.class);
+        var transferManager = mock(S3TransferUtil.class);
+        when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+            .thenReturn(completedFuture(PutObjectResponse.builder().build()));
+
+        var assumeObjectNotExists = S3OpenOption.assumeObjectNotExists();
+        try (var channel = new S3WritableByteChannel(file, client, transferManager, Set.of(assumeObjectNotExists))) {
+            assertThat(channel.position()).isZero();
+        }
+        verify(transferManager, never()).downloadToLocalFile(any(), any(), any());
     }
 
     @Test
