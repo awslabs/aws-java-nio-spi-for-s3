@@ -404,8 +404,21 @@ public class S3FileSystem extends FileSystem {
      */
     @Override
     public PathMatcher getPathMatcher(String syntaxAndPattern) {
-        //todo this assumes the JDK will be on a system where path matching of the default filesystem is Posix like.
-        return FileSystems.getDefault().getPathMatcher(syntaxAndPattern);
+        final int colonIndex = syntaxAndPattern.indexOf(':');
+        if (colonIndex <= 0 || colonIndex == syntaxAndPattern.length() - 1) {
+            throw new IllegalArgumentException("syntaxAndPattern must be of the form: syntax:pattern");
+        }
+        
+        final String syntax = syntaxAndPattern.substring(0, colonIndex).toLowerCase();
+        final String pattern = syntaxAndPattern.substring(colonIndex + 1);
+        
+        if ("strict-posix-glob".equals(syntax)) {
+            // Use our strict POSIX glob implementation
+            return new software.amazon.nio.spi.s3.util.StrictPosixGlobPathMatcher(pattern);
+        } else {
+            // Delegate to default implementation for other syntaxes
+            return FileSystems.getDefault().getPathMatcher(syntaxAndPattern);
+        }
     }
 
     /**

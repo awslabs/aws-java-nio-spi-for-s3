@@ -32,6 +32,18 @@ java -jar myExecutableJar --input s3://some-bucket/input/file
 java -jar myExecutableJar --input s3x://my-s3-service:9000/some-bucket/input/file
 ```
 
+### Path Matching
+
+The library supports both standard Java NIO glob pattern matching and a strict POSIX-compliant glob pattern matching:
+
+```java
+// Standard glob pattern matching
+PathMatcher standardMatcher = fileSystem.getPathMatcher("glob:*.txt");
+
+// Strict POSIX-compliant glob pattern matching
+PathMatcher strictMatcher = fileSystem.getPathMatcher("strict-posix-glob:*.txt");
+```
+
 If this library is exposed as an extension (see above), then no code changes or recompilation of `myExecutable` are
 required.
 
