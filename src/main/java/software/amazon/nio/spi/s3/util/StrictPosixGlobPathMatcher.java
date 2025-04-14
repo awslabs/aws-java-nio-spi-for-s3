@@ -99,6 +99,10 @@ public class StrictPosixGlobPathMatcher implements PathMatcher {
                         regex.append(',');
                     }
                     break;
+                case '/':
+                    // Path separator should be matched literally
+                    regex.append('/');
+                    break;
                 case '.':
                     // Escape dot to match it literally
                     regex.append("\\.");
