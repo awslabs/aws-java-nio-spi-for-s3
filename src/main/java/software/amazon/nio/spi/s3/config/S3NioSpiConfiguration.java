@@ -6,6 +6,7 @@
 package software.amazon.nio.spi.s3.config;
 
 import java.net.URI;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -14,12 +15,14 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.services.s3.internal.BucketUtils;
 import software.amazon.awssdk.utils.Pair;
+import software.amazon.nio.spi.s3.S3OpenOption;
 import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
 /**
@@ -113,6 +116,11 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     public static final Set<String> S3_INTEGRITY_CHECK_ALGORITHM_ALLOWED = Set.of(
         "CRC32", "CRC32C", "CRC64NVME", S3_INTEGRITY_CHECK_ALGORITHM_DEFAULT.toUpperCase());
 
+    /**
+     * This configuration is not meant to be configured via System Properties, but to be set programmatically.
+     */
+    static final String S3_OPEN_OPTIONS_PROPERTY = "s3.open-options";
+
     private static final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -146,6 +154,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         put(S3_SPI_TIMEOUT_MEDIUM_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_MEDIUM_DEFAULT));
         put(S3_SPI_TIMEOUT_HIGH_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_HIGH_DEFAULT));
         put(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, S3_INTEGRITY_CHECK_ALGORITHM_DEFAULT);
+        put(S3_OPEN_OPTIONS_PROPERTY, Set.of(S3OpenOption.useTransferManager()));
 
         //
         // With the below we pick existing environment variables and system
@@ -398,7 +407,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     }
 
     /**
-     * Get the value of the Integrity Check Algorithm
+     * Set the value of the Integrity Check Algorithm
      *
      * @param algorithm the new value; can be null
      * @return this instance
@@ -411,6 +420,27 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         }
         validateIntegrityAlgorithm(algorithm);
 
+        return this;
+    }
+
+    /**
+     * Set the default open options to be used when opening a {@code FileChannel} or {@code SeekableByteChannel}.
+     *
+     * <p>
+     * This configuration is not meant to be configured via System Properties, but to be set programmatically.
+     *
+     * @param options
+     *            the new value; can be null
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withOpenOptions(Collection<S3OpenOption> options) {
+        if (options == null) {
+            put(S3_OPEN_OPTIONS_PROPERTY, null);
+        } else {
+            // verify an open option type appears only once
+            options.stream().collect(Collectors.toMap(o -> o.getClass().getName(), o -> o));
+            put(S3_OPEN_OPTIONS_PROPERTY, Set.copyOf(options));
+        }
         return this;
     }
 
@@ -552,6 +582,21 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         String algorithm = (String) getOrDefault(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, S3_INTEGRITY_CHECK_ALGORITHM_DEFAULT);
         validateIntegrityAlgorithm(algorithm);
         return algorithm;
+    }
+
+    /**
+     * Get default open options to be used when opening a {@code FileChannel} or {@code SeekableByteChannel}.
+     *
+     * <p>
+     * This configuration is not meant to be configured via System Properties, but to be set programmatically.
+     *
+     * @return the open options
+     */
+    public Set<S3OpenOption> getOpenOptions() {
+        @SuppressWarnings("unchecked")
+        var options = (Set<S3OpenOption>) getOrDefault(S3_OPEN_OPTIONS_PROPERTY, Set.of());
+        // make a defensive copy to ensure that the thread-safetyness is ensured for the consumers
+        return options.stream().map(S3OpenOption::copy).collect(Collectors.toSet());
     }
 
     private void validateIntegrityAlgorithm(String algorithm) {

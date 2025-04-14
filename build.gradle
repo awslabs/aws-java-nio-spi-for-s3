@@ -54,7 +54,7 @@ sourceSets {
 dependencies {
     implementation 'io.reactivex.rxjava3:rxjava:3.1.10'
 
-    implementation platform('software.amazon.awssdk:bom:2.31.7')
+    implementation platform('software.amazon.awssdk:bom:2.31.16')
 
     implementation('software.amazon.awssdk:s3') {
         exclude group: 'software.amazon.awssdk', module: 'apache-client'
@@ -62,7 +62,7 @@ dependencies {
     implementation('software.amazon.awssdk:s3-transfer-manager') {
         exclude group: 'software.amazon.awssdk', module: 'apache-client'
     }
-    implementation 'software.amazon.awssdk.crt:aws-crt:0.36.3'
+    implementation 'software.amazon.awssdk.crt:aws-crt:0.37.0'
     implementation 'org.slf4j:slf4j-api:2.0.17'
     implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
 
@@ -147,8 +147,8 @@ testing {
             }
             dependencies {
                 implementation 'org.assertj:assertj-core:3.27.3'
-                implementation 'org.mockito:mockito-core:5.16.1'
-                implementation 'org.mockito:mockito-junit-jupiter:5.16.1'
+                implementation 'org.mockito:mockito-core:5.17.0'
+                implementation 'org.mockito:mockito-junit-jupiter:5.17.0'
                 implementation 'com.github.stefanbirkner:system-lambda:1.2.1'
                 runtimeOnly 'ch.qos.logback:logback-classic:1.5.18'
             }

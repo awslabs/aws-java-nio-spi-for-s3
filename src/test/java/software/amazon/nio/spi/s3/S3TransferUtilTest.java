@@ -39,6 +39,36 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 class S3TransferUtilTest {
 
     @Test
+    @DisplayName("download should succeed (with S3TransferManager but without timeout)")
+    void downloadFileCompletesSuccessfully_useTransferManager_withoutTimeout() throws IOException {
+        var file = mock(S3Path.class);
+
+        var client = mock(S3AsyncClient.class);
+        var responseFuture = completedFuture(GetObjectResponse.builder().build());
+        when(client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenReturn(responseFuture);
+
+        var util = new S3TransferUtil(client, null, null);
+        var tmpFile = Files.createTempFile(null, null);
+        var option = S3OpenOption.useTransferManager();
+        assertThatCode(() -> util.downloadToLocalFile(file, tmpFile, Set.of(option))).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("download should succeed (with S3TransferManager and timeout)")
+    void downloadFileCompletesSuccessfully_useTransferManager_withTimeout() throws IOException {
+        var file = mock(S3Path.class);
+
+        var client = mock(S3AsyncClient.class);
+        var responseFuture = completedFuture(GetObjectResponse.builder().build());
+        when(client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenReturn(responseFuture);
+
+        var util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES);
+        var tmpFile = Files.createTempFile(null, null);
+        var option = S3OpenOption.useTransferManager();
+        assertThatCode(() -> util.downloadToLocalFile(file, tmpFile, Set.of(option))).doesNotThrowAnyException();
+    }
+
+    @Test
     @DisplayName("download should succeed (with open options)")
     void downloadFileCompletesSuccessfully_withOpenOption() throws IOException {
         var file = mock(S3Path.class);
@@ -47,15 +77,15 @@ class S3TransferUtilTest {
         var responseFuture = completedFuture(GetObjectResponse.builder().build());
         when(client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenReturn(responseFuture);
 
-        var util = new S3TransferUtil(client, null, null, DisabledFileIntegrityCheck.INSTANCE);
+        var util = new S3TransferUtil(client, null, null);
         var tmpFile = Files.createTempFile(null, null);
         var option1 = mock(S3OpenOption.class);
         var option2 = mock(S3OpenOption.class);
         assertThatCode(() -> util.downloadToLocalFile(file, tmpFile, Set.of(option1, option2))).doesNotThrowAnyException();
         verify(option1, times(1)).apply(any(GetObjectRequest.Builder.class));
-        verify(option1, times(1)).consume(any(GetObjectResponse.class));
+        verify(option1, times(1)).consume(any(GetObjectResponse.class), any());
         verify(option2, times(1)).apply(any(GetObjectRequest.Builder.class));
-        verify(option2, times(1)).consume(any(GetObjectResponse.class));
+        verify(option2, times(1)).consume(any(GetObjectResponse.class), any());
     }
 
     @Test
@@ -67,7 +97,7 @@ class S3TransferUtilTest {
         var responseFuture = completedFuture(GetObjectResponse.builder().build());
         when(client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenReturn(responseFuture);
 
-        var util = new S3TransferUtil(client, null, null, DisabledFileIntegrityCheck.INSTANCE);
+        var util = new S3TransferUtil(client, null, null);
         var tmpFile = Files.createTempFile(null, null);
         assertThatCode(() -> util.downloadToLocalFile(file, tmpFile, Set.of())).doesNotThrowAnyException();
     }
@@ -81,7 +111,7 @@ class S3TransferUtilTest {
         var responseFuture = completedFuture(GetObjectResponse.builder().build());
         when(client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenReturn(responseFuture);
 
-        var util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES, DisabledFileIntegrityCheck.INSTANCE);
+        var util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES);
         var tmpFile = Files.createTempFile(null, null);
         assertThatCode(() -> util.downloadToLocalFile(file, tmpFile, Set.of())).doesNotThrowAnyException();
     }
@@ -96,7 +126,7 @@ class S3TransferUtilTest {
         var exception = new CompletionException(new RuntimeException("unknown error"));
         when(client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenThrow(exception);
 
-        var util = new S3TransferUtil(client, null, null, DisabledFileIntegrityCheck.INSTANCE);
+        var util = new S3TransferUtil(client, null, null);
         var tmpFile = Files.createTempFile(null, null);
         assertThatCode(() -> util.downloadToLocalFile(file, tmpFile, Set.of()))
             .isInstanceOf(IOException.class)
@@ -114,7 +144,7 @@ class S3TransferUtilTest {
         var exception = new CompletionException(S3Exception.builder().statusCode(400).build());
         when(client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenThrow(exception);
 
-        var util = new S3TransferUtil(client, null, null, DisabledFileIntegrityCheck.INSTANCE);
+        var util = new S3TransferUtil(client, null, null);
         var tmpFile = Files.createTempFile(null, null);
         assertThatCode(() -> util.downloadToLocalFile(file, tmpFile, Set.of()))
             .isInstanceOf(S3TransferException.class)
@@ -132,7 +162,7 @@ class S3TransferUtilTest {
         var exception = new CompletionException(S3Exception.builder().statusCode(404).build());
         when(client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenThrow(exception);
 
-        var util = new S3TransferUtil(client, null, null, DisabledFileIntegrityCheck.INSTANCE);
+        var util = new S3TransferUtil(client, null, null);
         var tmpFile = Files.createTempFile(null, null);
         assertThatCode(() -> util.downloadToLocalFile(file, tmpFile, Set.of()))
             .isInstanceOf(NoSuchFileException.class)
@@ -148,7 +178,7 @@ class S3TransferUtilTest {
         var exception = new CompletionException(S3Exception.builder().statusCode(404).build());
         when(client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenThrow(exception);
 
-        var util = new S3TransferUtil(client, null, null, DisabledFileIntegrityCheck.INSTANCE);
+        var util = new S3TransferUtil(client, null, null);
         var tmpFile = Files.createTempFile(null, null);
         assertThatCode(() -> util.downloadToLocalFile(file, tmpFile, Set.of(CREATE))).doesNotThrowAnyException();
     }
@@ -165,7 +195,7 @@ class S3TransferUtilTest {
         when(responseFuture.get(1L, TimeUnit.MINUTES)).thenThrow(exception);
         when(client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenReturn(responseFuture);
 
-        var util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES, DisabledFileIntegrityCheck.INSTANCE);
+        var util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES);
         var tmpFile = Files.createTempFile(null, null);
         assertThatCode(() -> util.downloadToLocalFile(file, tmpFile, Set.of()))
             .isInstanceOf(IOException.class)
@@ -185,12 +215,46 @@ class S3TransferUtilTest {
         when(responseFuture.get(1L, TimeUnit.MINUTES)).thenThrow(exception);
         when(client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenReturn(responseFuture);
 
-        var util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES, DisabledFileIntegrityCheck.INSTANCE);
+        var util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES);
         var tmpFile = Files.createTempFile(null, null);
         assertThatCode(() -> util.downloadToLocalFile(file, tmpFile, Set.of()))
             .isInstanceOf(IOException.class)
             .hasMessage("Could not read from path: somefile")
             .hasCause(exception);
+    }
+
+    @Test
+    @DisplayName("upload should succeed (with S3TransferManager but without timeout)")
+    void uploadFileCompletesSuccessfully_useTransferManager_withoutTimeout() throws IOException {
+        var file = mock(S3Path.class);
+        when(file.bucketName()).thenReturn("a");
+        when(file.getKey()).thenReturn("a");
+
+        var client = mock(S3AsyncClient.class);
+        when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+            .thenReturn(completedFuture(PutObjectResponse.builder().build()));
+
+        var util = new S3TransferUtil(client, null, null);
+        var tmpFile = Files.createTempFile(null, null);
+        var option = S3OpenOption.useTransferManager();
+        assertThatCode(() -> util.uploadLocalFile(file, tmpFile, Set.of(option))).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("upload should succeed (with S3TransferManager and timeout)")
+    void uploadFileCompletesSuccessfully_useTransferManager_withTimeout() throws IOException {
+        var file = mock(S3Path.class);
+        when(file.bucketName()).thenReturn("a");
+        when(file.getKey()).thenReturn("a");
+
+        var client = mock(S3AsyncClient.class);
+        when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+            .thenReturn(completedFuture(PutObjectResponse.builder().build()));
+
+        var util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES);
+        var tmpFile = Files.createTempFile(null, null);
+        var option = S3OpenOption.useTransferManager();
+        assertThatCode(() -> util.uploadLocalFile(file, tmpFile, Set.of(option))).doesNotThrowAnyException();
     }
 
     @Test
@@ -204,15 +268,15 @@ class S3TransferUtilTest {
         when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
             .thenReturn(completedFuture(PutObjectResponse.builder().build()));
 
-        var util = new S3TransferUtil(client, null, null, DisabledFileIntegrityCheck.INSTANCE);
+        var util = new S3TransferUtil(client, null, null);
         var tmpFile = Files.createTempFile(null, null);
         var option1 = mock(S3OpenOption.class);
         var option2 = mock(S3OpenOption.class);
         assertThatCode(() -> util.uploadLocalFile(file, tmpFile, Set.of(option1, option2))).doesNotThrowAnyException();
-        verify(option1, times(1)).apply(any(PutObjectRequest.Builder.class));
-        verify(option1, times(1)).consume(any(PutObjectResponse.class));
-        verify(option2, times(1)).apply(any(PutObjectRequest.Builder.class));
-        verify(option2, times(1)).consume(any(PutObjectResponse.class));
+        verify(option1, times(1)).apply(any(PutObjectRequest.Builder.class), any());
+        verify(option1, times(1)).consume(any(PutObjectResponse.class), any());
+        verify(option2, times(1)).apply(any(PutObjectRequest.Builder.class), any());
+        verify(option2, times(1)).consume(any(PutObjectResponse.class), any());
     }
 
     @Test
@@ -225,7 +289,7 @@ class S3TransferUtilTest {
         final S3AsyncClient client = mock();
         when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class))).thenReturn(completedFuture(PutObjectResponse.builder().build()));
 
-        var util = new S3TransferUtil(client, null, null, DisabledFileIntegrityCheck.INSTANCE);
+        var util = new S3TransferUtil(client, null, null);
         var tmpFile = Files.createTempFile(null, null);
         assertThatCode(() -> util.uploadLocalFile(file, tmpFile, Set.of())).doesNotThrowAnyException();
     }
@@ -240,7 +304,7 @@ class S3TransferUtilTest {
         final S3AsyncClient client = mock();
         when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class))).thenReturn(completedFuture(PutObjectResponse.builder().build()));
 
-        var util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES, DisabledFileIntegrityCheck.INSTANCE);
+        var util = new S3TransferUtil(client, 1L, TimeUnit.MINUTES);
         var tmpFile = Files.createTempFile(null, null);
         assertThatCode(() -> util.uploadLocalFile(file, tmpFile, Set.of())).doesNotThrowAnyException();
     }
@@ -257,7 +321,7 @@ class S3TransferUtilTest {
         when(responseFuture.get(1L, TimeUnit.SECONDS)).thenThrow(exception);
         when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class))).thenReturn(responseFuture);
 
-        var util = new S3TransferUtil(client, 1L, TimeUnit.SECONDS, DisabledFileIntegrityCheck.INSTANCE);
+        var util = new S3TransferUtil(client, 1L, TimeUnit.SECONDS);
         var tmpFile = Files.createTempFile(null, null);
         assertThatCode(() -> util.uploadLocalFile(file, tmpFile, Set.of()))
             .isInstanceOf(S3TransferException.class)
@@ -277,7 +341,7 @@ class S3TransferUtilTest {
         when(responseFuture.get(1L, TimeUnit.SECONDS)).thenThrow(exception);
         when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class))).thenReturn(responseFuture);
 
-        var util = new S3TransferUtil(client, 1L, TimeUnit.SECONDS, DisabledFileIntegrityCheck.INSTANCE);
+        var util = new S3TransferUtil(client, 1L, TimeUnit.SECONDS);
         var tmpFile = Files.createTempFile(null, null);
         assertThatCode(() -> util.uploadLocalFile(file, tmpFile, Set.of()))
             .isInstanceOf(IOException.class)
@@ -298,7 +362,7 @@ class S3TransferUtilTest {
         when(responseFuture.get(1L, TimeUnit.MILLISECONDS)).thenThrow(exception);
         when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class))).thenReturn(responseFuture);
 
-        var util = new S3TransferUtil(client, 1L, TimeUnit.MILLISECONDS, DisabledFileIntegrityCheck.INSTANCE);
+        var util = new S3TransferUtil(client, 1L, TimeUnit.MILLISECONDS);
         var tmpFile = Files.createTempFile(null, null);
         assertThatThrownBy(() -> util.uploadLocalFile(file, tmpFile, Set.of()))
             .isInstanceOf(IOException.class)

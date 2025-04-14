@@ -25,7 +25,7 @@ class Crc64nvmeFileIntegrityCheckTest {
         var file = tempDir.resolve("test");
         Files.writeString(file, "hello world!", CREATE_NEW);
         var putObjectRequest = PutObjectRequest.builder();
-        integrityCheck.addChecksumToRequest(file, putObjectRequest);
+        integrityCheck.apply(putObjectRequest, file);
         assertThat(putObjectRequest.build().checksumCRC64NVME()).isEqualTo("2RYNH6jkGOM=");
     }
 

@@ -39,10 +39,9 @@ class S3SeekableByteChannel implements SeekableByteChannel {
     S3SeekableByteChannel(
         S3Path s3Path,
         S3AsyncClient s3Client,
-        Set<? extends OpenOption> options,
-        S3ObjectIntegrityCheck integrityCheck)
+        Set<? extends OpenOption> options)
             throws IOException {
-        this(s3Path, s3Client, 0L, options, null, null, integrityCheck);
+        this(s3Path, s3Client, 0L, options, null, null);
     }
 
     private S3SeekableByteChannel(
@@ -51,8 +50,7 @@ class S3SeekableByteChannel implements SeekableByteChannel {
         long startAt,
         Set<? extends OpenOption> options,
         Long timeout,
-        TimeUnit timeUnit,
-        S3ObjectIntegrityCheck integrityCheck)
+        TimeUnit timeUnit)
             throws IOException {
         position = startAt;
         path = s3Path;
@@ -68,10 +66,10 @@ class S3SeekableByteChannel implements SeekableByteChannel {
         if (options.contains(StandardOpenOption.WRITE)) {
             LOGGER.debug("using S3WritableByteChannel as write delegate for path '{}'", s3Path.toUri());
             readDelegate = null;
-            var transferUtil = new S3TransferUtil(s3Client, timeout, timeUnit, integrityCheck);
+            var transferUtil = new S3TransferUtil(s3Client, timeout, timeUnit);
             writeDelegate = new S3WritableByteChannel(s3Path, s3Client, transferUtil, options);
             position = 0L;
-        } else if (options.contains(StandardOpenOption.READ) || options.isEmpty()) {
+        } else if (options.contains(StandardOpenOption.READ) || S3OpenOption.removeAll(options).isEmpty()) {
             LOGGER.debug("using S3ReadAheadByteChannel as read delegate for path '{}'", s3Path.toUri());
             readDelegate =
                 new S3ReadAheadByteChannel(s3Path, config.getMaxFragmentSize(), config.getMaxFragmentNumber(), s3Client, this,

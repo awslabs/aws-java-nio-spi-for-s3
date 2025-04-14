@@ -5,6 +5,7 @@
 
 package software.amazon.nio.spi.s3;
 
+import java.nio.file.Path;
 import software.amazon.awssdk.annotations.NotThreadSafe;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -29,17 +30,22 @@ class S3PreventConcurrentOverwrite extends S3OpenOption {
     private String eTag;
 
     @Override
-    protected void apply(PutObjectRequest.Builder putObjectRequest) {
+    protected void apply(PutObjectRequest.Builder putObjectRequest, Path file) {
         putObjectRequest.ifMatch(eTag);
     }
 
     @Override
-    protected void consume(GetObjectResponse getObjectResponse) {
+    protected void consume(GetObjectResponse getObjectResponse, Path file) {
         eTag = getObjectResponse.eTag();
     }
 
     @Override
-    protected void consume(PutObjectResponse putObjectResponse) {
+    protected void consume(PutObjectResponse putObjectResponse, Path file) {
         eTag = putObjectResponse.eTag();
+    }
+
+    @Override
+    public S3OpenOption copy() {
+        return new S3PreventConcurrentOverwrite();
     }
 }

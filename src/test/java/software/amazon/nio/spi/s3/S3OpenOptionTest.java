@@ -12,8 +12,12 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.BDDAssertions.*;
 import static org.mockito.Mockito.*;
 
 class S3OpenOptionTest {
@@ -27,6 +31,28 @@ class S3OpenOptionTest {
         assertThat(option)
                 .isInstanceOf(S3PreventConcurrentOverwrite.class)
                 .isInstanceOf(OpenOption.class);
+    }
+
+    @Test
+    void putOnlyIfModified_ReturnsS3PutOnlyIfModified() {
+        // When
+        S3OpenOption option = S3OpenOption.putOnlyIfModified();
+
+        // Then
+        assertThat(option)
+            .isInstanceOf(S3PutOnlyIfModified.class)
+            .isInstanceOf(OpenOption.class);
+    }
+
+    @Test
+    void putOnlyIfModified_ReturnsS3PutOnlyIfModified_withChecksumAlgorithm() {
+        // When
+        S3OpenOption option = S3OpenOption.putOnlyIfModified(new Crc32FileIntegrityCheck());
+
+        // Then
+        assertThat(option)
+            .isInstanceOf(S3PutOnlyIfModified.class)
+            .isInstanceOf(OpenOption.class);
     }
 
     @Test
@@ -62,6 +88,32 @@ class S3OpenOptionTest {
     }
 
     @Test
+    void retainAll() {
+        // When
+        var option1 = StandardOpenOption.CREATE;
+        var option2 = S3OpenOption.preventConcurrentOverwrite();
+        var option3 = StandardOpenOption.WRITE;
+        var option4 = S3OpenOption.putOnlyIfModified();
+        var options = Set.of(option1, option2, option3, option4);
+
+        // Then
+        then(S3OpenOption.retainAll(options)).containsExactlyInAnyOrder(option2, option4);
+    }
+
+    @Test
+    void removeAll() {
+        // When
+        var option1 = StandardOpenOption.CREATE;
+        var option2 = S3OpenOption.preventConcurrentOverwrite();
+        var option3 = StandardOpenOption.WRITE;
+        var option4 = S3OpenOption.putOnlyIfModified();
+        var options = Set.of(option1, option2, option3, option4);
+
+        // Then
+        then(S3OpenOption.removeAll(options)).containsExactlyInAnyOrder(option1, option3);
+    }
+
+    @Test
     void apply_GetObjectRequest_DoesNotModifyByDefault() {
         // Given
         S3OpenOption option = new TestS3OpenOption();
@@ -79,12 +131,14 @@ class S3OpenOptionTest {
         // Given
         S3OpenOption option = new TestS3OpenOption();
         PutObjectRequest.Builder builder = mock(PutObjectRequest.Builder.class);
+        Path file = mock(Path.class);
 
         // When
-        option.apply(builder);
+        option.apply(builder, file);
 
         // Then
         verifyNoInteractions(builder);
+        verifyNoInteractions(file);
     }
 
     @Test
@@ -92,12 +146,14 @@ class S3OpenOptionTest {
         // Given
         S3OpenOption option = new TestS3OpenOption();
         GetObjectResponse response = mock(GetObjectResponse.class);
+        Path file = mock(Path.class);
 
         // When
-        option.consume(response);
+        option.consume(response, file);
 
         // Then
         verifyNoInteractions(response);
+        verifyNoInteractions(file);
     }
 
     @Test
@@ -105,16 +161,23 @@ class S3OpenOptionTest {
         // Given
         S3OpenOption option = new TestS3OpenOption();
         PutObjectResponse response = mock(PutObjectResponse.class);
+        Path file = mock(Path.class);
 
         // When
-        option.consume(response);
+        option.consume(response, file);
 
         // Then
         verifyNoInteractions(response);
+        verifyNoInteractions(file);
     }
 
     // Test implementation of S3OpenOption
     private static class TestS3OpenOption extends S3OpenOption {
-        // Empty implementation for testing default behaviors
+        // implementation for testing default behaviors
+
+        @Override
+        public S3OpenOption copy() {
+            throw new UnsupportedOperationException();
+        }
     }
 }
