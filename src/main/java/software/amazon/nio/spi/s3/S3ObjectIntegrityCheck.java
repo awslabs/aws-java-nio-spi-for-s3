@@ -99,7 +99,7 @@ public abstract class S3ObjectIntegrityCheck extends S3OpenOption {
     /**
      * Calculates the checksum for the given file.
      *
-     * @param file
+     * @param file the file to calculate the checksum for
      * @return checksum
      */
     protected final long calculateChecksum(Path file) {
