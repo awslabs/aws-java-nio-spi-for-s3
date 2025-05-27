@@ -113,14 +113,22 @@ publishing {
     }
 }
 
-//signing {
-//    sign publishing.publications.maven
-//}
+signing {
+    def signingKey = findProperty('jreleaser.gpg.secret.key')?.toString()?.replace('\\', '')
+    def signingPassword = findProperty('jreleaser.gpg.passphrase')
+
+    if (signingKey && signingPassword) {
+        useInMemoryPgpKeys(signingKey, signingPassword)
+    }
+
+    sign publishing.publications.maven
+}
 
 jreleaser {
     signing {
         active = 'ALWAYS'
         armored = true
+        mode = 'COMMAND'  // Use the GPG command instead of in-memory keys
     }
     deploy {
         maven {
@@ -128,7 +136,7 @@ jreleaser {
                 sonatype {
                     active = 'ALWAYS'
                     url = 'https://central.sonatype.com/api/v1/publisher'
-                    stagingRepository('target/staging-deploy')
+                    stagingRepository('build/staging-deploy')
                 }
             }
         }
