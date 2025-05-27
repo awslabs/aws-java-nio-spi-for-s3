@@ -11,6 +11,7 @@ plugins {
     id 'java-library'
     id 'signing'
     id 'maven-publish'
+    id 'org.jreleaser' version '1.18.0'
     id 'jacoco'
     id 'jvm-test-suite'
     id 'jacoco-report-aggregation'
@@ -26,7 +27,7 @@ repositories {
 
 group = 'software.amazon.nio.s3'
 archivesBaseName = 'nio-spi-for-s3'
-version = '2.2.0'
+version = '2.2.1'
 
 java {
     withSourcesJar()
@@ -107,17 +108,33 @@ publishing {
     }
     repositories {
         maven {
-            def releasesRepoUrl = 'https://aws.oss.sonatype.org/service/local/staging/deploy/maven2/'
-            def snapshotsRepoUrl = 'https://aws.oss.sonatype.org/content/repositories/snapshots'
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-            credentials(PasswordCredentials)
+            url = layout.buildDirectory.dir('staging-deploy')
         }
     }
 }
 
-signing {
-    sign publishing.publications.maven
+//signing {
+//    sign publishing.publications.maven
+//}
+
+jreleaser {
+    signing {
+        active = 'ALWAYS'
+        armored = true
+    }
+    deploy {
+        maven {
+            mavenCentral {
+                sonatype {
+                    active = 'ALWAYS'
+                    url = 'https://central.sonatype.com/api/v1/publisher'
+                    stagingRepository('target/staging-deploy')
+                }
+            }
+        }
+    }
 }
+
 
 javadoc {
     if (JavaVersion.current().isJava9Compatible()) {
@@ -130,10 +147,10 @@ testing {
     suites {
         integrationTest(JvmTestSuite) {
             dependencies {
-                implementation project
-                implementation 'org.testcontainers:junit-jupiter:1.21.0'
-                implementation 'org.testcontainers:localstack:1.21.0'
-                implementation 'org.testcontainers:testcontainers:1.21.0'
+                implementation(project())
+                implementation('org.testcontainers:junit-jupiter:1.21.0')
+                implementation('org.testcontainers:localstack:1.21.0')
+                implementation('org.testcontainers:testcontainers:1.21.0')
             }
         }
         withType(JvmTestSuite).configureEach {
@@ -146,11 +163,11 @@ testing {
                 }
             }
             dependencies {
-                implementation 'org.assertj:assertj-core:3.27.3'
-                implementation 'org.mockito:mockito-core:5.18.0'
-                implementation 'org.mockito:mockito-junit-jupiter:5.18.0'
-                implementation 'com.github.stefanbirkner:system-lambda:1.2.1'
-                runtimeOnly 'ch.qos.logback:logback-classic:1.5.18'
+                implementation('org.assertj:assertj-core:3.27.3')
+                implementation('org.mockito:mockito-core:5.18.0')
+                implementation('org.mockito:mockito-junit-jupiter:5.18.0')
+                implementation('com.github.stefanbirkner:system-lambda:1.2.1')
+                runtimeOnly('ch.qos.logback:logback-classic:1.5.18')
             }
         }
     }
