@@ -119,6 +119,9 @@ signing {
 
     if (signingKey && signingPassword) {
         useInMemoryPgpKeys(signingKey, signingPassword)
+    } else {
+        useGpgCmd()
+        // The key ID will be selected by the gpg command
     }
 
     sign publishing.publications.maven
@@ -126,9 +129,10 @@ signing {
 
 jreleaser {
     signing {
-        active = 'ALWAYS'
+        active = 'ALWAYS'  // Keep signing active
         armored = true
         mode = 'COMMAND'  // Use the GPG command instead of in-memory keys
+        // The key ID is set in ~/.gnupg/gpg.conf
     }
     deploy {
         maven {
@@ -137,6 +141,7 @@ jreleaser {
                     active = 'ALWAYS'
                     url = 'https://central.sonatype.com/api/v1/publisher'
                     stagingRepository('build/staging-deploy')
+                    sign = false  // Disable signing during deployment since files are already signed
                 }
             }
         }
