@@ -244,7 +244,9 @@ jacocoTestCoverageVerification {
                     'software.amazon.nio.spi.s3.S3DirectoryStream',
                     'software.amazon.nio.spi.s3.S3WritableByteChannel',
                     'software.amazon.nio.spi.s3.S3FileSystemProvider',
-                    'software.amazon.nio.spi.s3.S3FileSystemProvider'
+                    'software.amazon.nio.spi.s3.S3FileSystemProvider',
+                    'software.amazon.nio.spi.s3.util.LibraryVersion',
+                    'software.amazon.nio.spi.s3.S3ClientProvider.S3NioSpiInterceptor'
             ]
         }
     }

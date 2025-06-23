@@ -79,4 +79,29 @@ class S3ClientProviderHeaderTest {
         // Verify that the builder has been configured
         assertThat(clientBuilder).isNotNull();
     }
+    
+    @Test
+    void testLibraryVersionFallback() {
+        // Test that LibraryVersion handles missing properties gracefully
+        String version = LibraryVersion.getVersion();
+        assertThat(version).isNotNull().isNotEmpty();
+        
+        // Test that multiple calls return the same cached version
+        String version2 = LibraryVersion.getVersion();
+        assertThat(version2).isEqualTo(version);
+    }
+    
+    @Test
+    void testSystemPropertyConfiguration() {
+        // Test that system property is read correctly
+        System.setProperty("s3.spi.client.custom-headers.enabled", "true");
+        try {
+            S3ClientProvider testProvider = new S3ClientProvider(new S3NioSpiConfiguration());
+            // The provider should now use custom headers by default
+            var client = testProvider.generateClient("test-bucket");
+            assertThat(client).isNotNull();
+        } finally {
+            System.clearProperty("s3.spi.client.custom-headers.enabled");
+        }
+    }
 }

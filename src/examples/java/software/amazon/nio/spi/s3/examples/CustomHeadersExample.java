@@ -39,8 +39,8 @@ public class CustomHeadersExample {
         
         // Method 2: Enable custom headers via system property
         enableCustomHeadersViaSystemProperty(s3Uri);
-    }
-    
+    }    
+
     /**
      * Enable custom headers programmatically by configuring the S3FileSystemProvider
      */
@@ -63,4 +63,45 @@ public class CustomHeadersExample {
         if (Files.exists(s3Path)) {
             System.out.println("File exists: " + s3Path);
             System.out.println("File size: " + Files.size(s3Path) + " bytes");
-        } else {\n            System.out.println("File does not exist: " + s3Path);\n        }\n        \n        System.out.println("Custom headers have been added to all S3 requests for this file system.");\n    }\n    \n    /**\n     * Enable custom headers via system property (affects all S3FileSystemProvider instances)\n     */\n    private static void enableCustomHeadersViaSystemProperty(String s3Uri) throws IOException {\n        System.out.println("\\n=== Enabling Custom Headers Via System Property ===");\n        \n        // Set the system property to enable custom headers globally\n        System.setProperty("s3.spi.client.custom-headers.enabled", "true");\n        \n        // Create a new provider instance (will pick up the system property)\n        S3FileSystemProvider provider = new S3FileSystemProvider();\n        \n        // Perform file operations - all requests will include custom headers\n        Path s3Path = Paths.get(URI.create(s3Uri));\n        \n        if (Files.exists(s3Path)) {\n            System.out.println("File exists: " + s3Path);\n            \n            // Read some content to demonstrate the headers are being sent\n            try {\n                String content = Files.readString(s3Path);\n                System.out.println("File content preview: " + \n                    content.substring(0, Math.min(100, content.length())) + \n                    (content.length() > 100 ? "..." : ""));\n            } catch (Exception e) {\n                System.out.println("Could not read file content: " + e.getMessage());\n            }\n        } else {\n            System.out.println("File does not exist: " + s3Path);\n        }\n        \n        System.out.println("Custom headers are now enabled globally via system property.");\n        System.out.println("All future S3FileSystemProvider instances will include custom headers.");\n    }\n}
+        } else {
+            System.out.println("File does not exist: " + s3Path);
+        }
+        
+        System.out.println("Custom headers have been added to all S3 requests for this file system.");
+    }
+    
+    /**
+     * Enable custom headers via system property (affects all S3FileSystemProvider instances)
+     */
+    private static void enableCustomHeadersViaSystemProperty(String s3Uri) throws IOException {
+        System.out.println("\n=== Enabling Custom Headers Via System Property ===");
+        
+        // Set the system property to enable custom headers globally
+        System.setProperty("s3.spi.client.custom-headers.enabled", "true");
+        
+        // Create a new provider instance (will pick up the system property)
+        S3FileSystemProvider provider = new S3FileSystemProvider();
+        
+        // Perform file operations - all requests will include custom headers
+        Path s3Path = Paths.get(URI.create(s3Uri));
+        
+        if (Files.exists(s3Path)) {
+            System.out.println("File exists: " + s3Path);
+            
+            // Read some content to demonstrate the headers are being sent
+            try {
+                String content = Files.readString(s3Path);
+                System.out.println("File content preview: " + 
+                    content.substring(0, Math.min(100, content.length())) + 
+                    (content.length() > 100 ? "..." : ""));
+            } catch (Exception e) {
+                System.out.println("Could not read file content: " + e.getMessage());
+            }
+        } else {
+            System.out.println("File does not exist: " + s3Path);
+        }
+        
+        System.out.println("Custom headers are now enabled globally via system property.");
+        System.out.println("All future S3FileSystemProvider instances will include custom headers.");
+    }
+}
