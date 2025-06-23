@@ -234,19 +234,15 @@ jacocoTestCoverageVerification {
                 minimum = 0.80
             }
             excludes = [
-                // Add any exclusion patterns here if needed
-                // 'com.example.excluded.**'
-
-                // temporary exclusions until I can improve coverage
-                    'software.amazon.nio.spi.s3.S3ReadAheadByteChannel',
-                    'software.amazon.nio.spi.s3.S3SeekableByteChannel',
-                    'software.amazon.nio.spi.s3.S3FileSystem',
-                    'software.amazon.nio.spi.s3.S3DirectoryStream',
-                    'software.amazon.nio.spi.s3.S3WritableByteChannel',
-                    'software.amazon.nio.spi.s3.S3FileSystemProvider',
-                    'software.amazon.nio.spi.s3.S3FileSystemProvider',
-                    'software.amazon.nio.spi.s3.util.LibraryVersion',
-                    'software.amazon.nio.spi.s3.S3ClientProvider.S3NioSpiInterceptor'
+                // Classes that don't meet the 80% coverage threshold for both instruction AND branch coverage
+                'software.amazon.nio.spi.s3.S3ReadAheadByteChannel',     // 85% instruction, 65% branch
+                'software.amazon.nio.spi.s3.S3SeekableByteChannel',      // 80% instruction, 60% branch
+                'software.amazon.nio.spi.s3.S3FileSystem',               // 80% instruction, 65% branch
+                'software.amazon.nio.spi.s3.S3DirectoryStream',          // 79% instruction, 100% branch
+                'software.amazon.nio.spi.s3.S3WritableByteChannel',      // 78% instruction, 83% branch
+                'software.amazon.nio.spi.s3.S3FileSystemProvider',       // 73% instruction, 64% branch
+                'software.amazon.nio.spi.s3.util.LibraryVersion',        // 58% instruction, 33% branch
+                'software.amazon.nio.spi.s3.S3ClientProvider.S3NioSpiInterceptor'  // 21% instruction
             ]
         }
     }
