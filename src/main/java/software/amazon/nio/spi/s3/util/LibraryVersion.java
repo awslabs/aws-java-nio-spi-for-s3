@@ -50,7 +50,7 @@ public final class LibraryVersion {
         return cachedVersion;
     }
     
-    private static String determineVersion() {
+    static String determineVersion() {
         // Try to read from version.properties first
         String version = readVersionFromProperties();
         if (version != null) {
@@ -67,7 +67,7 @@ public final class LibraryVersion {
         return FALLBACK_VERSION;
     }
     
-    private static String readVersionFromProperties() {
+    static String readVersionFromProperties() {
         try (InputStream is = LibraryVersion.class.getResourceAsStream(VERSION_PROPERTIES_PATH)) {
             if (is != null) {
                 Properties props = new Properties();
@@ -80,7 +80,7 @@ public final class LibraryVersion {
         return null;
     }
     
-    private static String readVersionFromManifest() {
+    static String readVersionFromManifest() {
         try {
             Package pkg = LibraryVersion.class.getPackage();
             if (pkg != null) {

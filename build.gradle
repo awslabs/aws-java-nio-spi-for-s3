@@ -221,8 +221,20 @@ checkstyle {
 
 jacocoTestCoverageVerification {
     violationRules {
+        // Default rule for most classes - 80% threshold
         rule {
             element = 'CLASS'
+            excludes = [
+                // Exclude classes that have specific rules below
+                'software.amazon.nio.spi.s3.S3ReadAheadByteChannel',
+                'software.amazon.nio.spi.s3.S3SeekableByteChannel', 
+                'software.amazon.nio.spi.s3.S3FileSystem',
+                'software.amazon.nio.spi.s3.S3DirectoryStream',
+                'software.amazon.nio.spi.s3.S3WritableByteChannel',
+                'software.amazon.nio.spi.s3.S3FileSystemProvider',
+                'software.amazon.nio.spi.s3.util.LibraryVersion',
+                'software.amazon.nio.spi.s3.S3ClientProvider.S3NioSpiInterceptor'
+            ]
             limit {
                 counter = 'LINE'
                 value = 'COVEREDRATIO'
@@ -233,17 +245,88 @@ jacocoTestCoverageVerification {
                 value = 'COVEREDRATIO'
                 minimum = 0.80
             }
-            excludes = [
-                // Classes that don't meet the 80% coverage threshold for both instruction AND branch coverage
-                'software.amazon.nio.spi.s3.S3ReadAheadByteChannel',     // 85% instruction, 65% branch
-                'software.amazon.nio.spi.s3.S3SeekableByteChannel',      // 80% instruction, 60% branch
-                'software.amazon.nio.spi.s3.S3FileSystem',               // 80% instruction, 65% branch
-                'software.amazon.nio.spi.s3.S3DirectoryStream',          // 79% instruction, 100% branch
-                'software.amazon.nio.spi.s3.S3WritableByteChannel',      // 78% instruction, 83% branch
-                'software.amazon.nio.spi.s3.S3FileSystemProvider',       // 73% instruction, 64% branch
-                'software.amazon.nio.spi.s3.util.LibraryVersion',        // 58% instruction, 33% branch
-                'software.amazon.nio.spi.s3.S3ClientProvider.S3NioSpiInterceptor'  // 21% instruction
+        }
+        
+        // Utility classes - lower threshold (73% line, 50% branch)
+        rule {
+            element = 'CLASS'
+            includes = ['software.amazon.nio.spi.s3.util.LibraryVersion']
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.73  // Current actual coverage
+            }
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.50  // Current actual coverage
+            }
+        }
+        
+        // Infrastructure classes with complex I/O - 75% line, 60% branch
+        rule {
+            element = 'CLASS'
+            includes = [
+                'software.amazon.nio.spi.s3.S3ReadAheadByteChannel',
+                'software.amazon.nio.spi.s3.S3SeekableByteChannel',
+                'software.amazon.nio.spi.s3.S3WritableByteChannel'
             ]
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.75
+            }
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.60
+            }
+        }
+        
+        // Core system classes - 74% line, 65% branch
+        rule {
+            element = 'CLASS'
+            includes = [
+                'software.amazon.nio.spi.s3.S3FileSystem',
+                'software.amazon.nio.spi.s3.S3DirectoryStream'
+            ]
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.74  // Adjusted for S3DirectoryStream
+            }
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.65
+            }
+        }
+        
+        // Main provider class - 70% line, 60% branch (most complex)
+        rule {
+            element = 'CLASS'
+            includes = ['software.amazon.nio.spi.s3.S3FileSystemProvider']
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.70
+            }
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.60
+            }
+        }
+        
+        // Simple interceptor class - very low threshold
+        rule {
+            element = 'CLASS'
+            includes = ['software.amazon.nio.spi.s3.S3ClientProvider.S3NioSpiInterceptor']
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.20  // Current actual coverage
+            }
         }
     }
 }
