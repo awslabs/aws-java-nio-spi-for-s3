@@ -40,6 +40,13 @@ java {
     }
 }
 
+// Process version.properties to replace placeholders with actual values
+processResources {
+    filesMatching('version.properties') {
+        expand(project: project)
+    }
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.release.set(11)
     options.compilerArgs += ['-Xlint:all,-serial']
