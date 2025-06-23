@@ -109,6 +109,35 @@ implementation("ch.qos.logback:logback-classic:1.3.11") // 1.3.x is still compat
 implementation("ch.qos.logback:logback-core:1.3.11")
 ```
 
+## Client Identification Headers
+
+This library can add custom headers to S3 requests to help identify traffic originating from this library. This is useful for:
+- Monitoring and analytics in S3 access logs
+- Identifying requests in AWS CloudTrail
+- Debugging and troubleshooting
+
+When enabled, the following headers are added to all S3 requests:
+- `User-Agent: aws-java-nio-spi-for-s3/[version]`
+- `X-Amz-Client-Name: aws-java-nio-spi-for-s3`
+- `X-Amz-Client-Version: [version]`
+
+### Enabling Custom Headers
+
+**Method 1: System Property (Global)**
+```bash
+# Enable for all S3FileSystemProvider instances
+java -Ds3.spi.client.custom-headers.enabled=true -jar your-application.jar
+```
+
+**Method 2: Programmatic (Per FileSystem)**
+```java
+S3FileSystemProvider provider = new S3FileSystemProvider();
+S3FileSystem fileSystem = (S3FileSystem) provider.getFileSystem(URI.create("s3://your-bucket"));
+fileSystem.clientProvider().setCustomHeadersEnabled(true);
+```
+
+**Note:** Enabling custom headers switches from the high-performance CRT client to the regular AWS SDK client. For most use cases, the performance difference is negligible, but consider this for high-throughput applications.
+
 ## AWS Credentials
 
 This library will perform all actions using credentials according to the AWS SDK for Java [default credential provider
