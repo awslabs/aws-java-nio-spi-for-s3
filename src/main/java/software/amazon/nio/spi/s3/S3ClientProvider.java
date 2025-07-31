@@ -5,13 +5,18 @@
 
 package software.amazon.nio.spi.s3;
 
+import java.lang.reflect.InvocationTargetException;
+import java.time.Duration;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import java.time.Duration;
+
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.interceptor.Context;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
+import software.amazon.awssdk.core.signer.Signer;
 import software.amazon.awssdk.http.SdkHttpRequest;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -68,6 +73,11 @@ public class S3ClientProvider {
      * Flag to determine if we should use CRT client or regular client with custom headers
      */
     private boolean useCustomHeaders = false;
+    
+    /**
+     * Class-name of the signer which should be used.
+     */
+    private String customerSigner = null;
 
 
     private final Cache<String, CacheableS3Client> bucketClientCache = Caffeine.newBuilder()
@@ -81,6 +91,7 @@ public class S3ClientProvider {
         this.useCustomHeaders = Boolean.parseBoolean(
             System.getProperty("s3.spi.client.custom-headers.enabled", "false")
         );
+        this.customerSigner =  System.getProperty("s3.spi.client.custom-signer", null);
     }
 
     public void asyncClientBuilder(final S3CrtAsyncClientBuilder builder) {
@@ -112,7 +123,7 @@ public class S3ClientProvider {
             if (client != null && client.isClosed()) {
                 bucketClientCache.invalidate(bucket);    // remove the closed client from the cache
             }
-            if (useCustomHeaders) {
+            if (useCustomHeaders || customerSigner != null) {
                 return bucketClientCache.get(bucket, b -> new CacheableS3Client(configureRegularClient().build()));
             } else {
                 return bucketClientCache.get(bucket, b -> new CacheableS3Client(configureCrtClient().build()));
@@ -161,11 +172,23 @@ public class S3ClientProvider {
         }
 
         // Add custom headers to identify requests from this library
-        var clientOverrideConfig = ClientOverrideConfiguration.builder()
-                .addExecutionInterceptor(new S3NioSpiInterceptor())
-                .build();
+        var clientOverrideConfigBuilder = ClientOverrideConfiguration.builder();
         
-        builder.overrideConfiguration(clientOverrideConfig);
+        if (useCustomHeaders) {
+            clientOverrideConfigBuilder.addExecutionInterceptor(new S3NioSpiInterceptor());
+        }
+        if (customerSigner != null) {
+	    try {
+		@SuppressWarnings("deprecation")
+		Signer signer = (Signer) Class.forName(customerSigner).getDeclaredConstructor().newInstance();
+		clientOverrideConfigBuilder.putAdvancedOption(SdkAdvancedClientOption.SIGNER, signer);
+	    } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException 
+		    | NoSuchMethodException | SecurityException | ClassNotFoundException e) {
+	            throw new RuntimeException(e);
+	    }
+        }
+        
+        builder.overrideConfiguration(clientOverrideConfigBuilder.build());
         builder.forcePathStyle(configuration.getForcePathStyle());
         
         return builder;
