@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.services.s3.internal.BucketUtils;
 import software.amazon.awssdk.utils.Pair;
 import software.amazon.nio.spi.s3.S3OpenOption;
@@ -102,6 +103,12 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * The name of the credentials property
      */
     public static final String S3_SPI_CREDENTIALS_PROPERTY = "s3.spi.credentials";
+
+    /**
+     * The name of the credentials provider property
+     */
+    public static final String S3_SPI_CREDENTIALS_PROVIDER_PROPERTY = "s3.spi.credentials.provider";
+
     /**
      * The name of the S3 object integrity check property
      */
@@ -331,6 +338,25 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     }
 
     /**
+     * Fluently sets the CredentialsProvider given a
+     * {@code AwsCredentialsProvider} object.
+     * When both AwsCredentials and AwsCredentialsProvider are
+     * provided, the AwsCredentialsProvider has higher priority.
+     *
+     * @param credentialsProvider the credentials provider
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withCredentialsProvider(AwsCredentialsProvider credentialsProvider) {
+        if (credentialsProvider == null) {
+            remove(S3_SPI_CREDENTIALS_PROVIDER_PROPERTY);
+        } else {
+            put(S3_SPI_CREDENTIALS_PROVIDER_PROPERTY, credentialsProvider);
+        }
+        return this;
+    }
+
+
+    /**
      * Fluently sets the value of {@code forcePathStyle} and adds
      * {@code S3_SPI_FORCE_PATH_STYLE_PROPERTY} to the map unless the given
      * value is null. If null, {@code S3_SPI_FORCE_PATH_STYLE_PROPERTY} is
@@ -517,6 +543,23 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
             );
         }
 
+        return null;
+    }
+
+    /**
+     * Get the configured credential provider.
+     *
+     * @return the configured value or null if not provided
+     */
+    public AwsCredentialsProvider getCredentialsProvider() {
+        if (containsKey(S3_SPI_CREDENTIALS_PROVIDER_PROPERTY)) {
+            return (AwsCredentialsProvider) get(S3_SPI_CREDENTIALS_PROVIDER_PROPERTY);
+        }
+
+        final AwsCredentials awsCredentials = getCredentials();
+        if (awsCredentials != null) {
+            return this::getCredentials;
+        }
         return null;
     }
 

@@ -126,9 +126,9 @@ public class S3ClientProvider {
             asyncClientBuilder.endpointOverride(endpointUri);
         }
 
-        var credentials = configuration.getCredentials();
-        if (credentials != null) {
-            asyncClientBuilder.credentialsProvider(() -> credentials);
+        var credentialsProvider = configuration.getCredentialsProvider();
+        if (credentialsProvider != null) {
+            asyncClientBuilder.credentialsProvider(credentialsProvider);
         }
 
         var region = configuration.getRegion();
