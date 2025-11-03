@@ -553,7 +553,14 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      */
     public AwsCredentialsProvider getCredentialsProvider() {
         if (containsKey(S3_SPI_CREDENTIALS_PROVIDER_PROPERTY)) {
-            return (AwsCredentialsProvider) get(S3_SPI_CREDENTIALS_PROVIDER_PROPERTY);
+            if (get(S3_SPI_CREDENTIALS_PROVIDER_PROPERTY) instanceof AwsCredentialsProvider) {
+                return (AwsCredentialsProvider) get(S3_SPI_CREDENTIALS_PROVIDER_PROPERTY);
+            } else {
+                logger.warn(
+                        "The value of property '{}' was found, but it is not a type of AwsCredentialsProvider. " +
+                                "Will fallback to AwsCredentials.",
+                        S3_SPI_CREDENTIALS_PROVIDER_PROPERTY);
+            }
         }
 
         final AwsCredentials awsCredentials = getCredentials();

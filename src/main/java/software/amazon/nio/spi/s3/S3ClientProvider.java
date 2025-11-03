@@ -150,9 +150,9 @@ public class S3ClientProvider {
             builder.endpointOverride(endpointUri);
         }
 
-        var credentials = configuration.getCredentials();
-        if (credentials != null) {
-            builder.credentialsProvider(() -> credentials);
+        var credentialsProvider = configuration.getCredentialsProvider();
+        if (credentialsProvider != null) {
+            builder.credentialsProvider(credentialsProvider);
         }
 
         var region = configuration.getRegion();
