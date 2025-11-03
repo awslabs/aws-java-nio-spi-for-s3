@@ -168,9 +168,9 @@ testing {
         integrationTest(JvmTestSuite) {
             dependencies {
                 implementation(project())
-                implementation('org.testcontainers:junit-jupiter:1.21.3')
-                implementation('org.testcontainers:localstack:1.21.3')
-                implementation('org.testcontainers:testcontainers:1.21.3')
+                implementation('org.testcontainers:junit-jupiter:2.0.1')
+                implementation('org.testcontainers:localstack:2.0.1')
+                implementation('org.testcontainers:testcontainers:2.0.1')
             }
         }
         withType(JvmTestSuite).configureEach {
@@ -187,7 +187,7 @@ testing {
                 implementation('org.mockito:mockito-core:5.20.0')
                 implementation('org.mockito:mockito-junit-jupiter:5.20.0')
                 implementation('com.github.stefanbirkner:system-lambda:1.2.1')
-                runtimeOnly('ch.qos.logback:logback-classic:1.5.18')
+                runtimeOnly('ch.qos.logback:logback-classic:1.5.20')
             }
         }
     }
