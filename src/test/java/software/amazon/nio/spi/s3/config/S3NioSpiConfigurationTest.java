@@ -21,6 +21,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.nio.spi.s3.S3OpenOption;
 
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.*;
@@ -54,6 +55,7 @@ public class S3NioSpiConfigurationTest {
         then(config.getBucketName()).isNull();
         then(config.getRegion()).isNull();
         then(config.getCredentials()).isNull();
+        then(config.getCredentialsProvider()).isNull();
         then(config.getForcePathStyle()).isFalse();
         then(config.getTimeoutLow()).isEqualTo(S3_SPI_TIMEOUT_LOW_DEFAULT);
         then(config.getTimeoutMedium()).isEqualTo(S3_SPI_TIMEOUT_MEDIUM_DEFAULT);
@@ -212,6 +214,61 @@ public class S3NioSpiConfigurationTest {
             .withCredentials(C2)
             .getCredentials()
         ).isSameAs(C2);
+    }
+
+    @Test
+    public void withAndGetCredentialsProvider() {
+
+        final AwsCredentialsProvider C1 = () -> AwsBasicCredentials.create("key1", "secret1");
+        final AwsCredentialsProvider C2 = () -> AwsBasicCredentials.create("key2", "secret2");
+
+        then(config.withCredentialsProvider(C1)).isSameAs(config);
+        then(config.getCredentialsProvider()).isSameAs(C1);
+        then(config.withCredentialsProvider(C2)).isSameAs(config);
+        then(config.getCredentialsProvider()).isSameAs(C2);
+        then(config.withCredentialsProvider(C1).withCredentialsProvider(null).getCredentialsProvider()).isNull();
+
+        //
+        // withCredentialsProvider(AwsCredentialsProvider) takes priority over withCredentialas
+        //
+        then(
+                config.withCredentials("key1", "secret1")
+                        .withCredentialsProvider(C2)
+                        .getCredentialsProvider()
+        ).isSameAs(C2);
+    }
+
+    @Test
+    public void getCredentialsProviderWithCredentials() {
+
+        final AwsCredentials C1 = AwsBasicCredentials.create("key1", "secret1");
+
+        then(config.withCredentials(C1)).isSameAs(config);
+        then(config.getCredentials()).isSameAs(C1);
+        then(config.withCredentials(null).getCredentials()).isNull();
+        then(config.withCredentials(null).withCredentialsProvider(null).getCredentialsProvider()).isNull();
+
+        then(
+                config.withCredentials(C1)
+                        .withCredentialsProvider(null)
+                        .getCredentials()
+        ).isSameAs(C1);
+    }
+
+    @Test
+    public void getCredentialsProviderWithWrongTypeOfObject() {
+
+        final AwsCredentials C1 = AwsBasicCredentials.create("key1", "secret1");
+        config.put(S3_SPI_CREDENTIALS_PROVIDER_PROPERTY, "IAmNotAProvider");
+        then(config.getCredentialsProvider()).isNull();
+
+        then(config.withCredentials(C1)).isSameAs(config);
+        then(config.getCredentials()).isSameAs(C1);
+        then(
+                config.withCredentials(C1)
+                        .withCredentialsProvider(null)
+                        .getCredentials()
+        ).isSameAs(C1);
     }
 
     @Test
