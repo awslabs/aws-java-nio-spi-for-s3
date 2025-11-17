@@ -55,7 +55,7 @@ public class S3FileSystem extends FileSystem {
     private final String bucketName;
     private final S3FileSystemProvider provider;
     private boolean open = true;
-    private final Set<S3SeekableByteChannel> openChannels = new HashSet<>();
+    private final Set<S3SeekableByteChannel> openChannels = ConcurrentHashMap.newKeySet();
 
     // private S3AsyncClient client;
     private final S3NioSpiConfiguration configuration;
