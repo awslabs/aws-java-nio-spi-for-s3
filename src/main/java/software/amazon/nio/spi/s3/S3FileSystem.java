@@ -25,10 +25,10 @@ import java.nio.file.WatchService;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import org.slf4j.Logger;
@@ -153,7 +153,8 @@ public class S3FileSystem extends FileSystem {
      * @return integrity check implementation
      */
     Set<? extends OpenOption> appendConfiguredOpenOptions(Set<? extends OpenOption> options) {
-        var newOptions = new HashSet<OpenOption>(options);
+        var newOptions = java.util.concurrent.ConcurrentHashMap.<OpenOption>newKeySet();
+        newOptions.addAll(options);
         integrityCheck().ifPresent(newOptions::add);
         configuration.getOpenOptions().forEach(newOptions::add);
         return newOptions;
