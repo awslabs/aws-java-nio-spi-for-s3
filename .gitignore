@@ -22,3 +22,8 @@ target
 
 # sdkman files
 .sdkmanrc
+
+
+# Internal release documentation (AWS only)
+RELEASE.md
+RELEASE_NOTES.md
