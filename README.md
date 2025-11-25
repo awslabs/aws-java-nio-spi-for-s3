@@ -78,6 +78,22 @@ For example:
     implementation("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.3.0")
 ```
 
+> [!TIP]
+> If your application only uses standard Java NIO APIs and doesn't directly reference S3-specific classes, 
+> you can use `runtimeOnly` instead of `implementation`. This allows the S3 provider to be discovered 
+> automatically via Java's ServiceLoader mechanism:
+> ```groovy
+> runtimeOnly("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.3.0")
+> ```
+> This approach is cleaner as it keeps the S3 provider as a pure runtime dependency that's loaded dynamically.
+>
+> You can also use `latest.release` to automatically get the most recent stable version:
+> ```groovy
+> runtimeOnly("software.amazon.nio.s3:aws-java-nio-spi-for-s3:latest.release")
+> ```
+> **Note**: Using `latest.release` can lead to unexpected behavior if new versions introduce breaking changes. 
+> Specifying exact versions is recommended for reproducible builds.
+
 The library heavily relies on the `crt` client from aws. It uses the [`uber`
 version](https://github.com/awslabs/aws-crt-java?tab=readme-ov-file#platform-specific-jars) for simplicity
 and wide range of supported platforms. 
