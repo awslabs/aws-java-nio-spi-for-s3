@@ -69,13 +69,13 @@ For example:
 <dependency>
     <groupId>software.amazon.nio.s3</groupId>
     <artifactId>aws-java-nio-spi-for-s3</artifactId>
-    <version>2.3.0</version>
+    <version>2.4.0</version>
 </dependency>
 ```
 
 `build.gradle(.kts)`
 ```groovy
-    implementation("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.3.0")
+    implementation("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.4.0")
 ```
 
 > [!TIP]
@@ -83,7 +83,7 @@ For example:
 > you can use `runtimeOnly` instead of `implementation`. This allows the S3 provider to be discovered 
 > automatically via Java's ServiceLoader mechanism:
 > ```groovy
-> runtimeOnly("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.3.0")
+> runtimeOnly("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.4.0")
 > ```
 > This approach is cleaner as it keeps the S3 provider as a pure runtime dependency that's loaded dynamically.
 >
@@ -102,7 +102,7 @@ and wide range of supported platforms.
 > If **size** is an **issue**, you can **exclude** the `crt` dependency from the library and import the [specific `crt` library](https://github.com/awslabs/aws-crt-java?tab=readme-ov-file#platform-specific-jars)
 > for your platform. For example:
 > ```
-> implementation("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.3.0") {
+> implementation("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.4.0") {
 >	exclude group: 'software.amazon.awssdk.crt', module: 'aws-crt'
 > }
 > implementation 'software.amazon.awssdk.crt:aws-crt:0.31.1:linux-x86_64'
