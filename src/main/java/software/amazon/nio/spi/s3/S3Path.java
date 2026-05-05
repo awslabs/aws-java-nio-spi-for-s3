@@ -286,11 +286,17 @@ class S3Path implements Path {
      */
     @Override
     public boolean startsWith(Path other) {
-        return this.equals(other) ||
-            this.fileSystem.equals(other.getFileSystem()) &&
-                this.isAbsolute() == other.isAbsolute() &&
-                this.getNameCount() >= other.getNameCount() &&
-                this.subpath(0, other.getNameCount()).equals(other);
+        if (this.equals(other)) {
+            return true;
+        }
+        if (!this.fileSystem.equals(other.getFileSystem()) || this.isAbsolute() != other.isAbsolute()) {
+            return false;
+        }
+        if (other.getNameCount() == 0) {
+            return true;
+        }
+        return this.getNameCount() >= other.getNameCount() &&
+            this.subpath(0, other.getNameCount()).equals(other);
     }
 
     /**
@@ -332,10 +338,17 @@ class S3Path implements Path {
      */
     @Override
     public boolean endsWith(Path other) {
-        return this.equals(other) ||
-            this.fileSystem == other.getFileSystem() &&
-                this.getNameCount() >= other.getNameCount() &&
-                this.subpath(this.getNameCount() - other.getNameCount(), this.getNameCount()).equals(other);
+        if (this.equals(other)) {
+            return true;
+        }
+        if (this.fileSystem != other.getFileSystem()) {
+            return false;
+        }
+        if (other.getNameCount() == 0) {
+            return false;
+        }
+        return this.getNameCount() >= other.getNameCount() &&
+            this.subpath(this.getNameCount() - other.getNameCount(), this.getNameCount()).equals(other);
     }
 
     /**
