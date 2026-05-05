@@ -209,7 +209,23 @@ public class S3FileSystemProvider extends FileSystemProvider {
             }
             throw new IOException(e.getMessage(), e);
         }
-        return getFileSystem(uri);
+
+        // Add the new filesystem to the cache with the configuration used to create it.
+        // This ensures that any configuration (credentials, endpoint, etc.) is preserved
+        // when the filesystem is later retrieved via getFileSystem().
+        return getOrCreateFileSystem(info.key(), config);
+    }
+
+    /**
+     * Gets an existing filesystem from the cache or creates a new one with the given configuration.
+     * This ensures that the filesystem is always cached with the configuration that was used to create it.
+     *
+     * @param key    the cache key (typically the bucket name)
+     * @param config the configuration to use if a new filesystem needs to be created
+     * @return the cached or newly created filesystem
+     */
+    S3FileSystem getOrCreateFileSystem(String key, S3NioSpiConfiguration config) {
+        return FS_CACHE.computeIfAbsent(key, (k) -> new S3FileSystem(this, config));
     }
 
     /**
@@ -248,13 +264,11 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public FileSystem getFileSystem(URI uri) {
         var info = fileSystemInfo(uri);
-        return FS_CACHE.computeIfAbsent(info.key(), (key) -> {
-            var config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
-            if (info.accessKey() != null) {
-                config.withCredentials(info.accessKey(), info.accessSecret());
-            }
-            return new S3FileSystem(this, config);
-        });
+        var config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
+        if (info.accessKey() != null) {
+            config.withCredentials(info.accessKey(), info.accessSecret());
+        }
+        return getOrCreateFileSystem(info.key(), config);
     }
 
     /**
