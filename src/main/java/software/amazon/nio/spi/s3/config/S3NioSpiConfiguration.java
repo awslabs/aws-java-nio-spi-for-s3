@@ -32,7 +32,7 @@ import software.amazon.nio.spi.s3.util.TimeOutUtils;
 public class S3NioSpiConfiguration extends HashMap<String, Object> {
 
     public static final String AWS_REGION_PROPERTY = "aws.region";
-    public static final String AWS_ACCESS_KEY_PROPERTY = "aws.accessKey";
+    public static final String AWS_ACCESS_KEY_PROPERTY = "aws.accessKeyId";
     public static final String AWS_SECRET_ACCESS_KEY_PROPERTY = "aws.secretAccessKey";
 
     /**
@@ -167,7 +167,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         // With the below we pick existing environment variables and system
         // properties as overrides of the default aws-nio specific properties.
         // We do not pick aws generic properties like aws.region or
-        // aws.accessKey, leaving the framework and the underlying AWS client
+        // aws.accessKeyId, leaving the framework and the underlying AWS client
         // the possibility to use the standard behaviour.
         //
 
