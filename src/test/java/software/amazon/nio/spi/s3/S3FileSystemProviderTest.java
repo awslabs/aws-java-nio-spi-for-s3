@@ -229,8 +229,8 @@ public class S3FileSystemProviderTest {
             new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build())
         );
 
-        var object1 = S3Object.builder().key(pathUri+"/key1").build();
-        var object2 = S3Object.builder().key(pathUri+"/key2").build();
+        var object1 = S3Object.builder().key("baa/key1").build();
+        var object2 = S3Object.builder().key("baa/key2").build();
         when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
             completedFuture(ListObjectsV2Response.builder().contents(object1, object2).build())
         );
@@ -294,14 +294,16 @@ public class S3FileSystemProviderTest {
         final var publisher = new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build());
         when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(publisher);
 
-        var object1 = S3Object.builder().key(pathUri+"/key1").build();
-        var object2 = S3Object.builder().key(pathUri+"/key2").build();
-        var object3 = S3Object.builder().key(pathUri+"/").build();
+        var object1 = S3Object.builder().key("baa/key1").build();
+        var object2 = S3Object.builder().key("baa/key2").build();
+        var object3 = S3Object.builder().key("baa/").build();
         when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
             completedFuture(ListObjectsV2Response.builder().contents(object1, object2, object3).build())
         );
 
-        final var expectedItems = Stream.of(object1, object2).map(obj -> fs.getPath(obj.key())).collect(Collectors.toList());
+        final var expectedItems = Stream.of(object1, object2)
+            .map(obj -> fs.getPath("/" + obj.key()))
+            .collect(Collectors.toList());
         try(var stream = provider.newDirectoryStream(fs.getPath(pathUri + "/"), path -> true)){
             assertThat(stream.iterator()).toIterable().containsExactlyElementsOf(expectedItems);
         }
@@ -312,9 +314,9 @@ public class S3FileSystemProviderTest {
         final var publisher = new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build());
         when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(publisher);
 
-        var object1 = S3Object.builder().key(pathUri+"/key1").build();
-        var object2 = S3Object.builder().key(pathUri+"/key2").build();
-        var object3 = S3Object.builder().key(pathUri+"/").build();
+        var object1 = S3Object.builder().key("baa/key1").build();
+        var object2 = S3Object.builder().key("baa/key2").build();
+        var object3 = S3Object.builder().key("baa/").build();
         when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
             completedFuture(ListObjectsV2Response.builder().contents(object1, object2, object3).build())
         );
@@ -322,7 +324,32 @@ public class S3FileSystemProviderTest {
         DirectoryStream.Filter<? super Path> filter = path -> path.toString().endsWith("key2");
 
         try(var stream = provider.newDirectoryStream(fs.getPath(pathUri + "/"), filter)){
-            assertThat(stream.iterator()).toIterable().containsExactly(fs.getPath(object2.key()));
+            assertThat(stream.iterator()).toIterable().containsExactly(fs.getPath("/" + object2.key()));
+        }
+    }
+
+    @Test
+    @DisplayName("newDirectoryStream should return absolute paths that can be relativized against the parent")
+    public void newDirectoryStreamReturnsAbsolutePaths() throws IOException {
+        final var publisher = new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build());
+        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(publisher);
+
+        var object1 = S3Object.builder().key("baa/key1").build();
+        var object2 = S3Object.builder().key("baa/subdir/").build();
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
+            completedFuture(ListObjectsV2Response.builder().contents(object1).commonPrefixes(
+                software.amazon.awssdk.services.s3.model.CommonPrefix.builder().prefix("baa/subdir/").build()
+            ).build())
+        );
+
+        var dir = fs.getPath(pathUri + "/");
+        try (var stream = provider.newDirectoryStream(dir, path -> true)) {
+            for (Path p : stream) {
+                // All returned paths should be absolute
+                assertTrue(p.isAbsolute(), "Directory stream entries should be absolute paths");
+                // Should be able to relativize without throwing
+                assertThatCode(() -> dir.relativize(p)).doesNotThrowAnyException();
+            }
         }
     }
 
