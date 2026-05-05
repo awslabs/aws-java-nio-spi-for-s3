@@ -32,6 +32,7 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.AccessMode;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileSystem;
 import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Path;
@@ -44,6 +45,7 @@ import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
@@ -75,6 +77,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 @SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
@@ -123,6 +126,46 @@ public class S3FileSystemProviderTest {
 
         assertThatCode(() -> provider.newFileSystem(uri, env))
                 .doesNotThrowAnyExceptionExcept(FileSystemAlreadyExistsException.class, IOException.class);
+    }
+
+    @Test
+    @DisplayName("newFileSystem should add the filesystem to the cache so getFileSystem returns the same instance")
+    public void newFileSystemShouldCacheFileSystem() throws IOException {
+        // Use a fresh bucket name that isn't already in the cache
+        final var newBucketUri = URI.create("s3://new-cached-bucket/key");
+
+        // Create a provider that bypasses the actual S3 createBucket call
+        var testProvider = new S3FileSystemProvider() {
+            @Override
+            public FileSystem newFileSystem(final URI uri, final Map<String, ?> env) throws IOException {
+                if (!uri.getScheme().equals(getScheme())) {
+                    throw new IllegalArgumentException("URI scheme must be " + getScheme());
+                }
+                var info = fileSystemInfo(uri);
+                var config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
+                if (info.accessKey() != null) {
+                    config.withCredentials(info.accessKey(), info.accessSecret());
+                }
+                // Skip the actual bucket creation and just cache the filesystem
+                return getOrCreateFileSystem(info.key(), config);
+            }
+        };
+
+        // The filesystem should not be in the cache before newFileSystem is called
+        assertFalse(testProvider.getFsCache().containsKey("new-cached-bucket"));
+
+        // Call newFileSystem
+        var createdFs = testProvider.newFileSystem(newBucketUri, null);
+
+        // The filesystem should now be in the cache
+        assertTrue(testProvider.getFsCache().containsKey("new-cached-bucket"));
+
+        // getFileSystem should return the same instance
+        var retrievedFs = testProvider.getFileSystem(newBucketUri);
+        assertSame(createdFs, retrievedFs);
+
+        // Clean up
+        testProvider.closeFileSystem(createdFs);
     }
 
     @Test
