@@ -124,9 +124,44 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         "CRC32", "CRC32C", "CRC64NVME", S3_INTEGRITY_CHECK_ALGORITHM_DEFAULT.toUpperCase());
 
     /**
+     * The name of the streaming multipart upload enabled property
+     */
+    public static final String S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_PROPERTY = "s3.spi.write.streaming-multipart-upload";
+    /**
+     * The default value of the streaming multipart upload enabled property
+     */
+    public static final boolean S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_DEFAULT = false;
+    /**
+     * The name of the multipart part size property
+     */
+    public static final String S3_SPI_WRITE_MULTIPART_PART_SIZE_PROPERTY = "s3.spi.write.multipart-part-size";
+    /**
+     * The default value of the multipart part size property (8 MiB)
+     */
+    public static final long S3_SPI_WRITE_MULTIPART_PART_SIZE_DEFAULT = 8L * 1024 * 1024;
+
+    /**
+     * The name of the streaming multipart upload fallback enabled property
+     */
+    public static final String S3_SPI_WRITE_MULTIPART_FALLBACK_PROPERTY = "s3.spi.write.multipart-fallback-enabled";
+    /**
+     * The default value of the streaming multipart upload fallback enabled property
+     */
+    public static final boolean S3_SPI_WRITE_MULTIPART_FALLBACK_DEFAULT = false;
+
+    /**
      * This configuration is not meant to be configured via System Properties, but to be set programmatically.
      */
     static final String S3_OPEN_OPTIONS_PROPERTY = "s3.open-options";
+
+    /**
+     * Minimum part size for streaming multipart upload: 5 MiB.
+     */
+    private static final long MIN_PART_SIZE = 5L * 1024 * 1024;
+    /**
+     * Maximum part size for streaming multipart upload: 5 GiB.
+     */
+    private static final long MAX_PART_SIZE = 5L * 1024 * 1024 * 1024;
 
     private static final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
 
@@ -161,6 +196,9 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         put(S3_SPI_TIMEOUT_MEDIUM_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_MEDIUM_DEFAULT));
         put(S3_SPI_TIMEOUT_HIGH_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_HIGH_DEFAULT));
         put(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, S3_INTEGRITY_CHECK_ALGORITHM_DEFAULT);
+        put(S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_PROPERTY, String.valueOf(S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_DEFAULT));
+        put(S3_SPI_WRITE_MULTIPART_PART_SIZE_PROPERTY, String.valueOf(S3_SPI_WRITE_MULTIPART_PART_SIZE_DEFAULT));
+        put(S3_SPI_WRITE_MULTIPART_FALLBACK_PROPERTY, String.valueOf(S3_SPI_WRITE_MULTIPART_FALLBACK_DEFAULT));
         put(S3_OPEN_OPTIONS_PROPERTY, Set.of(S3OpenOption.useTransferManager()));
 
         //
@@ -471,6 +509,46 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     }
 
     /**
+     * Fluently sets whether streaming multipart upload is enabled.
+     *
+     * @param enabled true to enable streaming multipart upload
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withStreamingMultipartUpload(boolean enabled) {
+        put(S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_PROPERTY, String.valueOf(enabled));
+        return this;
+    }
+
+    /**
+     * Fluently sets the multipart part size.
+     *
+     * @param partSize the part size in bytes
+     * @return this instance
+     * @throws IllegalArgumentException if partSize is less than 5 MiB or greater than 5 GiB
+     */
+    public S3NioSpiConfiguration withMultipartPartSize(long partSize) {
+        if (partSize < MIN_PART_SIZE) {
+            throw new IllegalArgumentException("partSize must be at least 5 MiB, got: " + partSize);
+        }
+        if (partSize > MAX_PART_SIZE) {
+            throw new IllegalArgumentException("partSize must not exceed 5 GiB, got: " + partSize);
+        }
+        put(S3_SPI_WRITE_MULTIPART_PART_SIZE_PROPERTY, String.valueOf(partSize));
+        return this;
+    }
+
+    /**
+     * Fluently sets whether fallback to temp-file mode is enabled for streaming multipart uploads.
+     *
+     * @param enabled true to enable fallback (default), false for strict append-only mode with lower memory usage
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withMultipartFallbackEnabled(boolean enabled) {
+        put(S3_SPI_WRITE_MULTIPART_FALLBACK_PROPERTY, String.valueOf(enabled));
+        return this;
+    }
+
+    /**
      * Get the value of the Maximum Fragment Size
      *
      * @return the configured value or the default if not overridden
@@ -492,6 +570,41 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
             S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY,
             S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT
         );
+    }
+
+    /**
+     * Get whether streaming multipart upload is enabled.
+     *
+     * @return true if streaming multipart upload is enabled
+     */
+    public boolean isStreamingMultipartUploadEnabled() {
+        return Boolean.parseBoolean(
+            (String) getOrDefault(S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_PROPERTY,
+                String.valueOf(S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_DEFAULT)));
+    }
+
+    /**
+     * Get the configured multipart part size in bytes.
+     *
+     * @return the configured part size or the default (8 MiB) if not overridden or invalid
+     */
+    public long getMultipartPartSize() {
+        return parseLongProperty(
+            S3_SPI_WRITE_MULTIPART_PART_SIZE_PROPERTY,
+            S3_SPI_WRITE_MULTIPART_PART_SIZE_DEFAULT);
+    }
+
+    /**
+     * Get whether fallback to temp-file mode is enabled for streaming multipart uploads.
+     * When disabled, seeks throw {@code UnsupportedOperationException} and part data is not
+     * retained in memory, reducing memory usage for large uploads.
+     *
+     * @return true if fallback is enabled (default), false for strict append-only mode
+     */
+    public boolean isMultipartFallbackEnabled() {
+        return Boolean.parseBoolean(
+            (String) getOrDefault(S3_SPI_WRITE_MULTIPART_FALLBACK_PROPERTY,
+                String.valueOf(S3_SPI_WRITE_MULTIPART_FALLBACK_DEFAULT)));
     }
 
     /**
@@ -646,7 +759,14 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         @SuppressWarnings("unchecked")
         var options = (Set<S3OpenOption>) getOrDefault(S3_OPEN_OPTIONS_PROPERTY, Set.of());
         // make a defensive copy to ensure that the thread-safetyness is ensured for the consumers
-        return options.stream().map(S3OpenOption::copy).collect(Collectors.toSet());
+        var result = options.stream().map(S3OpenOption::copy).collect(Collectors.toSet());
+
+        // Add streaming multipart upload option if enabled via configuration
+        if (isStreamingMultipartUploadEnabled()) {
+            result.add(S3OpenOption.streamingMultipartUpload(getMultipartPartSize(), isMultipartFallbackEnabled()));
+        }
+
+        return result;
     }
 
     private void validateIntegrityAlgorithm(String algorithm) {
@@ -678,6 +798,17 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
             return Integer.parseInt(propertyVal);
         } catch (NumberFormatException e) {
             logger.warn("the value of '{}' for '{}' is not an integer, using default value of '{}'",
+                propertyVal, propName, defaultVal);
+            return defaultVal;
+        }
+    }
+
+    private long parseLongProperty(String propName, long defaultVal) {
+        var propertyVal = (String) get(propName);
+        try {
+            return Long.parseLong(propertyVal);
+        } catch (NumberFormatException e) {
+            logger.warn("the value of '{}' for '{}' is not a long, using default value of '{}'",
                 propertyVal, propName, defaultVal);
             return defaultVal;
         }

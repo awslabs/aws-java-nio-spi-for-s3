@@ -81,6 +81,19 @@ class AsyncS3FileChannelTest {
     }
 
     @Test
+    void force_WithStreamingWriteDelegate_CallsForce() throws IOException {
+        // Given
+        var mockStreamingDelegate = mock(S3StreamingMultipartUploadChannel.class);
+        when(mockByteChannel.getWriteDelegate()).thenReturn(mockStreamingDelegate);
+
+        // When
+        channel.force(true);
+
+        // Then
+        verify(mockStreamingDelegate).force();
+    }
+
+    @Test
     void force_WithoutWriteDelegate_DoesNothing() throws IOException {
         // Given
         when(mockByteChannel.getWriteDelegate()).thenReturn(null);

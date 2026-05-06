@@ -24,6 +24,9 @@ target
 # sdkman files
 .sdkmanrc
 
+# jqwik property-based testing database
+.jqwik-database
+
 
 # Internal release documentation (AWS only)
 RELEASE.md

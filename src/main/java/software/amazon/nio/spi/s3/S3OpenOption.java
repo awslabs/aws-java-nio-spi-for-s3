@@ -171,6 +171,87 @@ public abstract class S3OpenOption implements OpenOption {
     }
 
     /**
+     * Enables streaming multipart upload with default settings (8 MiB part size, 4 max in-flight uploads).
+     *
+     * <p>
+     * When this option is used, data is uploaded to S3 incrementally as it is written to the channel, rather than
+     * buffering all data to a local temporary file. This requires the AWS CRT client to be in use.
+     *
+     * @return new instance with default part size and max in-flight
+     */
+    public static S3OpenOption streamingMultipartUpload() {
+        return new S3StreamingMultipartUpload(
+            S3StreamingMultipartUpload.DEFAULT_PART_SIZE,
+            S3StreamingMultipartUpload.DEFAULT_MAX_IN_FLIGHT
+        );
+    }
+
+    /**
+     * Enables streaming multipart upload with a custom part size and default max in-flight uploads (4).
+     *
+     * <p>
+     * When this option is used, data is uploaded to S3 incrementally as it is written to the channel, rather than
+     * buffering all data to a local temporary file. This requires the AWS CRT client to be in use.
+     *
+     * @param partSize
+     *            the part size in bytes, must be between 5 MiB and 5 GiB
+     * @return new instance with the specified part size
+     * @throws IllegalArgumentException
+     *             if partSize is less than 5 MiB or greater than 5 GiB
+     */
+    public static S3OpenOption streamingMultipartUpload(long partSize) {
+        if (partSize < S3StreamingMultipartUpload.MIN_PART_SIZE) {
+            throw new IllegalArgumentException(
+                "Part size must be at least 5 MiB, got: " + partSize);
+        }
+        if (partSize > S3StreamingMultipartUpload.MAX_PART_SIZE) {
+            throw new IllegalArgumentException(
+                "Part size must not exceed 5 GiB, got: " + partSize);
+        }
+        return new S3StreamingMultipartUpload(partSize,
+            S3StreamingMultipartUpload.DEFAULT_MAX_IN_FLIGHT);
+    }
+
+    /**
+     * Enables streaming multipart upload with a custom part size and fallback control.
+     *
+     * <p>
+     * When {@code fallbackEnabled} is {@code false}, the channel operates in strict append-only mode:
+     * <ul>
+     *   <li>Any call to {@code position()} that changes the current position throws
+     *       {@link UnsupportedOperationException}</li>
+     *   <li>Part data is not retained in memory after upload, significantly reducing memory usage
+     *       for large uploads</li>
+     *   <li>Memory usage is bounded to approximately {@code (maxInFlight + 1) × partSize} instead of
+     *       the total bytes written</li>
+     * </ul>
+     *
+     * <p>
+     * When {@code fallbackEnabled} is {@code true} (the default), the channel retains all written data in memory
+     * so it can reconstruct a temp file if a non-sequential position change is detected.
+     *
+     * @param partSize
+     *            the part size in bytes, must be between 5 MiB and 5 GiB
+     * @param fallbackEnabled
+     *            whether to enable fallback to temp-file mode on seeks (true = enable, false = strict append-only)
+     * @return new instance with the specified configuration
+     * @throws IllegalArgumentException
+     *             if partSize is less than 5 MiB or greater than 5 GiB
+     */
+    public static S3OpenOption streamingMultipartUpload(long partSize, boolean fallbackEnabled) {
+        if (partSize < S3StreamingMultipartUpload.MIN_PART_SIZE) {
+            throw new IllegalArgumentException(
+                "Part size must be at least 5 MiB, got: " + partSize);
+        }
+        if (partSize > S3StreamingMultipartUpload.MAX_PART_SIZE) {
+            throw new IllegalArgumentException(
+                "Part size must not exceed 5 GiB, got: " + partSize);
+        }
+        return new S3StreamingMultipartUpload(partSize,
+            S3StreamingMultipartUpload.DEFAULT_MAX_IN_FLIGHT, fallbackEnabled);
+    }
+
+    /**
      * Adapts the given {@link GetObjectRequest.Builder}.
      *
      * @param getObjectRequest
