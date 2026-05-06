@@ -84,7 +84,7 @@ public class StreamingMultipartUploadIntegrationTest {
     void fallbackOnBackwardSeek_producesCorrectContent() throws Exception {
         var key = "fallback-test-object.bin";
         var s3Path = createS3Path(key);
-        var option = new S3StreamingMultipartUpload(PART_SIZE, 4);
+        var option = new S3StreamingMultipartUpload(PART_SIZE, 4, true);
 
         // Write enough data to fill at least one part, then seek backward
         int initialSize = PART_SIZE + (PART_SIZE / 2); // 1.5 parts
