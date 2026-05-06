@@ -16,6 +16,7 @@
 - **JUnit 5** - Primary testing framework
 - **AssertJ** - Fluent assertions
 - **Mockito** - Mocking framework
+- **jqwik** - Property-based testing
 - **Testcontainers** - Integration testing with LocalStack
 - **System Lambda** - System property testing utilities
 

@@ -401,4 +401,94 @@ public class S3NioSpiConfigurationTest {
             .hasMessageStartingWith("Duplicate key software.amazon.nio.spi.s3.S3PreventConcurrentOverwrite");
     }
 
+    @Test
+    public void streamingMultipartUploadDefaultValues() {
+        then(config.isStreamingMultipartUploadEnabled()).isFalse();
+        then(config.getMultipartPartSize()).isEqualTo(S3_SPI_WRITE_MULTIPART_PART_SIZE_DEFAULT);
+        then(config.getMultipartPartSize()).isEqualTo(8L * 1024 * 1024);
+    }
+
+    @Test
+    public void streamingMultipartUploadEnvVarOverride() throws Exception {
+        withEnvironmentVariable("S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD", "true")
+            .and("S3_SPI_WRITE_MULTIPART_PART_SIZE", "16777216")
+            .execute(() -> {
+                var c = new S3NioSpiConfiguration();
+                then(c.isStreamingMultipartUploadEnabled()).isTrue();
+                then(c.getMultipartPartSize()).isEqualTo(16777216L);
+            });
+    }
+
+    @Test
+    public void streamingMultipartUploadSystemPropertyOverride() throws Exception {
+        withEnvironmentVariable("S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD", "false")
+            .execute(() -> {
+                restoreSystemProperties(() -> {
+                    System.setProperty(S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_PROPERTY, "true");
+                    System.setProperty(S3_SPI_WRITE_MULTIPART_PART_SIZE_PROPERTY, "10485760");
+                    var c = new S3NioSpiConfiguration();
+                    then(c.isStreamingMultipartUploadEnabled()).isTrue();
+                    then(c.getMultipartPartSize()).isEqualTo(10485760L);
+                });
+            });
+    }
+
+    @Test
+    public void streamingMultipartUploadProgrammaticOverride() {
+        Map<String, String> overridesMap = new HashMap<>();
+        overridesMap.put(S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_PROPERTY, "true");
+        overridesMap.put(S3_SPI_WRITE_MULTIPART_PART_SIZE_PROPERTY, "20971520");
+        var c = new S3NioSpiConfiguration(overridesMap);
+        then(c.isStreamingMultipartUploadEnabled()).isTrue();
+        then(c.getMultipartPartSize()).isEqualTo(20971520L);
+    }
+
+    @Test
+    public void getOpenOptionsIncludesStreamingWhenEnabled() {
+        config.withStreamingMultipartUpload(true);
+        var options = config.getOpenOptions();
+        then(options).anyMatch(o -> o.getClass().getName().contains("S3StreamingMultipartUpload"));
+    }
+
+    @Test
+    public void getOpenOptionsExcludesStreamingWhenDisabled() {
+        config.withStreamingMultipartUpload(false);
+        var options = config.getOpenOptions();
+        then(options).noneMatch(o -> o.getClass().getName().contains("S3StreamingMultipartUpload"));
+    }
+
+    @Test
+    public void invalidPartSizeLogsWarningAndUsesDefault() {
+        config.put(S3_SPI_WRITE_MULTIPART_PART_SIZE_PROPERTY, "not-a-number");
+        then(config.getMultipartPartSize()).isEqualTo(S3_SPI_WRITE_MULTIPART_PART_SIZE_DEFAULT);
+    }
+
+    @Test
+    public void withStreamingMultipartUploadFluentSetter() {
+        then(config.withStreamingMultipartUpload(true)).isSameAs(config);
+        then(config.isStreamingMultipartUploadEnabled()).isTrue();
+        then(config.withStreamingMultipartUpload(false)).isSameAs(config);
+        then(config.isStreamingMultipartUploadEnabled()).isFalse();
+    }
+
+    @Test
+    public void withMultipartPartSizeFluentSetter() {
+        long validSize = 10 * 1024 * 1024L; // 10 MiB
+        then(config.withMultipartPartSize(validSize)).isSameAs(config);
+        then(config.getMultipartPartSize()).isEqualTo(validSize);
+    }
+
+    @Test
+    public void withMultipartPartSizeValidation() {
+        long tooSmall = 4 * 1024 * 1024L; // 4 MiB (below 5 MiB minimum)
+        assertThatCode(() -> config.withMultipartPartSize(tooSmall))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("partSize must be at least 5 MiB");
+
+        long tooLarge = 6L * 1024 * 1024 * 1024; // 6 GiB (above 5 GiB maximum)
+        assertThatCode(() -> config.withMultipartPartSize(tooLarge))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("partSize must not exceed 5 GiB");
+    }
+
 }

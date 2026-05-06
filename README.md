@@ -290,6 +290,145 @@ To configure timeouts for writing files or opening files for write access, you m
 new S3SeekableByteChannel(s3Path, s3Client, channelOpenOptions, timeout, timeUnit);
 ```
 
+## Streaming Multipart Upload
+
+Streaming multipart upload allows parts to be uploaded to S3 as data is written, rather than buffering everything
+to a local temp file. This reduces memory and disk usage and provides incremental upload progress for large objects.
+
+### Requirements
+
+This feature requires the AWS CRT (Common Runtime) client. If the CRT client is not in use, an
+`UnsupportedOperationException` is thrown when attempting to open a channel with the streaming multipart upload option.
+
+### When to Use
+
+Use streaming multipart upload when writing large objects (greater than 8 MiB) sequentially and you want to minimize
+local disk and memory usage. This is not suitable for random-access write patterns — if a backward seek is detected,
+the channel automatically falls back to the traditional temp-file approach.
+
+### Configuration Options
+
+| Option | Default | Min | Max | Description |
+|--------|---------|-----|-----|-------------|
+| Part size | 8 MiB | 5 MiB | 5 GiB | Size of each part uploaded to S3 |
+| Max in-flight uploads | 4 | — | — | Maximum concurrent part uploads |
+
+Memory usage is approximately `(maxInFlight + 1) × partSize`. With defaults this is about 40 MiB.
+
+### Code Example
+
+```java
+// Open a channel with streaming multipart upload (default 8 MiB parts)
+Set<OpenOption> options = Set.of(
+    StandardOpenOption.WRITE,
+    StandardOpenOption.CREATE,
+    S3OpenOption.streamingMultipartUpload()
+);
+Path s3Path = Paths.get(URI.create("s3://my-bucket/large-file.dat"));
+try (SeekableByteChannel channel = Files.newByteChannel(s3Path, options)) {
+    ByteBuffer buffer = ByteBuffer.allocate(64 * 1024); // 64 KiB write buffer
+    while (hasMoreData()) {
+        fillBuffer(buffer);
+        buffer.flip();
+        channel.write(buffer);
+        buffer.clear();
+    }
+}
+
+// With custom part size (16 MiB)
+Set<OpenOption> options = Set.of(
+    StandardOpenOption.WRITE,
+    StandardOpenOption.CREATE,
+    S3OpenOption.streamingMultipartUpload(16 * 1024 * 1024)
+);
+```
+
+### Environment Variable / System Property Configuration
+
+SPI users who cannot pass custom open options programmatically can enable streaming multipart upload via
+environment variables or system properties:
+
+```bash
+export S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD=true
+export S3_SPI_WRITE_MULTIPART_PART_SIZE=16777216  # 16 MiB
+export S3_SPI_WRITE_MULTIPART_FALLBACK_ENABLED=true  # enable fallback to temp-file on seeks
+```
+
+Or via system properties:
+
+```bash
+java -Ds3.spi.write.streaming-multipart-upload=true \
+     -Ds3.spi.write.multipart-part-size=16777216 \
+     -Ds3.spi.write.multipart-fallback-enabled=true \
+     -jar my-application.jar
+```
+
+### Fallback Behavior
+
+If any explicit position change is detected (either a backward seek or a forward seek that creates a gap), the
+channel automatically aborts the multipart upload and falls back to the traditional temp-file approach. A warning
+is logged when this occurs. Subsequent writes and the final upload on close behave identically to the standard
+write channel.
+
+This includes:
+- **Backward seeks** — setting position to a value less than the current write position
+- **Forward seeks (gaps)** — setting position to a value greater than the current write position, which would
+  create a zero-filled hole in the data
+
+On a standard filesystem, a forward seek past the end of written data creates a sparse file with implicit zeros
+in the gap. Since streaming multipart upload cannot represent these gaps without materializing potentially large
+amounts of zero bytes through the upload pipeline, the channel falls back to temp-file mode where the filesystem
+handles sparse positioning natively.
+
+Only purely sequential writes (where position advances naturally via `write()`) remain in streaming mode. Calling
+`position(currentPosition)` (a no-op) does not trigger fallback.
+
+#### Enabling Fallback
+
+By default, the channel operates in strict append-only mode: seeks throw `UnsupportedOperationException` and
+part data is not retained in memory after upload. This keeps memory usage bounded to approximately
+`(maxInFlight + 1) × partSize`.
+
+If your use case may involve non-sequential writes (e.g., seeking backward to overwrite a header), you can
+enable fallback to temp-file mode:
+
+```java
+// Enable fallback: seeks trigger temp-file mode instead of throwing
+// Tradeoff: all written data is retained in memory to support reconstruction
+S3OpenOption.streamingMultipartUpload(8 * 1024 * 1024, true)
+```
+
+Or via environment variable / system property:
+```bash
+export S3_SPI_WRITE_MULTIPART_FALLBACK_ENABLED=true
+```
+
+When fallback is enabled:
+- Non-sequential position changes trigger automatic fallback to temp-file mode
+- All part data is retained in memory (total memory usage equals total bytes written)
+- After fallback, the channel behaves identically to the standard write channel
+
+### S3 Part Limits
+
+S3 imposes hard limits on multipart uploads:
+
+| Limit | Value |
+|-------|-------|
+| Maximum parts per upload | 10,000 |
+| Minimum part size | 5 MiB (except the final part) |
+| Maximum part size | 5 GiB |
+
+The maximum uploadable object size is `partSize × 10,000`:
+
+| Part Size | Max Object Size |
+|-----------|-----------------|
+| 8 MiB (default) | ~78 GiB |
+| 100 MiB | ~976 GiB |
+| 5 GiB | ~48.8 TiB (S3 limit is 5 TiB) |
+
+If the part limit is exceeded during a write, the channel aborts the multipart upload and throws an
+`IllegalStateException`. To upload larger objects, configure a larger part size.
+
 ## Design Decisions
 
 As an object store, S3 is not completely analogous to a traditional file system. Therefore, several opinionated decisions

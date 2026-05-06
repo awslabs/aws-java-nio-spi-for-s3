@@ -23,6 +23,13 @@ import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
+/**
+ * A seekable byte channel implementation for S3 that delegates to either a read-ahead channel
+ * for reading or a writable channel for writing. When the streaming multipart upload option is
+ * present, uses {@link S3StreamingMultipartUploadChannel} as the write delegate instead of
+ * {@link S3WritableByteChannel}.
+ */
+
 class S3SeekableByteChannel implements SeekableByteChannel {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SeekableByteChannel.class);
@@ -31,7 +38,7 @@ class S3SeekableByteChannel implements SeekableByteChannel {
     private long position;
     private final S3Path path;
     private final ReadableByteChannel readDelegate;
-    private final S3WritableByteChannel writeDelegate;
+    private final SeekableByteChannel writeDelegate;
 
     private boolean closed;
     private long size = -1L;
@@ -63,12 +70,39 @@ class S3SeekableByteChannel implements SeekableByteChannel {
         }
 
         var config = s3Path.getFileSystem().getConfiguration();
+        var streamingOption = findStreamingOption(options);
+
         if (options.contains(StandardOpenOption.WRITE)) {
-            LOGGER.debug("using S3WritableByteChannel as write delegate for path '{}'", s3Path.toUri());
-            readDelegate = null;
-            var transferUtil = new S3TransferUtil(s3Client, timeout, timeUnit);
-            writeDelegate = new S3WritableByteChannel(s3Path, s3Client, transferUtil, options);
-            position = 0L;
+            if (streamingOption != null) {
+                // Streaming multipart upload path
+                validateStreamingOptions(s3Client, options);
+                LOGGER.debug("using S3StreamingMultipartUploadChannel as write delegate for path '{}'", s3Path.toUri());
+                readDelegate = null;
+
+                // Handle CREATE_NEW: check existence before creating the streaming channel
+                if (options.contains(StandardOpenOption.CREATE_NEW)) {
+                    try {
+                        var fileSystemProvider = (S3FileSystemProvider) s3Path.getFileSystem().provider();
+                        if (fileSystemProvider.exists(s3Client, s3Path)) {
+                            throw new java.nio.file.FileAlreadyExistsException(s3Path.toString());
+                        }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new IOException("Interrupted while checking object existence: " + s3Path, e);
+                    } catch (java.util.concurrent.TimeoutException e) {
+                        throw new IOException("Timeout while checking object existence: " + s3Path, e);
+                    }
+                }
+
+                writeDelegate = new S3StreamingMultipartUploadChannel(s3Path, s3Client, streamingOption);
+                position = 0L;
+            } else {
+                LOGGER.debug("using S3WritableByteChannel as write delegate for path '{}'", s3Path.toUri());
+                readDelegate = null;
+                var transferUtil = new S3TransferUtil(s3Client, timeout, timeUnit);
+                writeDelegate = new S3WritableByteChannel(s3Path, s3Client, transferUtil, options);
+                position = 0L;
+            }
         } else if (options.contains(StandardOpenOption.READ) || S3OpenOption.removeAll(options).isEmpty()) {
             LOGGER.debug("using S3ReadAheadByteChannel as read delegate for path '{}'", s3Path.toUri());
             readDelegate =
@@ -312,5 +346,98 @@ class S3SeekableByteChannel implements SeekableByteChannel {
      */
     WritableByteChannel getWriteDelegate() {
         return this.writeDelegate;
+    }
+
+    /**
+     * Finds the {@link S3StreamingMultipartUpload} option in the given options set, if present.
+     *
+     * @param options the set of open options
+     * @return the streaming multipart upload option, or null if not present
+     */
+    private static S3StreamingMultipartUpload findStreamingOption(Set<? extends OpenOption> options) {
+        return options.stream()
+            .filter(o -> o instanceof S3StreamingMultipartUpload)
+            .map(o -> (S3StreamingMultipartUpload) o)
+            .findFirst()
+            .orElse(null);
+    }
+
+    /**
+     * Validates that the streaming multipart upload option can be used with the given client and options.
+     *
+     * @param s3Client the S3 async client
+     * @param options the set of open options
+     * @throws UnsupportedOperationException if the client is not a CRT client
+     * @throws IllegalArgumentException if READ option is combined with streaming upload
+     */
+    static void validateStreamingOptions(S3AsyncClient s3Client, Set<? extends OpenOption> options) {
+        // Validate CRT client
+        validateCrtClient(s3Client);
+
+        // Validate no READ option
+        if (options.contains(StandardOpenOption.READ)) {
+            throw new IllegalArgumentException(
+                "Streaming multipart upload is write-only and cannot be combined with READ");
+        }
+    }
+
+    /**
+     * Validates that the given client is a CRT-based S3 client.
+     * The check inspects the class hierarchy for any class or interface name containing "Crt".
+     *
+     * @param s3Client the S3 async client to validate
+     * @throws UnsupportedOperationException if the client is not a CRT client
+     */
+    static void validateCrtClient(S3AsyncClient s3Client) {
+        if (!isCrtClient(s3Client)) {
+            throw new UnsupportedOperationException(
+                "Streaming multipart upload requires the AWS CRT client. "
+                    + "Current client type: " + s3Client.getClass().getName());
+        }
+    }
+
+    /**
+     * Determines if the given client is a CRT-based S3 client by checking the class hierarchy.
+     * If the client is a delegating wrapper (e.g., CacheableS3Client), it unwraps to check the underlying client.
+     */
+    private static boolean isCrtClient(S3AsyncClient s3Client) {
+        S3AsyncClient clientToCheck = s3Client;
+
+        // Walk through the delegation chain, checking each layer for CRT
+        while (clientToCheck != null) {
+            if (hasCrtInHierarchy(clientToCheck.getClass())) {
+                return true;
+            }
+            // Try to unwrap if it's a delegating client
+            if (clientToCheck instanceof software.amazon.awssdk.services.s3.DelegatingS3AsyncClient) {
+                var delegate = ((software.amazon.awssdk.services.s3.DelegatingS3AsyncClient) clientToCheck).delegate();
+                if (delegate instanceof S3AsyncClient && delegate != clientToCheck) {
+                    clientToCheck = (S3AsyncClient) delegate;
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Checks if any class or interface in the hierarchy contains "Crt" in its name.
+     */
+    private static boolean hasCrtInHierarchy(Class<?> clazz) {
+        while (clazz != null) {
+            if (clazz.getName().contains("Crt")) {
+                return true;
+            }
+            for (Class<?> iface : clazz.getInterfaces()) {
+                if (iface.getName().contains("Crt")) {
+                    return true;
+                }
+            }
+            clazz = clazz.getSuperclass();
+        }
+        return false;
     }
 }
