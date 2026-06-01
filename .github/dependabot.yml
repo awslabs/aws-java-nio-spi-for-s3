@@ -9,6 +9,9 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    ignore:
+      - dependency-name: "net.jqwik:jqwik"
+        versions: ["> 1.9.3"] # Pinned due to https://github.com/jqwik-team/jqwik/issues/708
     groups:
       aws-dependencies:
         patterns:
