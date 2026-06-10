@@ -75,11 +75,16 @@ public class S3ReadAheadByteChannelTest {
         when(delegator.position()).thenReturn(0L);
         var dst = ByteBuffer.allocate(30);
         final var numBytesRead = readAheadByteChannel.read(dst);
-        assertEquals(26, numBytesRead);
+        // The destination buffer (capacity 30) spans the 26-byte fragment 0 and the start of
+        // fragment 1, so read() now fills the whole buffer rather than stopping at the boundary.
+        assertEquals(30, numBytesRead);
         // this should have triggered loading of the next fragment to the cache
         assertEquals(2, readAheadByteChannel.numberOfCachedFragments());
         assertEquals('a', dst.get(0));
         assertEquals('z', dst.get(25));
+        // bytes 26-29 are served from the next fragment
+        assertEquals('A', dst.get(26));
+        assertEquals('D', dst.get(29));
     }
 
     @Test
@@ -96,11 +101,16 @@ public class S3ReadAheadByteChannelTest {
         when(delegator.position()).thenReturn(1L);
         var dst = ByteBuffer.allocate(30);
         final var numBytesRead = readAheadByteChannel.read(dst);
-        assertEquals(25, numBytesRead);
+        // Starting at position 1, fragment 0 supplies 25 bytes (b..z); the buffer has room for 5
+        // more, which are filled from the next fragment instead of returning a short read.
+        assertEquals(30, numBytesRead);
         //should have triggered loading of the next fragment to the cache
         assertEquals(2, readAheadByteChannel.numberOfCachedFragments());
         assertEquals('b', dst.get(0));
         assertEquals('z', dst.get(24));
+        // bytes 25-29 are served from the next fragment
+        assertEquals('A', dst.get(25));
+        assertEquals('E', dst.get(29));
     }
 
     @Test
