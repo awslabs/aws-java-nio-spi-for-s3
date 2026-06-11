@@ -18,8 +18,9 @@ target
 # MacOS
 .DS_Store
 
-# directory used for API break checks
-/.palantir/
+# API break checks (revapi): ignore transient files but track accepted breaks
+/.palantir/*
+!/.palantir/revapi.yml
 
 # sdkman files
 .sdkmanrc
