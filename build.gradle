@@ -64,7 +64,7 @@ sourceSets {
 dependencies {
     implementation 'io.reactivex.rxjava3:rxjava:3.1.12'
 
-    implementation platform('software.amazon.awssdk:bom:2.44.12')
+    implementation platform('software.amazon.awssdk:bom:2.45.1')
 
     implementation('software.amazon.awssdk:s3') {
         exclude group: 'software.amazon.awssdk', module: 'apache-client'
@@ -72,7 +72,7 @@ dependencies {
     implementation('software.amazon.awssdk:s3-transfer-manager') {
         exclude group: 'software.amazon.awssdk', module: 'apache-client'
     }
-    implementation 'software.amazon.awssdk.crt:aws-crt:0.46.0'
+    implementation 'software.amazon.awssdk.crt:aws-crt:0.46.1'
     implementation 'org.slf4j:slf4j-api:2.0.18'
     implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
 
@@ -173,7 +173,7 @@ testing {
                 implementation('org.testcontainers:testcontainers-junit-jupiter:2.0.5')
                 implementation('org.testcontainers:testcontainers-localstack:2.0.5')
                 implementation('org.testcontainers:testcontainers:2.0.5')
-                implementation(platform('software.amazon.awssdk:bom:2.44.12'))
+                implementation(platform('software.amazon.awssdk:bom:2.45.1'))
                 implementation('software.amazon.awssdk:s3')
             }
         }

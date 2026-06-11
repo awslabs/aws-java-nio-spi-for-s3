@@ -103,53 +103,24 @@ class S3ReadAheadByteChannel implements ReadableByteChannel {
             return -1;
         }
 
-        //figure out the index of the fragment the bytes would start in
-        var fragmentIndex = fragmentIndexForByteNumber(channelPosition);
-        logger.debug("fragment index: {}", fragmentIndex);
-
-        var fragmentOffset = (int) (channelPosition - (fragmentIndex.longValue() * maxFragmentSize));
-        logger.debug("fragment {} offset: {}", fragmentIndex, fragmentOffset);
-
         try {
-            final var fragment = Objects.requireNonNull(readAheadBuffersCache.get(fragmentIndex, this::computeFragmentFuture))
-                .get(timeout, timeUnit)
-                .asReadOnlyBuffer();
+            var totalBytesRead = 0;
 
-            fragment.position(fragmentOffset);
-            logger.debug("fragment remaining: {}", fragment.remaining());
-            logger.debug("dst remaining: {}", dst.remaining());
-
-            //put the bytes from fragment from the offset upto the min of fragment remaining or dst remaining
-            var limit = Math.min(fragment.remaining(), dst.remaining());
-            logger.debug("byte limit: {}", limit);
-
-            var copiedBytes = new byte[limit];
-            fragment.get(copiedBytes, 0, limit);
-            dst.put(copiedBytes);
-
-            if (fragment.position() >= fragment.limit() / 2) {
-
-                // clear any fragments in cache that are lower index than this one
-                clearPriorFragments(fragmentIndex);
-
-                // until available cache slots are filled or number of fragments in file
-                var maxFragmentsToLoad = Math.min(maxNumberFragments - 1, numFragmentsInObject - fragmentIndex - 1);
-
-                for (var i = 0; i < maxFragmentsToLoad; i++) {
-                    final var idxToLoad = i + fragmentIndex + 1;
-
-                    //  add the index if it's not already there
-                    if (readAheadBuffersCache.asMap().containsKey(idxToLoad)) {
-                        continue;
-                    }
-
-                    logger.debug("initiate pre-loading fragment with index '{}' from '{}'", idxToLoad, path.toUri());
-                    readAheadBuffersCache.put(idxToLoad, computeFragmentFuture(idxToLoad));
-                }
+            // Fill the destination buffer even when the requested range spans more than one
+            // read-ahead fragment. A single fragment can only serve bytes up to its own boundary,
+            // so without this loop read() would return a short read at every fragment boundary.
+            // Although short reads are permitted by the ReadableByteChannel contract, some callers
+            // (e.g. htsjdk's IndexedFastaSequenceFile) issue a single read() and assume the buffer
+            // is filled the way a local FileChannel would. A short read shifts their parsing and
+            // can, for example, leak a line-terminator byte into the returned data.
+            while (dst.hasRemaining() && channelPosition < size) {
+                var bytesRead = readSingleFragment(dst, channelPosition);
+                channelPosition += bytesRead;
+                totalBytesRead += bytesRead;
             }
 
-            delegator.position(channelPosition + copiedBytes.length);
-            return copiedBytes.length;
+            delegator.position(channelPosition);
+            return totalBytesRead;
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -165,6 +136,67 @@ class S3ReadAheadByteChannel implements ReadableByteChannel {
             throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(logger, "read",
                 TimeOutUtils.TIMEOUT_TIME_LENGTH_5, TimeUnit.MINUTES);
         }
+    }
+
+    /**
+     * Copies bytes from the single read-ahead fragment that contains {@code channelPosition} into
+     * {@code dst}, up to the minimum of the bytes remaining in that fragment and the space remaining
+     * in {@code dst}. Also triggers read-ahead pre-loading of subsequent fragments once more than
+     * half of the current fragment has been consumed.
+     *
+     * @param dst             the destination buffer to copy bytes into.
+     * @param channelPosition the absolute position in the object to start reading from.
+     * @return the number of bytes copied. Always {@code >= 1} when {@code channelPosition < size}
+     *     and {@code dst} has remaining capacity, guaranteeing the calling loop makes progress.
+     */
+    private int readSingleFragment(ByteBuffer dst, long channelPosition)
+            throws InterruptedException, ExecutionException, TimeoutException {
+
+        //figure out the index of the fragment the bytes would start in
+        var fragmentIndex = fragmentIndexForByteNumber(channelPosition);
+        logger.debug("fragment index: {}", fragmentIndex);
+
+        var fragmentOffset = (int) (channelPosition - (fragmentIndex.longValue() * maxFragmentSize));
+        logger.debug("fragment {} offset: {}", fragmentIndex, fragmentOffset);
+
+        final var fragment = Objects.requireNonNull(readAheadBuffersCache.get(fragmentIndex, this::computeFragmentFuture))
+            .get(timeout, timeUnit)
+            .asReadOnlyBuffer();
+
+        fragment.position(fragmentOffset);
+        logger.debug("fragment remaining: {}", fragment.remaining());
+        logger.debug("dst remaining: {}", dst.remaining());
+
+        //put the bytes from fragment from the offset upto the min of fragment remaining or dst remaining
+        var limit = Math.min(fragment.remaining(), dst.remaining());
+        logger.debug("byte limit: {}", limit);
+
+        var copiedBytes = new byte[limit];
+        fragment.get(copiedBytes, 0, limit);
+        dst.put(copiedBytes);
+
+        if (fragment.position() >= fragment.limit() / 2) {
+
+            // clear any fragments in cache that are lower index than this one
+            clearPriorFragments(fragmentIndex);
+
+            // until available cache slots are filled or number of fragments in file
+            var maxFragmentsToLoad = Math.min(maxNumberFragments - 1, numFragmentsInObject - fragmentIndex - 1);
+
+            for (var i = 0; i < maxFragmentsToLoad; i++) {
+                final var idxToLoad = i + fragmentIndex + 1;
+
+                //  add the index if it's not already there
+                if (readAheadBuffersCache.asMap().containsKey(idxToLoad)) {
+                    continue;
+                }
+
+                logger.debug("initiate pre-loading fragment with index '{}' from '{}'", idxToLoad, path.toUri());
+                readAheadBuffersCache.put(idxToLoad, computeFragmentFuture(idxToLoad));
+            }
+        }
+
+        return copiedBytes.length;
     }
 
     @Override
