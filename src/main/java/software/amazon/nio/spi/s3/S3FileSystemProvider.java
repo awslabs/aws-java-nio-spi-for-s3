@@ -196,11 +196,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
             logger.debug("Create bucket response {}", createBucketResponse.toString());
 
         } catch (ExecutionException e) {
-            if (e.getCause() instanceof BucketAlreadyOwnedByYouException ||
-                    e.getCause() instanceof BucketAlreadyExistsException) {
+            if (e.getCause() instanceof BucketAlreadyExistsException) {
                 throw (FileSystemAlreadyExistsException) new FileSystemAlreadyExistsException(e.getCause().getMessage())
                         .initCause(e.getCause());
-            } else {
+            } else if (!(e.getCause() instanceof BucketAlreadyOwnedByYouException)) {
                 throw new IOException(e.getMessage(), e.getCause());
             }
         } catch (InterruptedException | TimeoutException | SdkException e) {
