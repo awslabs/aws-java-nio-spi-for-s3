@@ -168,6 +168,13 @@ public class S3FileSystemProvider extends FileSystemProvider {
         var envMap = (env != null) ? (Map<String, Object>) env : Collections.<String, Object>emptyMap();
 
         var info = fileSystemInfo(uri);
+
+        //  An already-existing entry in cache means that <pre>{@code newFileSystem}</pre> has already been called
+        //  for the requested file system, therefore exception should be thrown.
+        if (FS_CACHE.containsKey(info.key())) {
+            throw (FileSystemAlreadyExistsException) new FileSystemAlreadyExistsException(info.key());
+        }
+
         var config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
         if (info.accessKey() != null) {
             config.withCredentials(info.accessKey(), info.accessSecret());
@@ -196,17 +203,19 @@ public class S3FileSystemProvider extends FileSystemProvider {
             logger.debug("Create bucket response {}", createBucketResponse.toString());
 
         } catch (ExecutionException e) {
-            if (e.getCause() instanceof BucketAlreadyOwnedByYouException ||
-                    e.getCause() instanceof BucketAlreadyExistsException) {
+            if (e.getCause() instanceof BucketAlreadyExistsException) {
+                FS_CACHE.remove(info.key());
                 throw (FileSystemAlreadyExistsException) new FileSystemAlreadyExistsException(e.getCause().getMessage())
                         .initCause(e.getCause());
-            } else {
+            } else if (!(e.getCause() instanceof BucketAlreadyOwnedByYouException)) {
+                FS_CACHE.remove(info.key());
                 throw new IOException(e.getMessage(), e.getCause());
             }
         } catch (InterruptedException | TimeoutException | SdkException e) {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
+            FS_CACHE.remove(info.key());
             throw new IOException(e.getMessage(), e);
         }
 
