@@ -118,7 +118,9 @@ public class S3FileSystemProviderTest {
 
     @Test
     public void newFileSystemUri() {
-        final var uri = URI.create(pathUri);
+        //  Needs to be different from global pathUri to ensure we go through bucket-creation logic, keeping the
+        //  code coverage above .7
+        final var uri = URI.create("s3://different/foo/bah");
         final var env = Collections.<String, Object>emptyMap();
 
         assertThatCode(() -> provider.newFileSystem(uri, null))
