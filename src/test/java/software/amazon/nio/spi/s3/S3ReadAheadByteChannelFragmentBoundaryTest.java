@@ -56,7 +56,7 @@ public class S3ReadAheadByteChannelFragmentBoundaryTest {
 
     private void initChannel(byte[] data, int fragmentSize, int maxFragments) throws IOException {
         this.backing = data;
-        path = S3Path.getPath((S3FileSystem) provider.getFileSystem(URI.create("s3://my-bucket")), "/object");
+        path = S3Path.getPath((S3FileSystem) provider.getPath(URI.create("s3://my-bucket")).getFileSystem(), "/object");
 
         lenient().when(delegator.size()).thenReturn((long) backing.length);
         lenient().when(delegator.position()).thenAnswer(i -> positionHolder[0]);

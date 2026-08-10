@@ -83,7 +83,10 @@ class S3WritableByteChannel implements SeekableByteChannel {
             return;
         }
 
-        s3TransferUtil.uploadLocalFile(path, tempFile, options);
+        // DELETE_ON_CLOSE means the entity should not persist, so skip uploading to S3.
+        if (!options.contains(StandardOpenOption.DELETE_ON_CLOSE)) {
+            s3TransferUtil.uploadLocalFile(path, tempFile, options);
+        }
         Files.deleteIfExists(tempFile);
 
         open = false;
@@ -124,6 +127,7 @@ class S3WritableByteChannel implements SeekableByteChannel {
 
     @Override
     public SeekableByteChannel truncate(long size) throws IOException {
-        throw new UnsupportedOperationException("Currently not supported");
+        channel.truncate(size);
+        return this;
     }
 }

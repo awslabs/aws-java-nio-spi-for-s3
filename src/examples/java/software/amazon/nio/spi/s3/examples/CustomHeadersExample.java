@@ -50,9 +50,11 @@ public class CustomHeadersExample {
         // Get the S3 file system provider
         S3FileSystemProvider provider = new S3FileSystemProvider();
         
-        // Get or create the file system for the bucket
+        // Materialize the file system view for the bucket. getPath creates it on demand;
+        // provider.getFileSystem(uri) would throw FileSystemNotFoundException if it did not
+        // already exist.
         URI uri = URI.create(s3Uri);
-        S3FileSystem fileSystem = (S3FileSystem) provider.getFileSystem(uri);
+        S3FileSystem fileSystem = (S3FileSystem) provider.getPath(uri).getFileSystem();
         
         // Enable custom headers on the client provider
         fileSystem.clientProvider().setCustomHeadersEnabled(true);

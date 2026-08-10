@@ -148,7 +148,9 @@ java -Ds3.spi.client.custom-headers.enabled=true -jar your-application.jar
 **Method 2: Programmatic (Per FileSystem)**
 ```java
 S3FileSystemProvider provider = new S3FileSystemProvider();
-S3FileSystem fileSystem = (S3FileSystem) provider.getFileSystem(URI.create("s3://your-bucket"));
+// getPath materializes the file-system view on demand; getFileSystem(uri) throws
+// FileSystemNotFoundException if the file system has not been created yet.
+S3FileSystem fileSystem = (S3FileSystem) provider.getPath(URI.create("s3://your-bucket")).getFileSystem();
 fileSystem.clientProvider().setCustomHeadersEnabled(true);
 ```
 
@@ -156,11 +158,16 @@ fileSystem.clientProvider().setCustomHeadersEnabled(true);
 
 ## AWS Credentials
 
-This library will perform all actions using credentials according to the AWS SDK for Java [default credential provider
-chain](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html). The library does not allow any
-library specific configuration of credentials. In essence, you (or the service / Principal
-using this library) should have, or be able to assume, a role that will allow access to the S3 buckets and objects you
-want to interact with.
+By default this library performs all actions using credentials according to the AWS SDK for Java [default credential provider
+chain](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/credentials-chain.html). In essence, you (or the
+service / Principal using this library) should have, or be able to assume, a role that will allow access to the S3 buckets
+and objects you want to interact with.
+
+You may also supply credentials explicitly per file system, either through the `env` map of
+`FileSystems.newFileSystem(URI, env)` — as an `AwsCredentials` object under `s3.spi.credentials` or an
+`AwsCredentialsProvider` under `s3.spi.credentials.provider` (see
+[Per-filesystem configuration](#per-filesystem-configuration-via-newfilesystem)) — or via the
+`s3x://key:secret@endpoint/...` URI form described below. When none are supplied, the default provider chain is used.
 
 Note, although your IAM role may be sufficient to access the desired objects and buckets you may still be
 blocked by bucket access control lists and/ or bucket policies.
@@ -213,49 +220,96 @@ on I/O, up to the limits of your network connection.
 
 ### Configuration
 
-System configuration parameters can be set as environment variables or java system properties.
-Therefore these parameters apply to all file systems created with
-S3 and S3X providers.
+Configuration parameters can be supplied per file system (via the `env` map of
+`FileSystems.newFileSystem(URI, env)` — see [Per-filesystem configuration](#per-filesystem-configuration-via-newfilesystem)
+below) or globally as environment variables and Java system properties. Global values apply to all
+file systems created with the S3 and S3X providers unless overridden per file system.
 
-If no configuration is supplied the values in `resources/s3-nio-spi.properties` are used. Currently, 50 fragments of 5MB.
-Each fragment is downloaded concurrently on a unique thread.
+If no configuration is supplied, built-in defaults are used (for reads, 50 fragments of 5&nbsp;MB, each
+downloaded concurrently on its own thread).
 
-#### System parameter ####
-|parameter|description|
-|---------|-----------|
-|**aws.region**|specifies the default region for API calls|
-|**aws.accessKeyId**|specifies the key id to use for authentication|
-|**aws.secretAccessKey**|specifies the secret to use for authentication|
-|**s3.spi.read.fragment-number**|buffer asynchronously prefetches `n` sequential fragments from S3 (currently 50)|
-|**s3.spi.read.fragment-size**|size of each fragment (currently 5MB)|
+#### Supported keys
+
+Values may be set programmatically (via `S3NioSpiConfiguration` `withXxx(...)` setters or the
+`newFileSystem` env map) or as a system property / environment variable. The environment-variable
+name is the system-property name uppercased with `.` and `-` replaced by `_` (e.g.
+`s3.spi.read.max-fragment-size` → `S3_SPI_READ_MAX_FRAGMENT_SIZE`).
+
+| system property | env var | description |
+|---|---|---|
+| **aws.region** | AWS_REGION | region for API calls; if unset, the AWS SDK default region provider chain resolves it |
+| **s3.spi.endpoint** | S3_SPI_ENDPOINT | non-default `host[:port]` endpoint (mainly for S3-compatible services) |
+| **s3.spi.endpoint-protocol** | S3_SPI_ENDPOINT_PROTOCOL | `http` or `https` (default `https`) |
+| **s3.spi.force-path-style** | S3_SPI_FORCE_PATH_STYLE | force path-style addressing (default `false`) |
+| **s3.spi.read.max-fragment-number** | S3_SPI_READ_MAX_FRAGMENT_NUMBER | number of sequential fragments prefetched (default 50) |
+| **s3.spi.read.max-fragment-size** | S3_SPI_READ_MAX_FRAGMENT_SIZE | size of each fragment in bytes (default 5&nbsp;MB) |
+| **s3.spi.timeout-low** / **-medium** / **-high** | S3_SPI_TIMEOUT_LOW / _MEDIUM / _HIGH | API timeouts in minutes |
+| **s3.integrity-check-algorithm** | S3_INTEGRITY_CHECK_ALGORITHM | `disabled` (default), `CRC32`, `CRC32C`, or `CRC64NVME` |
+| **s3.spi.write.streaming-multipart-upload** | S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD | enable streaming multipart upload (default `false`) |
+| **s3.spi.write.multipart-part-size** | S3_SPI_WRITE_MULTIPART_PART_SIZE | multipart part size in bytes (default 8&nbsp;MB; 5&nbsp;MB–5&nbsp;GB) |
+| **s3.spi.write.multipart-fallback-enabled** | S3_SPI_WRITE_MULTIPART_FALLBACK_ENABLED | enable temp-file fallback for streaming uploads (default `false`) |
+
+Credentials are handled by the AWS SDK [default credential provider chain](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/credentials-chain.html)
+and are **not** read from `aws.accessKeyId` / `aws.secretAccessKey` by this library. You may instead
+supply credentials per file system (see below) either as an `AwsCredentials` object under
+`s3.spi.credentials`, an `AwsCredentialsProvider` under `s3.spi.credentials.provider`, or via the
+`s3x://key:secret@endpoint/...` URI form.
 
 #### Environment Variables
 
-You may use `S3_SPI_READ_MAX_FRAGMENT_NUMBER` and `S3_SPI_READ_MAX_FRAGMENT_SIZE` to set the maximum umber of cached
-fragments and maximum fragment sizes respectively. For example:
+For example, to set the read fragment size and number:
 
 ```shell
 export S3_SPI_READ_MAX_FRAGMENT_SIZE=100000
 export S3_SPI_READ_MAX_FRAGMENT_NUMBER=5
-java -Djava.ext.dirs=$JAVA_HOME/jre/lib/ext:<location-of-this-spi-jar> -jar <jar-file-to-run>
+java -classpath <location-of-this-spi-jar> -jar <jar-file-to-run>
 ```
 
 #### Java Properties
 
-You may use java command line properties to set the values of the maximum fragment size and maximum number of fragments
-with `s3.spi.read.max-fragment-size` and `s3.spi.read.max-fragment-number` respectively. For example:
+The same values can be set as Java system properties:
 
 ```shell
-java -Djava.ext.dirs=$JAVA_HOME/jre/lib/ext:<location-of-this-spi-jar> -Ds3.spi.read.max-fragment-size=10000 -Ds3.spi.read.max-fragment-number=2 -jar <jar-file-to-run>
+java -classpath <location-of-this-spi-jar> -Ds3.spi.read.max-fragment-size=10000 -Ds3.spi.read.max-fragment-number=2 -jar <jar-file-to-run>
 ```
+
+#### Per-filesystem configuration via `newFileSystem`
+
+Configuration can be supplied for a single file system through the `env` map of
+`FileSystems.newFileSystem(URI, env)`. The map is merged into that file system's configuration at the
+highest precedence (it overrides values parsed from the URI as well as system properties and
+environment variables). Keys are the property names from the table above; values may be `String`s or
+already-typed objects (e.g. an `AwsCredentials` / `AwsCredentialsProvider`). Bucket-creation keys
+(`acl`, `grantFullControl`, `grantRead`, `grantReadACP`, `grantWrite`, `grantWriteACP`,
+`locationConstraint`) continue to configure the underlying `createBucket` call and are not merged
+into the configuration.
+
+```java
+Map<String, Object> env = new HashMap<>();
+env.put(S3NioSpiConfiguration.AWS_REGION_PROPERTY, "eu-central-1");
+env.put(S3NioSpiConfiguration.S3_SPI_TIMEOUT_LOW_PROPERTY, "2");
+env.put(S3NioSpiConfiguration.S3_SPI_CREDENTIALS_PROPERTY,
+        AwsBasicCredentials.create(accessKey, secretKey));
+
+try (FileSystem fs = FileSystems.newFileSystem(URI.create("s3://my-bucket"), env)) {
+    // ... use fs; ((S3FileSystem) fs).getConfiguration().getRegion() == "eu-central-1"
+}
+```
+
+A file system's configuration is bound when the file system is first created (by `newFileSystem` or,
+for `Paths.get(URI)` / `provider.getPath(URI)`, when the view is first materialized). Per the
+`java.nio.file` contract, calling `newFileSystem` for a bucket that already has a file system in this
+JVM throws `FileSystemAlreadyExistsException`. See the runnable
+`ConfiguredFileSystemExample` in the `examples` module.
 
 #### Order of Precedence
 
 Configurations use the following order of precedence from highest to lowest:
 
-1. Java properties
-2. Environment variables
-3. Default values
+1. Programmatic values — `S3NioSpiConfiguration` `withXxx(...)` setters, the `newFileSystem` env map, and values parsed from the URI
+2. Java system properties
+3. Environment variables
+4. Default values
 
 #### S3 limits
 
@@ -481,9 +535,16 @@ to `/` must also be a directory. S3 holds no metadata that can be used to make t
 
 #### Working directory
 
-As directories don't exist and are only inferred there is no concept of being "in a directory". Therefore, the working
-directory is always the root and `/object` `./object` and `object` can be inferred to be the same file. In addition `../object`
-will also be the same file as you may not navigate above the root and no error will be produced if you attempt to.
+As directories don't exist and are only inferred there is no concept of being "in a directory". The working directory
+is always the root, so a relative path such as `object` refers to the same S3 object as the absolute path `/object`
+once it is resolved against the root. `../object` also refers to that object because you may not navigate above the
+root, and no error is produced if you attempt to.
+
+> **Behavior change in 3.0:** `S3Path.equals`, `hashCode` and `compareTo` now compare the *abstract* path, matching the
+> `java.nio.file.Path` contract. This means a relative path is **not** `equals()` to the corresponding absolute path
+> (e.g. `object` is no longer `equals()` to `/object`), and `.`/`..` are not eliminated during comparison. Use
+> `Files.isSameFile(a, b)` (or compare `toRealPath()`) to test whether two paths refer to the same object. See
+> [Breaking changes in 3.0](#breaking-changes-in-30).
 
 #### Relative path resolution
 
@@ -493,12 +554,17 @@ So if `some/path` was resolved relative to `/this/location/` then the resulting 
 Because directories are inferred, you may not resolve `some/path` relative to `/this/location` as the latter cannot be
 inferred to be a directory (it lacks a trailing `/`).
 
+The parent of an absolute path is always absolute (e.g. the parent of `/a/b/c` is `/a/b`), and `getParent()` returns
+`null` once the root is reached, so walking a path to its root terminates cleanly.
+
 #### Resolution of `..` and `.`
 
-The POSIX path special symbols `.` and `..` are treated as they would be in a normal POSIX path. Note that this could
-cause some S3 objects to be effectively invisible to this implementation. For example `s3://mybucket/foo/./baa` is
-an allowed S3 URI that is *not* equivalent to `s3://mybucket/foo/baa` even though this library will resolve the path `/foo/./baa`
-to `/foo/baa`.
+The POSIX path special symbols `.` and `..` are treated as they would be in a normal POSIX path. `normalize()` follows
+the `java.nio.file.Path` contract: a leading `..` in a *relative* path is preserved (its target is unknown), while a
+`..` at the root of an *absolute* path is dropped without making the path relative. Note that this could cause some S3
+objects to be effectively invisible to this implementation. For example `s3://mybucket/foo/./baa` is an allowed S3 URI
+that is *not* equivalent to `s3://mybucket/foo/baa` even though `normalize()` will reduce the path `/foo/./baa` to
+`/foo/baa`.
 
 ### S3 "URI" and Java `URI` incompatibility
 
@@ -509,20 +575,86 @@ and therefore must URL encode the URI. This results in a small incompatibility w
 by this library. Whenever possible avoiding the use of special characters in S3 filenames and paths is recommended. Otherwise
 cautious use of URL escapes will be needed.
 
-### `S3FileSystemProvider.deleteIfExists(path)` will always return true
+### `delete` follows the `Files.delete` contract
 
-The AWS S3 JDK `delete` operation doesn't return any indication of whether the file existed before deletion. Although
-we could test for file existence before deletion this would require an additional API call and would not be an atomic
-operation. Because S3 only guarantees read after write consistency it would be possible for a file to be created or 
-deleted between these two operations. Therefore, we currently always return `true`
+As of 3.0, `delete(path)` throws `NoSuchFileException` when the target does not exist and `DirectoryNotEmptyException`
+when the path is a non-empty directory, matching `java.nio.file.Files.delete`. Each `delete` therefore performs a small
+existence/emptiness check (a `HEAD` or a single-key `LIST`) before issuing the delete. To remove a directory together
+with all of its contents, either move it (see below) or walk it bottom-up (for example with a
+`Files.walkFileTree` deletion visitor).
 
-### Copies of a directory will also copy contents
+### Copies (and moves) of a directory will also copy contents
 
 Our implementation of `FileSystemProvider.copy` will also copy the content of the directory via batched copy operations. This is a variance
 from some other implementations such as `UnixFileSystemProvider` where directory contents are not copied and the
 use of the `walkFileTree` method is suggested to perform deep copies. In S3 this could result in an explosion
 of API calls which would be both expensive in time and possibly money. By performing batch copies we can greatly reduce
-the number of calls.
+the number of calls. `move` is implemented as a recursive copy followed by removal of the whole source subtree, and so
+shares this behavior. Because S3 has no atomic rename, `move` with `StandardCopyOption.ATOMIC_MOVE` throws
+`AtomicMoveNotSupportedException`.
+
+## Breaking changes in 3.0
+
+Release 3.0 tightens the provider's conformance to the `java.nio.file` contracts. The most visible changes are:
+
+- **`Path` equality is abstract.** `S3Path.equals`, `hashCode` and `compareTo` compare the abstract path (and bucket),
+  no longer normalizing via `toRealPath()`. A relative path is no longer `equals()` to the corresponding absolute path,
+  and `.`/`..` are not eliminated during comparison. Use `Files.isSameFile` to test whether two paths locate the same
+  object.
+- **`getParent()` stays absolute** and returns `null` at the root (previously it could return a relative path and then
+  throw while walking to the root).
+- **`normalize()`** preserves a leading `..` in relative paths and keeps absolute paths absolute.
+- **`relativize()`** now returns a correct, non-null relative path in all cases (including when `..` segments are
+  required).
+- **`iterator()`** no longer yields the root component as the first element.
+- **`delete()`** throws `NoSuchFileException` / `DirectoryNotEmptyException` instead of silently succeeding; it no longer
+  recursively deletes a non-empty directory. `deleteIfExists` behaves accordingly.
+- **`createDirectory()`** throws `FileAlreadyExistsException` if an object already exists at the key.
+- **`move()`** throws `AtomicMoveNotSupportedException` for `ATOMIC_MOVE`.
+- **`newDirectoryStream()`** throws `NotDirectoryException` when the path is a regular object, and `DirectoryStream`
+  now throws `IllegalStateException` if `iterator()` is called more than once.
+- **`getFileStore()` / `FileSystem.getFileStores()`** return a real, non-null `S3FileStore` (bucket-backed) instead of
+  `null` / an empty set.
+- **`readAttributes(path, "...")`** returns real attributes for directories (with `isDirectory == true`) instead of an
+  empty map.
+- **`checkAccess()`** throws `AccessDeniedException` for `EXECUTE` (S3 objects are never executable) and for `WRITE`
+  on a read-only file system, rather than only logging a warning.
+- **Channels:** `FileChannel.read(dst, position)` no longer moves the channel position; `SeekableByteChannel.truncate`
+  is supported on writable channels (and throws `NonWritableChannelException` on read-only channels); `DELETE_ON_CLOSE`
+  no longer leaves an object in S3.
+- **`newFileSystem` / `getFileSystem` / `getPath`:**
+  - `getFileSystem(uri)` now throws `FileSystemNotFoundException` when no file system has been created for that bucket
+    (previously it lazily created one). The headline `Paths.get(URI)` / `provider.getPath(URI)` ergonomics are
+    unchanged — they still materialize a file-system view on demand — so most code is unaffected. Code that relied on
+    `getFileSystem` to *create* a file system should call `getPath(uri).getFileSystem()` (or `newFileSystem`) instead.
+  - `newFileSystem(uri, env)` gates `FileSystemAlreadyExistsException` on whether a file system for the URI already
+    exists in *this JVM* — whether created by a previous `newFileSystem` call or lazily materialized by
+    `getPath` / `Paths.get` — not on whether the S3 bucket exists. A pre-existing bucket that you own is reused (fixes
+    [#770]); a bucket owned by another account yields `IOException` rather than `FileSystemAlreadyExistsException`.
+- **Configuration ([#601], [#597]):**
+  - `newFileSystem(uri, env)` now merges the `env` map into the file system's configuration (region, credentials,
+    endpoint, timeouts, fragment sizes, etc.), in addition to the existing bucket-creation keys. env-map values take
+    precedence over values parsed from the URI. See
+    [Per-filesystem configuration](#per-filesystem-configuration-via-newfilesystem).
+  - `S3NioSpiConfiguration` now reads `aws.region` and `s3.spi.endpoint` from environment variables and system
+    properties (previously ignored). Credentials remain delegated to the AWS SDK chain. When nothing is set,
+    `getRegion()` is still `null` and behavior is unchanged.
+  - `S3NioSpiConfiguration` no longer extends `HashMap`. Use the `withXxx(...)` setters and getters; a read-only
+    snapshot is available via `asMap()`, and bulk overrides via `withOverrides(Map)`. Direct map mutation is no longer
+    supported.
+  - Removed the deprecated `S3FileSystemProvider.setConfiguration(...)` method and the shared
+    `S3FileSystemProvider.configuration` field. Provider operations now read timeouts from each file system's own
+    `getConfiguration()`, fixing the last-writer-wins bug when multiple buckets were used ([#597]). Configure per file
+    system instead.
+  - Removed the unused `S3ClientProvider.universalClient` field.
+
+See [`docs/nio-contract-compliance-audit.md`](docs/nio-contract-compliance-audit.md) and
+[`docs/newfilesystem-contract-fix.md`](docs/newfilesystem-contract-fix.md) for the full analysis and rationale.
+
+[#597]: https://github.com/awslabs/aws-java-nio-spi-for-s3/issues/597
+[#601]: https://github.com/awslabs/aws-java-nio-spi-for-s3/issues/601
+
+[#770]: https://github.com/awslabs/aws-java-nio-spi-for-s3/pull/770
 
 ## Building this library
 

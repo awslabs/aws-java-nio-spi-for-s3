@@ -52,13 +52,15 @@ public class S3XFileSystemProviderTest {
     public void getFileSystem() {
         var provider = new S3XFileSystemProvider();
 
-        FileSystem fs2 = provider.getFileSystem(URI1);
+        // getFileSystem no longer lazily creates; a view is materialized via getPath and then
+        // returned by getFileSystem for any URI resolving to the same file-system key.
+        FileSystem fs2 = provider.getPath(URI1).getFileSystem();
         then(provider.getFileSystem(URI1)).isSameAs(fs2);
-        FileSystem fs3 = provider.getFileSystem(URI3);
+        FileSystem fs3 = provider.getPath(URI3).getFileSystem();
         then(fs3).isNotSameAs(fs2);
         then(provider.getFileSystem(URI2)).isSameAs(fs2);
-        then(provider.getFileSystem(URI7)).isNotSameAs(fs3);
-        then(provider.getFileSystem(URI8)).isNotSameAs(fs3);
+        then(provider.getPath(URI7).getFileSystem()).isNotSameAs(fs3);
+        then(provider.getPath(URI8).getFileSystem()).isNotSameAs(fs3);
         provider.closeFileSystem(fs2);
         provider.closeFileSystem(fs3);
     }
@@ -70,7 +72,7 @@ public class S3XFileSystemProviderTest {
         restoreSystemProperties(() -> {
             System.setProperty("aws.region", "us-west-1");
 
-            var fs = (S3FileSystem) p.getFileSystem(URI.create("s3x://urikey:urisecret@some.where.com:1010/bucket"));
+            var fs = (S3FileSystem) p.getPath(URI.create("s3x://urikey:urisecret@some.where.com:1010/bucket")).getFileSystem();
             fs.clientProvider().asyncClientBuilder(BUILDER);
             fs.client();
             fs.close();
@@ -93,6 +95,35 @@ public class S3XFileSystemProviderTest {
         // Make sure a file system is created if not already done (if the file
         // system has not been created getFileSystem would throw an exception)
         p.closeFileSystem(p.getFileSystem(URI1));
+    }
+
+    @Test
+    @DisplayName("env-map credentials override credentials parsed from the s3x URI")
+    public void envMapCredentialsOverrideUriCredentials() throws Exception {
+        // Reproduce the real config-merge path without the remote createBucket call.
+        var provider = new S3XFileSystemProvider() {
+            @Override
+            public FileSystem newFileSystem(final URI uri, final java.util.Map<String, ?> env) {
+                var info = fileSystemInfo(uri);
+                var config = new software.amazon.nio.spi.s3.config.S3NioSpiConfiguration()
+                    .withEndpoint(info.endpoint()).withBucketName(info.bucket());
+                if (info.accessKey() != null) {
+                    config.withCredentials(info.accessKey(), info.accessSecret());
+                }
+                config.withOverrides(env);
+                return getOrCreateFileSystem(info.key(), config);
+            }
+        };
+
+        var envCreds = software.amazon.awssdk.auth.credentials.AwsBasicCredentials.create("envKey", "envSecret");
+        var fs = (S3FileSystem) provider.newFileSystem(URI7,
+            java.util.Map.of(software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.S3_SPI_CREDENTIALS_PROPERTY, envCreds));
+        try {
+            // URI7 carries key:secret, but the env-map credentials win.
+            then(fs.getConfiguration().getCredentials()).isSameAs(envCreds);
+        } finally {
+            provider.closeFileSystem(fs);
+        }
     }
 
 }

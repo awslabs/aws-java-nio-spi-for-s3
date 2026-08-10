@@ -100,4 +100,34 @@ public class S3NioSpiConfigurationPropertyTest {
                 });
             });
     }
+
+    // Region precedence: programmatic (env-map / withOverrides) > system property > env var.
+    @Property(tries = 50)
+    void regionProgrammaticBeatsSysPropBeatsEnv(
+            @ForAll("regions") String envRegion,
+            @ForAll("regions") String sysPropRegion,
+            @ForAll("regions") String programmaticRegion) throws Exception {
+
+        withEnvironmentVariable("AWS_REGION", envRegion).execute(() -> {
+            restoreSystemProperties(() -> {
+                // env only -> env value
+                System.clearProperty(AWS_REGION_PROPERTY);
+                then(new S3NioSpiConfiguration().getRegion()).isEqualTo(envRegion);
+
+                // system property beats env
+                System.setProperty(AWS_REGION_PROPERTY, sysPropRegion);
+                then(new S3NioSpiConfiguration().getRegion()).isEqualTo(sysPropRegion);
+
+                // programmatic override (as supplied by newFileSystem's env map) beats both
+                var config = new S3NioSpiConfiguration()
+                    .withOverrides(Map.of(AWS_REGION_PROPERTY, programmaticRegion));
+                then(config.getRegion()).isEqualTo(programmaticRegion);
+            });
+        });
+    }
+
+    @net.jqwik.api.Provide
+    net.jqwik.api.Arbitrary<String> regions() {
+        return net.jqwik.api.Arbitraries.of("us-east-1", "us-west-2", "eu-west-1", "ap-south-1", "sa-east-1");
+    }
 }

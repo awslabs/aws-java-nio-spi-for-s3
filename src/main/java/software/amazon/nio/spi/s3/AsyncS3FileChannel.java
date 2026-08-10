@@ -79,8 +79,13 @@ public class AsyncS3FileChannel extends AsynchronousFileChannel {
 
         return CompletableFuture.supplyAsync(() -> {
             try {
-                byteChannel.position(position);
-                return byteChannel.read(dst);
+                synchronized (byteChannel) {
+                    var originalPosition = byteChannel.position();
+                    byteChannel.position(position);
+                    var bytesRead = byteChannel.read(dst);
+                    byteChannel.position(originalPosition);
+                    return bytesRead;
+                }
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -105,8 +110,13 @@ public class AsyncS3FileChannel extends AsynchronousFileChannel {
 
         return CompletableFuture.supplyAsync(() -> {
             try {
-                byteChannel.position(position);
-                return byteChannel.write(src);
+                synchronized (byteChannel) {
+                    var originalPosition = byteChannel.position();
+                    byteChannel.position(position);
+                    var bytesWritten = byteChannel.write(src);
+                    byteChannel.position(originalPosition);
+                    return bytesWritten;
+                }
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

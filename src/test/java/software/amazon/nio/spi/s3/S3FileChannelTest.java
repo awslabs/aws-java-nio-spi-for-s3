@@ -142,12 +142,15 @@ public class S3FileChannelTest {
     public void testReadStartingAt() throws IOException {
         setupReadMocks();
         ByteBuffer dest = ByteBuffer.allocate(10);
+        when(s3SeekableByteChannel.position()).thenReturn(3L);
 
         s3FileChannel.read(dest, 6L);
 
-        // verify delegation by s3FileChannel
+        // A positional read must NOT modify the channel position: the original position (3) is
+        // saved before seeking to 6 and restored afterward.
         verify(s3SeekableByteChannel).position(6L);
         verify(s3SeekableByteChannel).read(dest);
+        verify(s3SeekableByteChannel).position(3L);
     }
 
     @Test

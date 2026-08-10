@@ -5,6 +5,7 @@
 
 package software.amazon.nio.spi.s3;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -123,5 +124,24 @@ public class S3ClientProviderTest {
 
         // THEN
         verify(BUILDER, times(1)).endpointOverride(URI.create("https://endpoint2:2020"));
+    }
+
+    @Test
+    public void configureRegularClientAppliesRegionEndpointAndCredentials() {
+        // Custom-headers mode uses the regular (non-CRT) client builder; exercise the region,
+        // endpoint and credentials branches on that path.
+        var config = new S3NioSpiConfiguration()
+            .withRegion(Region.EU_WEST_1.id())
+            .withEndpoint("regular-endpoint:1234")
+            .withCredentials("ak", "sk");
+        var p = new S3ClientProvider(config);
+        p.setCustomHeadersEnabled(true);
+
+        try (var client = p.generateClient("bucket-regular")) {
+            assertNotNull(client);
+            var cfg = client.serviceClientConfiguration();
+            assertSame(Region.EU_WEST_1, cfg.region());
+            assertEquals(URI.create("https://regular-endpoint:1234"), cfg.endpointOverride().orElseThrow());
+        }
     }
 }

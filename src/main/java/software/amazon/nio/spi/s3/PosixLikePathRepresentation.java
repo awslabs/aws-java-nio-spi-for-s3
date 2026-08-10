@@ -37,7 +37,7 @@ class PosixLikePathRepresentation {
     }
 
     PosixLikePathRepresentation(char[] path) {
-        new PosixLikePathRepresentation(new String(path));
+        this(new String(path));
     }
 
     /**

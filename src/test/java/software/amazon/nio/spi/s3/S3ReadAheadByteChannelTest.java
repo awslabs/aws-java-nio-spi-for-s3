@@ -48,7 +48,7 @@ public class S3ReadAheadByteChannelTest {
 
     @BeforeEach
     public void setup() throws IOException {
-        path = S3Path.getPath((S3FileSystem) provider.getFileSystem(URI.create("s3://my-bucket")), "/object");
+        path = S3Path.getPath((S3FileSystem) provider.getPath(URI.create("s3://my-bucket")).getFileSystem(), "/object");
 
         // mocking
         lenient().when(delegator.size()).thenReturn(52L);

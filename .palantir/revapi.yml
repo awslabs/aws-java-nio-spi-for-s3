@@ -6,3 +6,298 @@ acceptedBreaks:
       new: "field software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_ACCESS_KEY_PROPERTY"
       justification: "Corrected constant to match AWS SDK system property aws.accessKeyId\
         \ (#746); released in 2.5.0"
+  "2.5.0":
+    software.amazon.nio.s3:aws-java-nio-spi-for-s3:
+    - code: "java.class.noLongerImplementsInterface"
+      old: "class software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      new: "class software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.class.noLongerInheritsFromClass"
+      old: "class software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      new: "class software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.field.removed"
+      old: "field software.amazon.nio.spi.s3.S3ClientProvider.universalClient"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.field.removed"
+      old: "field software.amazon.nio.spi.s3.S3FileSystemProvider.configuration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method <K, V> java.util.HashMap<K, V> java.util.HashMap<K, V>::newHashMap(int)\
+        \ @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method <K, V> java.util.Map.Entry<K, V> java.util.Map<K, V>::entry(K,\
+        \ V) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method <K, V> java.util.Map<K, V> java.util.Map<K, V>::copyOf(java.util.Map<?\
+        \ extends K, ? extends V>) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method <K, V> java.util.Map<K, V> java.util.Map<K, V>::of() @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method <K, V> java.util.Map<K, V> java.util.Map<K, V>::of(K, V) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method <K, V> java.util.Map<K, V> java.util.Map<K, V>::of(K, V, K, V)\
+        \ @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method <K, V> java.util.Map<K, V> java.util.Map<K, V>::of(K, V, K, V,\
+        \ K, V) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method <K, V> java.util.Map<K, V> java.util.Map<K, V>::of(K, V, K, V,\
+        \ K, V, K, V) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method <K, V> java.util.Map<K, V> java.util.Map<K, V>::of(K, V, K, V,\
+        \ K, V, K, V, K, V) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method <K, V> java.util.Map<K, V> java.util.Map<K, V>::of(K, V, K, V,\
+        \ K, V, K, V, K, V, K, V) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method <K, V> java.util.Map<K, V> java.util.Map<K, V>::of(K, V, K, V,\
+        \ K, V, K, V, K, V, K, V, K, V) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method <K, V> java.util.Map<K, V> java.util.Map<K, V>::of(K, V, K, V,\
+        \ K, V, K, V, K, V, K, V, K, V, K, V) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method <K, V> java.util.Map<K, V> java.util.Map<K, V>::of(K, V, K, V,\
+        \ K, V, K, V, K, V, K, V, K, V, K, V, K, V) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method <K, V> java.util.Map<K, V> java.util.Map<K, V>::of(K, V, K, V,\
+        \ K, V, K, V, K, V, K, V, K, V, K, V, K, V, K, V) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method <K, V> java.util.Map<K, V> java.util.Map<K, V>::ofEntries(java.util.Map.Entry<?\
+        \ extends K, ? extends V>[]) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method V java.util.HashMap<K, V>::compute(K, java.util.function.BiFunction<?\
+        \ super K, ? super V, ? extends V>) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method V java.util.HashMap<K, V>::computeIfAbsent(K, java.util.function.Function<?\
+        \ super K, ? extends V>) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method V java.util.HashMap<K, V>::computeIfPresent(K, java.util.function.BiFunction<?\
+        \ super K, ? super V, ? extends V>) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method V java.util.HashMap<K, V>::merge(K, V, java.util.function.BiFunction<?\
+        \ super V, ? super V, ? extends V>) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method V java.util.HashMap<K, V>::putIfAbsent(K, V) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method V java.util.HashMap<K, V>::replace(K, V) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method boolean java.util.HashMap<K, V>::containsValue(java.lang.Object)\
+        \ @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method boolean java.util.HashMap<K, V>::isEmpty() @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method boolean java.util.HashMap<K, V>::remove(java.lang.Object, java.lang.Object)\
+        \ @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method boolean java.util.HashMap<K, V>::replace(K, V, V) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method int java.util.HashMap<K, V>::size() @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method java.util.Collection<V> java.util.HashMap<K, V>::values() @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method java.util.Set<java.util.Map.Entry<K, V>> java.util.HashMap<K, V>::entrySet()\
+        \ @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method void java.util.HashMap<K, V>::clear() @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method void java.util.HashMap<K, V>::forEach(java.util.function.BiConsumer<?\
+        \ super K, ? super V>) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method void java.util.HashMap<K, V>::putAll(java.util.Map<? extends K,\
+        \ ? extends V>) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method void java.util.HashMap<K, V>::replaceAll(java.util.function.BiFunction<?\
+        \ super K, ? super V, ? extends V>) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.removed"
+      old: "method void software.amazon.nio.spi.s3.S3FileSystemProvider::setConfiguration(software.amazon.nio.spi.s3.config.S3NioSpiConfiguration)"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.visibilityReduced"
+      old: "method V java.util.HashMap<K, V>::get(java.lang.Object) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      new: "method java.lang.Object software.amazon.nio.spi.s3.config.S3NioSpiConfiguration::get(java.lang.String)"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.visibilityReduced"
+      old: "method V java.util.HashMap<K, V>::getOrDefault(java.lang.Object, V) @\
+        \ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      new: "method java.lang.Object software.amazon.nio.spi.s3.config.S3NioSpiConfiguration::getOrDefault(java.lang.String,\
+        \ java.lang.Object)"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.visibilityReduced"
+      old: "method V java.util.HashMap<K, V>::put(K, V) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      new: "method java.lang.Object software.amazon.nio.spi.s3.config.S3NioSpiConfiguration::put(java.lang.String,\
+        \ java.lang.Object)"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.visibilityReduced"
+      old: "method V java.util.HashMap<K, V>::remove(java.lang.Object) @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      new: "method java.lang.Object software.amazon.nio.spi.s3.config.S3NioSpiConfiguration::remove(java.lang.String)"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.visibilityReduced"
+      old: "method boolean java.util.HashMap<K, V>::containsKey(java.lang.Object)\
+        \ @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      new: "method boolean software.amazon.nio.spi.s3.config.S3NioSpiConfiguration::containsKey(java.lang.String)"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."
+    - code: "java.method.visibilityReduced"
+      old: "method java.util.Set<K> java.util.HashMap<K, V>::keySet() @ software.amazon.nio.spi.s3.config.S3NioSpiConfiguration"
+      new: "method java.util.Set<java.lang.String> software.amazon.nio.spi.s3.config.S3NioSpiConfiguration::keySet()"
+      justification: "Intentional API changes for the 3.0.0 configuration redesign\
+        \ (issue #601): S3NioSpiConfiguration no longer extends HashMap; removed deprecated\
+        \ S3FileSystemProvider.configuration field and setConfiguration; removed vestigial\
+        \ S3ClientProvider.universalClient. See README 'Breaking changes in 3.0'."

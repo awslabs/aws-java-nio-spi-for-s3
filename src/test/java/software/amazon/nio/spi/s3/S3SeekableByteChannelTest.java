@@ -22,6 +22,7 @@ import static software.amazon.nio.spi.s3.S3Matchers.anyConsumer;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.nio.channels.NonWritableChannelException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.OpenOption;
 import java.time.Instant;
@@ -74,7 +75,7 @@ public class S3SeekableByteChannelTest {
                         bytes)));
 
         var provider = new S3FileSystemProvider();
-        fs = (S3FileSystem) provider.getFileSystem(URI.create("s3://test-bucket"));
+        fs = (S3FileSystem) provider.getPath(URI.create("s3://test-bucket")).getFileSystem();
         fs.clientProvider(new FixedS3ClientProvider(mockClient));
         path = (S3Path) fs.getPath("/object");
     }
@@ -138,8 +139,9 @@ public class S3SeekableByteChannelTest {
 
     @Test
     public void truncate() throws IOException {
+        // A read-only channel cannot be truncated.
         try(var channel = seekableByteChannelForRead()) {
-            assertThrows(UnsupportedOperationException.class, () -> channel.truncate(0L));
+            assertThrows(NonWritableChannelException.class, () -> channel.truncate(0L));
         }
     }
 

@@ -11,7 +11,6 @@ import static software.amazon.nio.spi.s3.util.TimeOutUtils.createAndLogTimeOutMe
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -19,12 +18,12 @@ import java.nio.file.attribute.FileTime;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
@@ -187,14 +186,17 @@ class S3BasicFileAttributes implements BasicFileAttributes {
      * @return a map filtered to only contain keys that pass the attributeFilter
      */
     protected Map<String, Object> asMap(Predicate<String> attributeFilter) {
-        return Arrays.stream(this.getClass().getMethods())
+        // Note: some attributes (e.g. fileKey for a directory) are legitimately null, so we cannot
+        // use Collectors.toMap, which rejects null values. A HashMap preserves null-valued keys.
+        var result = new HashMap<String, Object>();
+        Arrays.stream(this.getClass().getMethods())
             .filter(method -> method.getParameterCount() == 0)
             .filter(method -> !METHOD_NAMES_TO_FILTER_OUT.contains(method.getName()))
             .filter(method -> attributeFilter.test(method.getName()))
-            .collect(Collectors.toMap(Method::getName, (method -> {
+            .forEach(method -> {
                 logger.debug("method name: '{}'", method.getName());
                 try {
-                    return method.invoke(this);
+                    result.put(method.getName(), method.invoke(this));
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     // should not ever happen as these are all public no arg methods
                     var errorMsg =
@@ -204,7 +206,8 @@ class S3BasicFileAttributes implements BasicFileAttributes {
                     logger.error("{}, caused by {}", errorMsg, e.getCause().getMessage());
                     throw new RuntimeException(errorMsg, e);
                 }
-            })));
+            });
+        return result;
     }
 
     /**

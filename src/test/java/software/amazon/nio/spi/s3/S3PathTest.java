@@ -51,7 +51,7 @@ public class S3PathTest {
 
     @BeforeEach
     public void init(){
-        fileSystem = (S3FileSystem) provider.getFileSystem(URI.create(uriString));
+        fileSystem = (S3FileSystem) provider.getPath(URI.create(uriString)).getFileSystem();
         fileSystem.clientProvider(new FixedS3ClientProvider(mockClient));
         lenient().when(mockClient.headObject(anyConsumer())).thenReturn(
                 CompletableFuture.supplyAsync(() -> HeadObjectResponse.builder().contentLength(100L).build()));
@@ -144,12 +144,27 @@ public class S3PathTest {
     public void getParent() {
         assertNull(root.getParent());
 
+        // The parent of an absolute path must remain absolute (issue #772).
+        var absoluteDir1 = S3Path.getPath(fileSystem, "/dir1/");
+        assertEquals(absoluteDir1, absoluteDirectory.getParent());
+        assertTrue(absoluteDirectory.getParent().isAbsolute());
 
-        var dir1 = S3Path.getPath(fileSystem, "dir1/");
-        assertEquals(dir1, absoluteDirectory.getParent());
-
+        // A single-element absolute path has the root as its parent.
         var top = S3Path.getPath(fileSystem, "/top");
-        assertEquals(root, top.getRoot());
+        assertEquals(root, top.getParent());
+
+        // A single-element relative path has no parent.
+        assertNull(S3Path.getPath(fileSystem, "solo").getParent());
+
+        // Walking an absolute path to the root terminates at root then null, without throwing.
+        var p = S3Path.getPath(fileSystem, "/aa/bb/cc/");
+        p = p.getParent();
+        assertEquals(S3Path.getPath(fileSystem, "/aa/bb/"), p);
+        p = p.getParent();
+        assertEquals(S3Path.getPath(fileSystem, "/aa/"), p);
+        p = p.getParent();
+        assertEquals(root, p);
+        assertNull(p.getParent());
     }
 
     @Test
@@ -185,13 +200,17 @@ public class S3PathTest {
     @Test
     public void subpath() {
         var dir1 = S3Path.getPath(fileSystem, "dir1/");
-        var rootDir1 = S3Path.getPath(fileSystem, "/dir1/");
         var dir2 = S3Path.getPath(fileSystem, "dir2/");
-        var up = S3Path.getPath(fileSystem, "..");
+        // A non-terminal element carries a trailing separator (like "dir1/"), so the first element
+        // of "../dir3/" is "../".
+        var up = S3Path.getPath(fileSystem, "../");
         var obj = S3Path.getPath(fileSystem, "object");
 
-        assertEquals(rootDir1, absoluteDirectory.subpath(0,1));
-        assertEquals(rootDir1, absoluteObject.subpath(0,1));
+        // subpath always returns a relative path (per the Path contract), even for an absolute
+        // source path.
+        assertEquals(dir1, absoluteDirectory.subpath(0,1));
+        assertFalse(absoluteDirectory.subpath(0,1).isAbsolute());
+        assertEquals(dir1, absoluteObject.subpath(0,1));
         assertEquals(dir1, relativeObject.subpath(0,1));
         assertEquals(up, relativeDirectory.subpath(0,1));
         assertEquals(dir2, absoluteDirectory.subpath(1,2));
@@ -211,7 +230,7 @@ public class S3PathTest {
 
         assertFalse(relativeObject.startsWith(S3Path.getPath(fileSystem, "dir1/dir2")));
         assertFalse(absoluteObject.startsWith(relativeBeginning));
-        assertFalse(absoluteObject.startsWith(S3Path.getPath((S3FileSystem) provider.getFileSystem(URI.create("s3://different-bucket")), "/dir1/")));
+        assertFalse(absoluteObject.startsWith(S3Path.getPath((S3FileSystem) provider.getPath(URI.create("s3://different-bucket")).getFileSystem(), "/dir1/")));
     }
 
     @Test
@@ -232,7 +251,7 @@ public class S3PathTest {
         assertFalse(relativeDirectory.startsWith(root));
 
         // Root from a different filesystem should not match
-        var otherFs = (S3FileSystem) provider.getFileSystem(URI.create("s3://other-bucket"));
+        var otherFs = (S3FileSystem) provider.getPath(URI.create("s3://other-bucket")).getFileSystem();
         var otherRoot = S3Path.getPath(otherFs, PATH_SEPARATOR);
         assertFalse(absoluteObject.startsWith(otherRoot));
         provider.closeFileSystem(otherFs);
@@ -463,11 +482,12 @@ public class S3PathTest {
         assertTrue(absoluteObject.iterator().hasNext());
         assertFalse(root.iterator().hasNext());
 
-        // /dir1/dir2/object
+        // /dir1/dir2/object -- per the Path contract the root component is NOT returned by the
+        // iterator, so the first element is "dir1/", not "/dir1/".
         List<String> absoluteObjectElements = new ArrayList<>();
         absoluteObject.iterator().forEachRemaining(p -> absoluteObjectElements.add(p.toString()));
         assertEquals(3, absoluteObjectElements.size());
-        assertEquals("/dir1/", absoluteObjectElements.get(0));
+        assertEquals("dir1/", absoluteObjectElements.get(0));
         assertEquals("dir2/", absoluteObjectElements.get(1));
         assertEquals("object", absoluteObjectElements.get(2));
 
@@ -475,7 +495,7 @@ public class S3PathTest {
         List<String> absoluteDirElements = new ArrayList<>();
         absoluteDirectory.iterator().forEachRemaining(p -> absoluteDirElements.add(p.toString()));
         assertEquals(2, absoluteDirElements.size());
-        assertEquals("/dir1/", absoluteDirElements.get(0));
+        assertEquals("dir1/", absoluteDirElements.get(0));
         assertEquals("dir2/", absoluteDirElements.get(1));
 
         // ../dir3/
@@ -503,22 +523,31 @@ public class S3PathTest {
         final var rootAbc = fileSystem.getPath("/a/b/c");
         final var abc = fileSystem.getPath("a/b/c");
         final var bbc = fileSystem.getPath("b/b/c");
-        assertEquals(0, rootAbc.compareTo(abc));
-        assertEquals(0, abc.compareTo(rootAbc));
+        // compareTo now compares abstract paths lexically, so an absolute path and a relative path
+        // are not equal (the leading "/" sorts before name characters).
+        assertEquals(0, abc.compareTo(fileSystem.getPath("a/b/c")));
+        assertTrue(rootAbc.compareTo(abc) < 0);
+        assertTrue(abc.compareTo(rootAbc) > 0);
         assertTrue(abc.compareTo(bbc) < 0);
         assertTrue(bbc.compareTo(abc) > 0);
     }
 
     @Test
     public void testEquals() {
-        // true because the equals contract requires the use of realPath which uses an absolute path which is relative to
-        // the working directory, which is always "/" for a bucket.
-        assertEquals(S3Path.getPath(fileSystem, "dir1/"), S3Path.getPath(fileSystem, "/dir1/"));
+        // Per the Path contract, equality is based on the abstract path and does not normalize
+        // absoluteness away: a relative path is NOT equal to the corresponding absolute path.
+        assertNotEquals(S3Path.getPath(fileSystem, "dir1/"), S3Path.getPath(fileSystem, "/dir1/"));
+
+        // Two equal abstract paths in the same bucket are equal.
+        assertEquals(S3Path.getPath(fileSystem, "/dir1/"), S3Path.getPath(fileSystem, "/dir1/"));
+
+        // Equality does not eliminate "." / ".." names.
+        assertNotEquals(S3Path.getPath(fileSystem, "/a/./b"), S3Path.getPath(fileSystem, "/a/b"));
 
         S3FileSystem fooFS = null;
         try{
-            fooFS = (S3FileSystem) provider.getFileSystem(URI.create("s3://foo"));
-            assertNotEquals(S3Path.getPath(fileSystem, "dir1/"), S3Path.getPath(fooFS, "/dir1/"));
+            fooFS = (S3FileSystem) provider.getPath(URI.create("s3://foo")).getFileSystem();
+            assertNotEquals(S3Path.getPath(fileSystem, "/dir1/"), S3Path.getPath(fooFS, "/dir1/"));
         } finally {
             if ( fooFS != null ) provider.closeFileSystem(fooFS);
         }
@@ -530,9 +559,9 @@ public class S3PathTest {
 
     @Test
     public void testHashCode() {
-        final var rootAbc = fileSystem.getPath("/a/b/c");
+        // Equal abstract paths share a hash code; a relative and absolute path need not.
         final var abc = fileSystem.getPath("a/b/c");
-        assertEquals(rootAbc.hashCode(), abc.hashCode());
+        assertEquals(abc.hashCode(), fileSystem.getPath("a/b/c").hashCode());
     }
 
     @Test

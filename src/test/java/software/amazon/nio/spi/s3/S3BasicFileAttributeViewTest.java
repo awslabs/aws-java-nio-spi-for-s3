@@ -15,7 +15,7 @@ class S3BasicFileAttributeViewTest {
     final String uriString = "s3://mybucket";
     final S3FileSystemProvider provider = new S3FileSystemProvider();
 
-    S3FileSystem fileSystem = (S3FileSystem) provider.getFileSystem(URI.create(uriString));
+    S3FileSystem fileSystem = (S3FileSystem) provider.getPath(URI.create(uriString)).getFileSystem();
     S3Path path = S3Path.getPath(fileSystem, uriString);
     S3BasicFileAttributeView view = new S3BasicFileAttributeView(path);
 
