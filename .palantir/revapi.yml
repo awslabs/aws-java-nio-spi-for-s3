@@ -1,0 +1,8 @@
+acceptedBreaks:
+  "2.4.0":
+    software.amazon.nio.s3:aws-java-nio-spi-for-s3:
+    - code: "java.field.constantValueChanged"
+      old: "field software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_ACCESS_KEY_PROPERTY"
+      new: "field software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.AWS_ACCESS_KEY_PROPERTY"
+      justification: "Corrected constant to match AWS SDK system property aws.accessKeyId\
+        \ (#746); released in 2.5.0"

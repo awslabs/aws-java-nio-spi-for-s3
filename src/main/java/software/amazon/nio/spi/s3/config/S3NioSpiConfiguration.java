@@ -6,6 +6,7 @@
 package software.amazon.nio.spi.s3.config;
 
 import java.net.URI;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -14,12 +15,15 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.services.s3.internal.BucketUtils;
 import software.amazon.awssdk.utils.Pair;
+import software.amazon.nio.spi.s3.S3OpenOption;
 import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
 /**
@@ -28,7 +32,7 @@ import software.amazon.nio.spi.s3.util.TimeOutUtils;
 public class S3NioSpiConfiguration extends HashMap<String, Object> {
 
     public static final String AWS_REGION_PROPERTY = "aws.region";
-    public static final String AWS_ACCESS_KEY_PROPERTY = "aws.accessKey";
+    public static final String AWS_ACCESS_KEY_PROPERTY = "aws.accessKeyId";
     public static final String AWS_SECRET_ACCESS_KEY_PROPERTY = "aws.secretAccessKey";
 
     /**
@@ -99,6 +103,12 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      * The name of the credentials property
      */
     public static final String S3_SPI_CREDENTIALS_PROPERTY = "s3.spi.credentials";
+
+    /**
+     * The name of the credentials provider property
+     */
+    public static final String S3_SPI_CREDENTIALS_PROVIDER_PROPERTY = "s3.spi.credentials.provider";
+
     /**
      * The name of the S3 object integrity check property
      */
@@ -112,6 +122,46 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
      */
     public static final Set<String> S3_INTEGRITY_CHECK_ALGORITHM_ALLOWED = Set.of(
         "CRC32", "CRC32C", "CRC64NVME", S3_INTEGRITY_CHECK_ALGORITHM_DEFAULT.toUpperCase());
+
+    /**
+     * The name of the streaming multipart upload enabled property
+     */
+    public static final String S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_PROPERTY = "s3.spi.write.streaming-multipart-upload";
+    /**
+     * The default value of the streaming multipart upload enabled property
+     */
+    public static final boolean S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_DEFAULT = false;
+    /**
+     * The name of the multipart part size property
+     */
+    public static final String S3_SPI_WRITE_MULTIPART_PART_SIZE_PROPERTY = "s3.spi.write.multipart-part-size";
+    /**
+     * The default value of the multipart part size property (8 MiB)
+     */
+    public static final long S3_SPI_WRITE_MULTIPART_PART_SIZE_DEFAULT = 8L * 1024 * 1024;
+
+    /**
+     * The name of the streaming multipart upload fallback enabled property
+     */
+    public static final String S3_SPI_WRITE_MULTIPART_FALLBACK_PROPERTY = "s3.spi.write.multipart-fallback-enabled";
+    /**
+     * The default value of the streaming multipart upload fallback enabled property
+     */
+    public static final boolean S3_SPI_WRITE_MULTIPART_FALLBACK_DEFAULT = false;
+
+    /**
+     * This configuration is not meant to be configured via System Properties, but to be set programmatically.
+     */
+    static final String S3_OPEN_OPTIONS_PROPERTY = "s3.open-options";
+
+    /**
+     * Minimum part size for streaming multipart upload: 5 MiB.
+     */
+    private static final long MIN_PART_SIZE = 5L * 1024 * 1024;
+    /**
+     * Maximum part size for streaming multipart upload: 5 GiB.
+     */
+    private static final long MAX_PART_SIZE = 5L * 1024 * 1024 * 1024;
 
     private static final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
 
@@ -146,12 +196,16 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         put(S3_SPI_TIMEOUT_MEDIUM_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_MEDIUM_DEFAULT));
         put(S3_SPI_TIMEOUT_HIGH_PROPERTY, String.valueOf(S3_SPI_TIMEOUT_HIGH_DEFAULT));
         put(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, S3_INTEGRITY_CHECK_ALGORITHM_DEFAULT);
+        put(S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_PROPERTY, String.valueOf(S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_DEFAULT));
+        put(S3_SPI_WRITE_MULTIPART_PART_SIZE_PROPERTY, String.valueOf(S3_SPI_WRITE_MULTIPART_PART_SIZE_DEFAULT));
+        put(S3_SPI_WRITE_MULTIPART_FALLBACK_PROPERTY, String.valueOf(S3_SPI_WRITE_MULTIPART_FALLBACK_DEFAULT));
+        put(S3_OPEN_OPTIONS_PROPERTY, Set.of(S3OpenOption.useTransferManager()));
 
         //
         // With the below we pick existing environment variables and system
         // properties as overrides of the default aws-nio specific properties.
         // We do not pick aws generic properties like aws.region or
-        // aws.accessKey, leaving the framework and the underlying AWS client
+        // aws.accessKeyId, leaving the framework and the underlying AWS client
         // the possibility to use the standard behaviour.
         //
 
@@ -322,6 +376,25 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     }
 
     /**
+     * Fluently sets the CredentialsProvider given a
+     * {@code AwsCredentialsProvider} object.
+     * When both AwsCredentials and AwsCredentialsProvider are
+     * provided, the AwsCredentialsProvider has higher priority.
+     *
+     * @param credentialsProvider the credentials provider
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withCredentialsProvider(AwsCredentialsProvider credentialsProvider) {
+        if (credentialsProvider == null) {
+            remove(S3_SPI_CREDENTIALS_PROVIDER_PROPERTY);
+        } else {
+            put(S3_SPI_CREDENTIALS_PROVIDER_PROPERTY, credentialsProvider);
+        }
+        return this;
+    }
+
+
+    /**
      * Fluently sets the value of {@code forcePathStyle} and adds
      * {@code S3_SPI_FORCE_PATH_STYLE_PROPERTY} to the map unless the given
      * value is null. If null, {@code S3_SPI_FORCE_PATH_STYLE_PROPERTY} is
@@ -398,7 +471,7 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     }
 
     /**
-     * Get the value of the Integrity Check Algorithm
+     * Set the value of the Integrity Check Algorithm
      *
      * @param algorithm the new value; can be null
      * @return this instance
@@ -411,6 +484,67 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         }
         validateIntegrityAlgorithm(algorithm);
 
+        return this;
+    }
+
+    /**
+     * Set the default open options to be used when opening a {@code FileChannel} or {@code SeekableByteChannel}.
+     *
+     * <p>
+     * This configuration is not meant to be configured via System Properties, but to be set programmatically.
+     *
+     * @param options
+     *            the new value; can be null
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withOpenOptions(Collection<S3OpenOption> options) {
+        if (options == null) {
+            put(S3_OPEN_OPTIONS_PROPERTY, null);
+        } else {
+            // verify an open option type appears only once
+            options.stream().collect(Collectors.toMap(o -> o.getClass().getName(), o -> o));
+            put(S3_OPEN_OPTIONS_PROPERTY, Set.copyOf(options));
+        }
+        return this;
+    }
+
+    /**
+     * Fluently sets whether streaming multipart upload is enabled.
+     *
+     * @param enabled true to enable streaming multipart upload
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withStreamingMultipartUpload(boolean enabled) {
+        put(S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_PROPERTY, String.valueOf(enabled));
+        return this;
+    }
+
+    /**
+     * Fluently sets the multipart part size.
+     *
+     * @param partSize the part size in bytes
+     * @return this instance
+     * @throws IllegalArgumentException if partSize is less than 5 MiB or greater than 5 GiB
+     */
+    public S3NioSpiConfiguration withMultipartPartSize(long partSize) {
+        if (partSize < MIN_PART_SIZE) {
+            throw new IllegalArgumentException("partSize must be at least 5 MiB, got: " + partSize);
+        }
+        if (partSize > MAX_PART_SIZE) {
+            throw new IllegalArgumentException("partSize must not exceed 5 GiB, got: " + partSize);
+        }
+        put(S3_SPI_WRITE_MULTIPART_PART_SIZE_PROPERTY, String.valueOf(partSize));
+        return this;
+    }
+
+    /**
+     * Fluently sets whether fallback to temp-file mode is enabled for streaming multipart uploads.
+     *
+     * @param enabled true to enable fallback (default), false for strict append-only mode with lower memory usage
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withMultipartFallbackEnabled(boolean enabled) {
+        put(S3_SPI_WRITE_MULTIPART_FALLBACK_PROPERTY, String.valueOf(enabled));
         return this;
     }
 
@@ -436,6 +570,41 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
             S3_SPI_READ_MAX_FRAGMENT_NUMBER_PROPERTY,
             S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT
         );
+    }
+
+    /**
+     * Get whether streaming multipart upload is enabled.
+     *
+     * @return true if streaming multipart upload is enabled
+     */
+    public boolean isStreamingMultipartUploadEnabled() {
+        return Boolean.parseBoolean(
+            (String) getOrDefault(S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_PROPERTY,
+                String.valueOf(S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_DEFAULT)));
+    }
+
+    /**
+     * Get the configured multipart part size in bytes.
+     *
+     * @return the configured part size or the default (8 MiB) if not overridden or invalid
+     */
+    public long getMultipartPartSize() {
+        return parseLongProperty(
+            S3_SPI_WRITE_MULTIPART_PART_SIZE_PROPERTY,
+            S3_SPI_WRITE_MULTIPART_PART_SIZE_DEFAULT);
+    }
+
+    /**
+     * Get whether fallback to temp-file mode is enabled for streaming multipart uploads.
+     * When disabled, seeks throw {@code UnsupportedOperationException} and part data is not
+     * retained in memory, reducing memory usage for large uploads.
+     *
+     * @return true if fallback is enabled (default), false for strict append-only mode
+     */
+    public boolean isMultipartFallbackEnabled() {
+        return Boolean.parseBoolean(
+            (String) getOrDefault(S3_SPI_WRITE_MULTIPART_FALLBACK_PROPERTY,
+                String.valueOf(S3_SPI_WRITE_MULTIPART_FALLBACK_DEFAULT)));
     }
 
     /**
@@ -487,6 +656,30 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
             );
         }
 
+        return null;
+    }
+
+    /**
+     * Get the configured credential provider.
+     *
+     * @return the configured value or null if not provided
+     */
+    public AwsCredentialsProvider getCredentialsProvider() {
+        if (containsKey(S3_SPI_CREDENTIALS_PROVIDER_PROPERTY)) {
+            if (get(S3_SPI_CREDENTIALS_PROVIDER_PROPERTY) instanceof AwsCredentialsProvider) {
+                return (AwsCredentialsProvider) get(S3_SPI_CREDENTIALS_PROVIDER_PROPERTY);
+            } else {
+                logger.warn(
+                        "The value of property '{}' was found, but it is not a type of AwsCredentialsProvider. " +
+                                "Will fallback to AwsCredentials.",
+                        S3_SPI_CREDENTIALS_PROVIDER_PROPERTY);
+            }
+        }
+
+        final AwsCredentials awsCredentials = getCredentials();
+        if (awsCredentials != null) {
+            return this::getCredentials;
+        }
         return null;
     }
 
@@ -554,6 +747,28 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         return algorithm;
     }
 
+    /**
+     * Get default open options to be used when opening a {@code FileChannel} or {@code SeekableByteChannel}.
+     *
+     * <p>
+     * This configuration is not meant to be configured via System Properties, but to be set programmatically.
+     *
+     * @return the open options
+     */
+    public Set<S3OpenOption> getOpenOptions() {
+        @SuppressWarnings("unchecked")
+        var options = (Set<S3OpenOption>) getOrDefault(S3_OPEN_OPTIONS_PROPERTY, Set.of());
+        // make a defensive copy to ensure that the thread-safetyness is ensured for the consumers
+        var result = options.stream().map(S3OpenOption::copy).collect(Collectors.toSet());
+
+        // Add streaming multipart upload option if enabled via configuration
+        if (isStreamingMultipartUploadEnabled()) {
+            result.add(S3OpenOption.streamingMultipartUpload(getMultipartPartSize(), isMultipartFallbackEnabled()));
+        }
+
+        return result;
+    }
+
     private void validateIntegrityAlgorithm(String algorithm) {
         if (!S3_INTEGRITY_CHECK_ALGORITHM_ALLOWED.contains(algorithm.toUpperCase())) {
             throw new UnsupportedOperationException("unknown integrity check algorithm '" + algorithm + "'");
@@ -583,6 +798,17 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
             return Integer.parseInt(propertyVal);
         } catch (NumberFormatException e) {
             logger.warn("the value of '{}' for '{}' is not an integer, using default value of '{}'",
+                propertyVal, propName, defaultVal);
+            return defaultVal;
+        }
+    }
+
+    private long parseLongProperty(String propName, long defaultVal) {
+        var propertyVal = (String) get(propName);
+        try {
+            return Long.parseLong(propertyVal);
+        } catch (NumberFormatException e) {
+            logger.warn("the value of '{}' for '{}' is not a long, using default value of '{}'",
                 propertyVal, propName, defaultVal);
             return defaultVal;
         }

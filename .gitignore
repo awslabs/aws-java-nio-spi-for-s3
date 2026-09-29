@@ -2,6 +2,7 @@
 .gradle
 .idea
 gradle
+!gradle/wrapper/
 gradle.properties
 
 # Ignore Gradle build output directory
@@ -18,8 +19,17 @@ target
 # MacOS
 .DS_Store
 
-# directory used for API break checks
-/.palantir/
+# API break checks (revapi): ignore transient files but track accepted breaks
+/.palantir/*
+!/.palantir/revapi.yml
 
 # sdkman files
 .sdkmanrc
+
+# jqwik property-based testing database
+.jqwik-database
+
+
+# Internal release documentation (AWS only)
+RELEASE.md
+RELEASE_NOTES.md

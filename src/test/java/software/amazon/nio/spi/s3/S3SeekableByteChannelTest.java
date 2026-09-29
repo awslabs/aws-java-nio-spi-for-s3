@@ -107,7 +107,7 @@ public class S3SeekableByteChannelTest {
             .thenThrow(new CompletionException(S3Exception.builder().statusCode(404).build()));
         when(mockClient.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
             .thenReturn(CompletableFuture.completedFuture(PutObjectResponse.builder().build()));
-        try(var channel = new S3SeekableByteChannel(path, mockClient, Set.<OpenOption>of(CREATE, WRITE), DisabledFileIntegrityCheck.INSTANCE)){
+        try (var channel = new S3SeekableByteChannel(path, mockClient, Set.<OpenOption> of(CREATE, WRITE))) {
             assertEquals(0L, channel.size());
             channel.write(ByteBuffer.allocate(12));
             assertEquals(12L, channel.size());
@@ -158,7 +158,7 @@ public class S3SeekableByteChannelTest {
     }
 
     private S3SeekableByteChannel seekableByteChannelForRead() throws IOException {
-        return new S3SeekableByteChannel(path, mockClient, Collections.singleton(READ), DisabledFileIntegrityCheck.INSTANCE);
+        return new S3SeekableByteChannel(path, mockClient, Collections.singleton(READ));
     }
 
     // test that the S3SeekableByteChannel uses the buffer size from the configuration set for the FileSystem

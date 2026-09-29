@@ -6,6 +6,10 @@
 package software.amazon.nio.spi.s3;
 
 import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -16,6 +20,30 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
  * {@link GetObjectRequest}.
  */
 public abstract class S3OpenOption implements OpenOption {
+
+    /**
+     * Assume that the S3 object does not exist and therefore no download from S3 is needed and an accidental overwrite
+     * is prevented while uploading to S3.
+     *
+     * <p>
+     * This option sets an HTTP <code>If-None-Match</code> header with a wildcard value for the
+     * {@link PutObjectRequest}, which tells S3 to proceed with the upload only if the object doesn't already exist.
+     *
+     * <p>
+     * This is meant to be used while opening a {@code FileChannel} or {@code SeekableByteChannel}. Additionally, it
+     * suppresses the download while opening the channel - no {@code GetObjectRequest} is involved. When closing the
+     * channel the <code>If-None-Match</code> header is set to prevent overwriting an existing S3 object.
+     *
+     * <p>
+     * Currently, this option in combination with <code>FileChannel.force</code> is unsupported. The reason is, that
+     * <code>FileChannel.force</code> uploads to S3 and any subsequent <code>force</code> or <code>close</code> would
+     * fail due to the <code>If-None-Match</code> header.
+     *
+     * @return same instance
+     */
+    public static S3OpenOption assumeObjectNotExists() {
+        return S3AssumeObjectNotExists.INSTANCE;
+    }
 
     /**
      * Sets an HTTP <code>If-Match</code> header for the {@link PutObjectRequest} with a previously read ETag from the
@@ -30,13 +58,53 @@ public abstract class S3OpenOption implements OpenOption {
      * <p>
      * If multiple conditional writes occur for the same object name, the first write operation to finish succeeds.
      * Amazon S3 then fails subsequent writes with a <code>412 Precondition Failed</code> response.
+     *
+     * @return new instance
      */
     public static S3OpenOption preventConcurrentOverwrite() {
         return new S3PreventConcurrentOverwrite();
     }
 
     /**
+     * This open options prevents the {@link PutObjectRequest} when the content of the local temporary file has not
+     * changed.
+     *
+     * <p>
+     * This is meant to be used while opening a {@code FileChannel} or {@code SeekableByteChannel}. When opening the
+     * channel, a checksum is calculated for the downloaded file and stored. When closing the channel (or while calling
+     * <code>FileChannel.force</code>) a checksum is calculated again and compared to the previously stored one. If the
+     * checksum matches, no {@link PutObjectRequest} is performed.
+     *
+     * @return new instance
+     */
+    public static S3OpenOption putOnlyIfModified() {
+        return new S3PutOnlyIfModified(new Crc32FileIntegrityCheck());
+    }
+
+    /**
+     * This open options prevents the {@link PutObjectRequest} when the content of the local temporary file has not
+     * changed.
+     *
+     * <p>
+     * This is meant to be used while opening a {@code FileChannel} or {@code SeekableByteChannel}. When opening the
+     * channel, a checksum is calculated for the downloaded file and stored. When closing the channel (or while calling
+     * <code>FileChannel.force</code>) a checksum is calculated again and compared to the previously stored one. If the
+     * checksum matches, no {@link PutObjectRequest} is performed.
+     *
+     * @param checksumAlgorithm
+     *            the algorithm to calculate a checksum
+     * @return new instance
+     */
+    public static S3OpenOption putOnlyIfModified(S3ObjectIntegrityCheck checksumAlgorithm) {
+        return new S3PutOnlyIfModified(checksumAlgorithm);
+    }
+
+    /**
      * Sets an HTTP <code>Range</code> header for a {@link GetObjectRequest}, e.g. <code>Range: bytes=0-100</code>.
+     *
+     * @param end
+     *            exclusive end
+     * @return new instance
      */
     public static S3OpenOption range(int end) {
         return new S3RangeHeader(0, end);
@@ -44,9 +112,143 @@ public abstract class S3OpenOption implements OpenOption {
 
     /**
      * Sets an HTTP <code>Range</code> header for a {@link GetObjectRequest}, e.g. <code>Range: bytes=50-100</code>.
+     *
+     * @param start
+     *            first position (offset)
+     * @param end
+     *            last position (exclusive)
+     * @return new instance
      */
     public static S3OpenOption range(int start, int end) {
         return new S3RangeHeader(start, end);
+    }
+
+    /**
+     * Removes all {@link S3OpenOption}s from the given set.
+     *
+     * @param options
+     *            options that may contain {@link S3OpenOption}s
+     * @return new set of filtered options
+     */
+    static Set<OpenOption> removeAll(Set<? extends OpenOption> options) {
+        return options.stream()
+            .filter(o -> !(o instanceof S3OpenOption))
+            .collect(Collectors.toSet());
+    }
+
+    /**
+     * Retains all {@link S3OpenOption}s from the given set.
+     *
+     * @param options
+     *            options that may contain {@link S3OpenOption}s
+     * @return new set of filtered options
+     */
+    static Set<S3OpenOption> retainAll(Set<? extends OpenOption> options) {
+        return options.stream()
+            .flatMap(o -> o instanceof S3OpenOption
+                ? Stream.of((S3OpenOption) o)
+                : Stream.empty())
+            .collect(Collectors.toSet());
+    }
+
+    /**
+     * Enables the usage of the {@code S3TransferManager}.
+     *
+     * <p>
+     * This open options tells the implementation to use the {@code S3TransferManager} for {@code GetObjectRequest} or
+     * {@code PutObjectRequest} requests if applicable. It is meant to be used while opening a {@code FileChannel} or
+     * {@code SeekableByteChannel} on large S3 objects. For small objects (typically smaller than 8 MiB) the
+     * {@code GetObjectRequest} or {@code PutObjectRequest} operations are sufficient.
+     *
+     * <p>
+     * The {@code S3TransferManager} allows you to transfer a single object with enhanced throughput by leveraging
+     * multi-part upload and byte-range fetches to perform transfers in parallel.
+     *
+     * @return same instance
+     */
+    public static S3OpenOption useTransferManager() {
+        return S3UseTransferManager.INSTANCE;
+    }
+
+    /**
+     * Enables streaming multipart upload with default settings (8 MiB part size, 4 max in-flight uploads).
+     *
+     * <p>
+     * When this option is used, data is uploaded to S3 incrementally as it is written to the channel, rather than
+     * buffering all data to a local temporary file. This requires the AWS CRT client to be in use.
+     *
+     * @return new instance with default part size and max in-flight
+     */
+    public static S3OpenOption streamingMultipartUpload() {
+        return new S3StreamingMultipartUpload(
+            S3StreamingMultipartUpload.DEFAULT_PART_SIZE,
+            S3StreamingMultipartUpload.DEFAULT_MAX_IN_FLIGHT
+        );
+    }
+
+    /**
+     * Enables streaming multipart upload with a custom part size and default max in-flight uploads (4).
+     *
+     * <p>
+     * When this option is used, data is uploaded to S3 incrementally as it is written to the channel, rather than
+     * buffering all data to a local temporary file. This requires the AWS CRT client to be in use.
+     *
+     * @param partSize
+     *            the part size in bytes, must be between 5 MiB and 5 GiB
+     * @return new instance with the specified part size
+     * @throws IllegalArgumentException
+     *             if partSize is less than 5 MiB or greater than 5 GiB
+     */
+    public static S3OpenOption streamingMultipartUpload(long partSize) {
+        if (partSize < S3StreamingMultipartUpload.MIN_PART_SIZE) {
+            throw new IllegalArgumentException(
+                "Part size must be at least 5 MiB, got: " + partSize);
+        }
+        if (partSize > S3StreamingMultipartUpload.MAX_PART_SIZE) {
+            throw new IllegalArgumentException(
+                "Part size must not exceed 5 GiB, got: " + partSize);
+        }
+        return new S3StreamingMultipartUpload(partSize,
+            S3StreamingMultipartUpload.DEFAULT_MAX_IN_FLIGHT);
+    }
+
+    /**
+     * Enables streaming multipart upload with a custom part size and fallback control.
+     *
+     * <p>
+     * When {@code fallbackEnabled} is {@code false}, the channel operates in strict append-only mode:
+     * <ul>
+     *   <li>Any call to {@code position()} that changes the current position throws
+     *       {@link UnsupportedOperationException}</li>
+     *   <li>Part data is not retained in memory after upload, significantly reducing memory usage
+     *       for large uploads</li>
+     *   <li>Memory usage is bounded to approximately {@code (maxInFlight + 1) × partSize} instead of
+     *       the total bytes written</li>
+     * </ul>
+     *
+     * <p>
+     * When {@code fallbackEnabled} is {@code true} (the default), the channel retains all written data in memory
+     * so it can reconstruct a temp file if a non-sequential position change is detected.
+     *
+     * @param partSize
+     *            the part size in bytes, must be between 5 MiB and 5 GiB
+     * @param fallbackEnabled
+     *            whether to enable fallback to temp-file mode on seeks (true = enable, false = strict append-only)
+     * @return new instance with the specified configuration
+     * @throws IllegalArgumentException
+     *             if partSize is less than 5 MiB or greater than 5 GiB
+     */
+    public static S3OpenOption streamingMultipartUpload(long partSize, boolean fallbackEnabled) {
+        if (partSize < S3StreamingMultipartUpload.MIN_PART_SIZE) {
+            throw new IllegalArgumentException(
+                "Part size must be at least 5 MiB, got: " + partSize);
+        }
+        if (partSize > S3StreamingMultipartUpload.MAX_PART_SIZE) {
+            throw new IllegalArgumentException(
+                "Part size must not exceed 5 GiB, got: " + partSize);
+        }
+        return new S3StreamingMultipartUpload(partSize,
+            S3StreamingMultipartUpload.DEFAULT_MAX_IN_FLIGHT, fallbackEnabled);
     }
 
     /**
@@ -63,8 +265,10 @@ public abstract class S3OpenOption implements OpenOption {
      *
      * @param putObjectRequest
      *            put object request
+     * @param file
+     *            file in which the content is saved locally
      */
-    protected void apply(PutObjectRequest.Builder putObjectRequest) {
+    protected void apply(PutObjectRequest.Builder putObjectRequest, Path file) {
     }
 
     /**
@@ -72,8 +276,10 @@ public abstract class S3OpenOption implements OpenOption {
      *
      * @param getObjectResponse
      *            get object response
+     * @param file
+     *            file in which the content is saved locally
      */
-    protected void consume(GetObjectResponse getObjectResponse) {
+    protected void consume(GetObjectResponse getObjectResponse, Path file) {
     }
 
     /**
@@ -81,7 +287,27 @@ public abstract class S3OpenOption implements OpenOption {
      *
      * @param putObjectResponse
      *            put object response
+     * @param file
+     *            file in which the content is saved locally
      */
-    protected void consume(PutObjectResponse putObjectResponse) {
+    protected void consume(PutObjectResponse putObjectResponse, Path file) {
+    }
+
+    /**
+     * Creates a new instance unless it is thread-safe.
+     * 
+     * @return new instance
+     */
+    public abstract S3OpenOption copy();
+
+    /**
+     * Whether the {@link PutObjectRequest} should not be made.
+     *
+     * @param file
+     *            file in which the content is saved locally
+     * @return <code>true</code> if the upload should not be performed
+     */
+    protected boolean preventPutObjectRequest(Path file) {
+        return false;
     }
 }

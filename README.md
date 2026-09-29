@@ -72,14 +72,30 @@ For example:
 <dependency>
     <groupId>software.amazon.nio.s3</groupId>
     <artifactId>aws-java-nio-spi-for-s3</artifactId>
-    <version>2.2.0</version>
+    <version>2.5.0</version>
 </dependency>
 ```
 
 `build.gradle(.kts)`
 ```groovy
-    implementation("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.2.0")
+    implementation("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.5.0")
 ```
+
+> [!TIP]
+> If your application only uses standard Java NIO APIs and doesn't directly reference S3-specific classes, 
+> you can use `runtimeOnly` instead of `implementation`. This allows the S3 provider to be discovered 
+> automatically via Java's ServiceLoader mechanism:
+> ```groovy
+> runtimeOnly("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.5.0")
+> ```
+> This approach is cleaner as it keeps the S3 provider as a pure runtime dependency that's loaded dynamically.
+>
+> You can also use `latest.release` to automatically get the most recent stable version:
+> ```groovy
+> runtimeOnly("software.amazon.nio.s3:aws-java-nio-spi-for-s3:latest.release")
+> ```
+> **Note**: Using `latest.release` can lead to unexpected behavior if new versions introduce breaking changes. 
+> Specifying exact versions is recommended for reproducible builds.
 
 The library heavily relies on the `crt` client from aws. It uses the [`uber`
 version](https://github.com/awslabs/aws-crt-java?tab=readme-ov-file#platform-specific-jars) for simplicity
@@ -89,7 +105,7 @@ and wide range of supported platforms.
 > If **size** is an **issue**, you can **exclude** the `crt` dependency from the library and import the [specific `crt` library](https://github.com/awslabs/aws-crt-java?tab=readme-ov-file#platform-specific-jars)
 > for your platform. For example:
 > ```
-> implementation("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.2.0") {
+> implementation("software.amazon.nio.s3:aws-java-nio-spi-for-s3:2.5.0") {
 >	exclude group: 'software.amazon.awssdk.crt', module: 'aws-crt'
 > }
 > implementation 'software.amazon.awssdk.crt:aws-crt:0.31.1:linux-x86_64'
@@ -111,6 +127,35 @@ implementation("software.amazon.nio.s3:aws-java-nio-spi-for-s3:1.2.2") {
 implementation("ch.qos.logback:logback-classic:1.3.11") // 1.3.x is still compatible with java 8
 implementation("ch.qos.logback:logback-core:1.3.11")
 ```
+
+## Client Identification Headers
+
+This library can add custom headers to S3 requests to help identify traffic originating from this library. This is useful for:
+- Monitoring and analytics in S3 access logs
+- Identifying requests in AWS CloudTrail
+- Debugging and troubleshooting
+
+When enabled, the following headers are added to all S3 requests:
+- `User-Agent: aws-java-nio-spi-for-s3/[version]`
+- `X-Amz-Client-Name: aws-java-nio-spi-for-s3`
+- `X-Amz-Client-Version: [version]`
+
+### Enabling Custom Headers
+
+**Method 1: System Property (Global)**
+```bash
+# Enable for all S3FileSystemProvider instances
+java -Ds3.spi.client.custom-headers.enabled=true -jar your-application.jar
+```
+
+**Method 2: Programmatic (Per FileSystem)**
+```java
+S3FileSystemProvider provider = new S3FileSystemProvider();
+S3FileSystem fileSystem = (S3FileSystem) provider.getFileSystem(URI.create("s3://your-bucket"));
+fileSystem.clientProvider().setCustomHeadersEnabled(true);
+```
+
+**Note:** Enabling custom headers switches from the high-performance CRT client to the regular AWS SDK client. For most use cases, the performance difference is negligible, but consider this for high-throughput applications.
 
 ## AWS Credentials
 
@@ -247,6 +292,145 @@ To configure timeouts for writing files or opening files for write access, you m
 ```
 new S3SeekableByteChannel(s3Path, s3Client, channelOpenOptions, timeout, timeUnit);
 ```
+
+## Streaming Multipart Upload
+
+Streaming multipart upload allows parts to be uploaded to S3 as data is written, rather than buffering everything
+to a local temp file. This reduces memory and disk usage and provides incremental upload progress for large objects.
+
+### Requirements
+
+This feature requires the AWS CRT (Common Runtime) client. If the CRT client is not in use, an
+`UnsupportedOperationException` is thrown when attempting to open a channel with the streaming multipart upload option.
+
+### When to Use
+
+Use streaming multipart upload when writing large objects (greater than 8 MiB) sequentially and you want to minimize
+local disk and memory usage. This is not suitable for random-access write patterns — if a backward seek is detected,
+the channel automatically falls back to the traditional temp-file approach.
+
+### Configuration Options
+
+| Option | Default | Min | Max | Description |
+|--------|---------|-----|-----|-------------|
+| Part size | 8 MiB | 5 MiB | 5 GiB | Size of each part uploaded to S3 |
+| Max in-flight uploads | 4 | — | — | Maximum concurrent part uploads |
+
+Memory usage is approximately `(maxInFlight + 1) × partSize`. With defaults this is about 40 MiB.
+
+### Code Example
+
+```java
+// Open a channel with streaming multipart upload (default 8 MiB parts)
+Set<OpenOption> options = Set.of(
+    StandardOpenOption.WRITE,
+    StandardOpenOption.CREATE,
+    S3OpenOption.streamingMultipartUpload()
+);
+Path s3Path = Paths.get(URI.create("s3://my-bucket/large-file.dat"));
+try (SeekableByteChannel channel = Files.newByteChannel(s3Path, options)) {
+    ByteBuffer buffer = ByteBuffer.allocate(64 * 1024); // 64 KiB write buffer
+    while (hasMoreData()) {
+        fillBuffer(buffer);
+        buffer.flip();
+        channel.write(buffer);
+        buffer.clear();
+    }
+}
+
+// With custom part size (16 MiB)
+Set<OpenOption> options = Set.of(
+    StandardOpenOption.WRITE,
+    StandardOpenOption.CREATE,
+    S3OpenOption.streamingMultipartUpload(16 * 1024 * 1024)
+);
+```
+
+### Environment Variable / System Property Configuration
+
+SPI users who cannot pass custom open options programmatically can enable streaming multipart upload via
+environment variables or system properties:
+
+```bash
+export S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD=true
+export S3_SPI_WRITE_MULTIPART_PART_SIZE=16777216  # 16 MiB
+export S3_SPI_WRITE_MULTIPART_FALLBACK_ENABLED=true  # enable fallback to temp-file on seeks
+```
+
+Or via system properties:
+
+```bash
+java -Ds3.spi.write.streaming-multipart-upload=true \
+     -Ds3.spi.write.multipart-part-size=16777216 \
+     -Ds3.spi.write.multipart-fallback-enabled=true \
+     -jar my-application.jar
+```
+
+### Fallback Behavior
+
+If any explicit position change is detected (either a backward seek or a forward seek that creates a gap), the
+channel automatically aborts the multipart upload and falls back to the traditional temp-file approach. A warning
+is logged when this occurs. Subsequent writes and the final upload on close behave identically to the standard
+write channel.
+
+This includes:
+- **Backward seeks** — setting position to a value less than the current write position
+- **Forward seeks (gaps)** — setting position to a value greater than the current write position, which would
+  create a zero-filled hole in the data
+
+On a standard filesystem, a forward seek past the end of written data creates a sparse file with implicit zeros
+in the gap. Since streaming multipart upload cannot represent these gaps without materializing potentially large
+amounts of zero bytes through the upload pipeline, the channel falls back to temp-file mode where the filesystem
+handles sparse positioning natively.
+
+Only purely sequential writes (where position advances naturally via `write()`) remain in streaming mode. Calling
+`position(currentPosition)` (a no-op) does not trigger fallback.
+
+#### Enabling Fallback
+
+By default, the channel operates in strict append-only mode: seeks throw `UnsupportedOperationException` and
+part data is not retained in memory after upload. This keeps memory usage bounded to approximately
+`(maxInFlight + 1) × partSize`.
+
+If your use case may involve non-sequential writes (e.g., seeking backward to overwrite a header), you can
+enable fallback to temp-file mode:
+
+```java
+// Enable fallback: seeks trigger temp-file mode instead of throwing
+// Tradeoff: all written data is retained in memory to support reconstruction
+S3OpenOption.streamingMultipartUpload(8 * 1024 * 1024, true)
+```
+
+Or via environment variable / system property:
+```bash
+export S3_SPI_WRITE_MULTIPART_FALLBACK_ENABLED=true
+```
+
+When fallback is enabled:
+- Non-sequential position changes trigger automatic fallback to temp-file mode
+- All part data is retained in memory (total memory usage equals total bytes written)
+- After fallback, the channel behaves identically to the standard write channel
+
+### S3 Part Limits
+
+S3 imposes hard limits on multipart uploads:
+
+| Limit | Value |
+|-------|-------|
+| Maximum parts per upload | 10,000 |
+| Minimum part size | 5 MiB (except the final part) |
+| Maximum part size | 5 GiB |
+
+The maximum uploadable object size is `partSize × 10,000`:
+
+| Part Size | Max Object Size |
+|-----------|-----------------|
+| 8 MiB (default) | ~78 GiB |
+| 100 MiB | ~976 GiB |
+| 5 GiB | ~48.8 TiB (S3 limit is 5 TiB) |
+
+If the part limit is exceeded during a write, the channel aborts the multipart upload and throws an
+`IllegalStateException`. To upload larger objects, configure a larger part size.
 
 ## Design Decisions
 

@@ -68,6 +68,7 @@ class S3DirectoryStream implements DirectoryStream<Path> {
                 listObjectsV2Publisher.contents().map(S3Object::key);
 
         return Flowable.concat(prefixPublisher, keysPublisher)
+                .map(key -> PATH_SEPARATOR + key)
                 .map(fs::getPath)
                 .filter(path -> !isEqualToParent(finalDirName, path))  // including the parent will induce loops
                 .filter(path -> tryAccept(filter, path))

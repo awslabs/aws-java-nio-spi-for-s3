@@ -215,6 +215,30 @@ public class S3PathTest {
     }
 
     @Test
+    public void startsWithRootPath() {
+        // Any absolute path in the same filesystem should start with the root
+        assertTrue(absoluteObject.startsWith(root));
+        assertTrue(absoluteDirectory.startsWith(root));
+
+        // The root itself starts with root
+        assertTrue(root.startsWith(root));
+
+        // A resolved path should start with root
+        var resolved = root.resolve("test");
+        assertTrue(resolved.startsWith(root));
+
+        // Relative paths do not start with root (different absoluteness)
+        assertFalse(relativeObject.startsWith(root));
+        assertFalse(relativeDirectory.startsWith(root));
+
+        // Root from a different filesystem should not match
+        var otherFs = (S3FileSystem) provider.getFileSystem(URI.create("s3://other-bucket"));
+        var otherRoot = S3Path.getPath(otherFs, PATH_SEPARATOR);
+        assertFalse(absoluteObject.startsWith(otherRoot));
+        provider.closeFileSystem(otherFs);
+    }
+
+    @Test
     public void testStartsWithString() {
         assertFalse(absoluteObject.startsWith("no"));
         assertFalse(absoluteObject.startsWith("dir1"));
@@ -247,6 +271,17 @@ public class S3PathTest {
         assertFalse(absoluteDirectory.endsWith(S3Path.getPath(fileSystem, "/no/")));
 
         assertTrue(relativeDirectory.endsWith(dir3));
+    }
+
+    @Test
+    public void endsWithRootPath() {
+        // Only root itself ends with root
+        assertTrue(root.endsWith(root));
+
+        // Other paths do not end with root (should return false, not throw)
+        assertFalse(absoluteObject.endsWith(root));
+        assertFalse(absoluteDirectory.endsWith(root));
+        assertFalse(relativeObject.endsWith(root));
     }
 
     @Test

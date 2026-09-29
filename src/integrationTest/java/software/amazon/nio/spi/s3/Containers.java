@@ -5,7 +5,7 @@
 
 package software.amazon.nio.spi.s3;
 
-import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.net.URI;
@@ -21,7 +21,6 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.testcontainers.containers.localstack.LocalStackContainer.Service.S3;
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.S3_SPI_ENDPOINT_PROTOCOL_PROPERTY;
 
 abstract class Containers {
@@ -31,7 +30,7 @@ abstract class Containers {
     static {
         LOCAL_STACK_CONTAINER = new LocalStackContainer(
             DockerImageName.parse("localstack/localstack:4.2")
-        ).withServices(S3);
+        ).withServices("s3");
         LOCAL_STACK_CONTAINER.start();
         System.setProperty(S3_SPI_ENDPOINT_PROTOCOL_PROPERTY, "http");
     }

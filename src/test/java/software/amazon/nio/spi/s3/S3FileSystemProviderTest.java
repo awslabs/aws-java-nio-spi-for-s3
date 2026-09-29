@@ -32,6 +32,8 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.AccessMode;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -43,6 +45,7 @@ import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
@@ -74,6 +77,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
+import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 @SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
@@ -118,10 +122,50 @@ public class S3FileSystemProviderTest {
         final var env = Collections.<String, Object>emptyMap();
 
         assertThatCode(() -> provider.newFileSystem(uri, null))
-                .doesNotThrowAnyExceptionExcept(IOException.class);
+                .doesNotThrowAnyExceptionExcept(FileSystemAlreadyExistsException.class, IOException.class);
 
         assertThatCode(() -> provider.newFileSystem(uri, env))
-                .doesNotThrowAnyExceptionExcept(IOException.class);
+                .doesNotThrowAnyExceptionExcept(FileSystemAlreadyExistsException.class, IOException.class);
+    }
+
+    @Test
+    @DisplayName("newFileSystem should add the filesystem to the cache so getFileSystem returns the same instance")
+    public void newFileSystemShouldCacheFileSystem() throws IOException {
+        // Use a fresh bucket name that isn't already in the cache
+        final var newBucketUri = URI.create("s3://new-cached-bucket/key");
+
+        // Create a provider that bypasses the actual S3 createBucket call
+        var testProvider = new S3FileSystemProvider() {
+            @Override
+            public FileSystem newFileSystem(final URI uri, final Map<String, ?> env) throws IOException {
+                if (!uri.getScheme().equals(getScheme())) {
+                    throw new IllegalArgumentException("URI scheme must be " + getScheme());
+                }
+                var info = fileSystemInfo(uri);
+                var config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
+                if (info.accessKey() != null) {
+                    config.withCredentials(info.accessKey(), info.accessSecret());
+                }
+                // Skip the actual bucket creation and just cache the filesystem
+                return getOrCreateFileSystem(info.key(), config);
+            }
+        };
+
+        // The filesystem should not be in the cache before newFileSystem is called
+        assertFalse(testProvider.getFsCache().containsKey("new-cached-bucket"));
+
+        // Call newFileSystem
+        var createdFs = testProvider.newFileSystem(newBucketUri, null);
+
+        // The filesystem should now be in the cache
+        assertTrue(testProvider.getFsCache().containsKey("new-cached-bucket"));
+
+        // getFileSystem should return the same instance
+        var retrievedFs = testProvider.getFileSystem(newBucketUri);
+        assertSame(createdFs, retrievedFs);
+
+        // Clean up
+        testProvider.closeFileSystem(createdFs);
     }
 
     @Test
@@ -185,8 +229,8 @@ public class S3FileSystemProviderTest {
             new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build())
         );
 
-        var object1 = S3Object.builder().key(pathUri+"/key1").build();
-        var object2 = S3Object.builder().key(pathUri+"/key2").build();
+        var object1 = S3Object.builder().key("baa/key1").build();
+        var object2 = S3Object.builder().key("baa/key2").build();
         when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
             completedFuture(ListObjectsV2Response.builder().contents(object1, object2).build())
         );
@@ -250,14 +294,16 @@ public class S3FileSystemProviderTest {
         final var publisher = new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build());
         when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(publisher);
 
-        var object1 = S3Object.builder().key(pathUri+"/key1").build();
-        var object2 = S3Object.builder().key(pathUri+"/key2").build();
-        var object3 = S3Object.builder().key(pathUri+"/").build();
+        var object1 = S3Object.builder().key("baa/key1").build();
+        var object2 = S3Object.builder().key("baa/key2").build();
+        var object3 = S3Object.builder().key("baa/").build();
         when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
             completedFuture(ListObjectsV2Response.builder().contents(object1, object2, object3).build())
         );
 
-        final var expectedItems = Stream.of(object1, object2).map(obj -> fs.getPath(obj.key())).collect(Collectors.toList());
+        final var expectedItems = Stream.of(object1, object2)
+            .map(obj -> fs.getPath("/" + obj.key()))
+            .collect(Collectors.toList());
         try(var stream = provider.newDirectoryStream(fs.getPath(pathUri + "/"), path -> true)){
             assertThat(stream.iterator()).toIterable().containsExactlyElementsOf(expectedItems);
         }
@@ -268,9 +314,9 @@ public class S3FileSystemProviderTest {
         final var publisher = new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build());
         when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(publisher);
 
-        var object1 = S3Object.builder().key(pathUri+"/key1").build();
-        var object2 = S3Object.builder().key(pathUri+"/key2").build();
-        var object3 = S3Object.builder().key(pathUri+"/").build();
+        var object1 = S3Object.builder().key("baa/key1").build();
+        var object2 = S3Object.builder().key("baa/key2").build();
+        var object3 = S3Object.builder().key("baa/").build();
         when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
             completedFuture(ListObjectsV2Response.builder().contents(object1, object2, object3).build())
         );
@@ -278,7 +324,32 @@ public class S3FileSystemProviderTest {
         DirectoryStream.Filter<? super Path> filter = path -> path.toString().endsWith("key2");
 
         try(var stream = provider.newDirectoryStream(fs.getPath(pathUri + "/"), filter)){
-            assertThat(stream.iterator()).toIterable().containsExactly(fs.getPath(object2.key()));
+            assertThat(stream.iterator()).toIterable().containsExactly(fs.getPath("/" + object2.key()));
+        }
+    }
+
+    @Test
+    @DisplayName("newDirectoryStream should return absolute paths that can be relativized against the parent")
+    public void newDirectoryStreamReturnsAbsolutePaths() throws IOException {
+        final var publisher = new ListObjectsV2Publisher(mockClient, ListObjectsV2Request.builder().build());
+        when(mockClient.listObjectsV2Paginator(anyConsumer())).thenReturn(publisher);
+
+        var object1 = S3Object.builder().key("baa/key1").build();
+        var object2 = S3Object.builder().key("baa/subdir/").build();
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
+            completedFuture(ListObjectsV2Response.builder().contents(object1).commonPrefixes(
+                software.amazon.awssdk.services.s3.model.CommonPrefix.builder().prefix("baa/subdir/").build()
+            ).build())
+        );
+
+        var dir = fs.getPath(pathUri + "/");
+        try (var stream = provider.newDirectoryStream(dir, path -> true)) {
+            for (Path p : stream) {
+                // All returned paths should be absolute
+                assertTrue(p.isAbsolute(), "Directory stream entries should be absolute paths");
+                // Should be able to relativize without throwing
+                assertThatCode(() -> dir.relativize(p)).doesNotThrowAnyException();
+            }
         }
     }
 

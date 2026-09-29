@@ -8,20 +8,21 @@ import static com.github.stefanbirkner.systemlambda.SystemLambda.restoreSystemPr
 import static com.github.stefanbirkner.systemlambda.SystemLambda.withEnvironmentVariable;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.BDDAssertions.entry;
-
-import static org.assertj.core.api.BDDAssertions.then;
-import static org.assertj.core.api.BDDAssertions.thenExceptionOfType;
+import static org.assertj.core.api.BDDAssertions.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.nio.spi.s3.S3OpenOption;
 
 import static software.amazon.nio.spi.s3.config.S3NioSpiConfiguration.*;
 
@@ -54,6 +55,7 @@ public class S3NioSpiConfigurationTest {
         then(config.getBucketName()).isNull();
         then(config.getRegion()).isNull();
         then(config.getCredentials()).isNull();
+        then(config.getCredentialsProvider()).isNull();
         then(config.getForcePathStyle()).isFalse();
         then(config.getTimeoutLow()).isEqualTo(S3_SPI_TIMEOUT_LOW_DEFAULT);
         then(config.getTimeoutMedium()).isEqualTo(S3_SPI_TIMEOUT_MEDIUM_DEFAULT);
@@ -215,6 +217,61 @@ public class S3NioSpiConfigurationTest {
     }
 
     @Test
+    public void withAndGetCredentialsProvider() {
+
+        final AwsCredentialsProvider C1 = () -> AwsBasicCredentials.create("key1", "secret1");
+        final AwsCredentialsProvider C2 = () -> AwsBasicCredentials.create("key2", "secret2");
+
+        then(config.withCredentialsProvider(C1)).isSameAs(config);
+        then(config.getCredentialsProvider()).isSameAs(C1);
+        then(config.withCredentialsProvider(C2)).isSameAs(config);
+        then(config.getCredentialsProvider()).isSameAs(C2);
+        then(config.withCredentialsProvider(C1).withCredentialsProvider(null).getCredentialsProvider()).isNull();
+
+        //
+        // withCredentialsProvider(AwsCredentialsProvider) takes priority over withCredentialas
+        //
+        then(
+                config.withCredentials("key1", "secret1")
+                        .withCredentialsProvider(C2)
+                        .getCredentialsProvider()
+        ).isSameAs(C2);
+    }
+
+    @Test
+    public void getCredentialsProviderWithCredentials() {
+
+        final AwsCredentials C1 = AwsBasicCredentials.create("key1", "secret1");
+
+        then(config.withCredentials(C1)).isSameAs(config);
+        then(config.getCredentials()).isSameAs(C1);
+        then(config.withCredentials(null).getCredentials()).isNull();
+        then(config.withCredentials(null).withCredentialsProvider(null).getCredentialsProvider()).isNull();
+
+        then(
+                config.withCredentials(C1)
+                        .withCredentialsProvider(null)
+                        .getCredentials()
+        ).isSameAs(C1);
+    }
+
+    @Test
+    public void getCredentialsProviderWithWrongTypeOfObject() {
+
+        final AwsCredentials C1 = AwsBasicCredentials.create("key1", "secret1");
+        config.put(S3_SPI_CREDENTIALS_PROVIDER_PROPERTY, "IAmNotAProvider");
+        then(config.getCredentialsProvider()).isNull();
+
+        then(config.withCredentials(C1)).isSameAs(config);
+        then(config.getCredentials()).isSameAs(C1);
+        then(
+                config.withCredentials(C1)
+                        .withCredentialsProvider(null)
+                        .getCredentials()
+        ).isSameAs(C1);
+    }
+
+    @Test
     public void convertPropertyNameToEnvVar() {
         var expected = "FOO_BAA_FIZZ_BUZZ";
         then(config.convertPropertyNameToEnvVar("foo.baa.fizz-buzz")).isEqualTo(expected);
@@ -309,6 +366,129 @@ public class S3NioSpiConfigurationTest {
             .execute(() -> then(new S3NioSpiConfiguration().getIntegrityCheckAlgorithm()).isEqualTo("CRC64NVME"));
 
         then(new S3NioSpiConfiguration(Map.of(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, "CRC32")).getIntegrityCheckAlgorithm()).isEqualTo("CRC32");
+    }
+
+    @Test
+    public void withAndGetOpenOptions() {
+        // by default `useTransferManager` is set
+        then(config).contains(entry(S3_OPEN_OPTIONS_PROPERTY, Set.of(S3OpenOption.useTransferManager())));
+        then(config.getOpenOptions()).containsExactly(S3OpenOption.useTransferManager());
+
+        // clear all default open options
+        then(config.withOpenOptions(Set.of())).isSameAs(config);
+        then(config).contains(entry(S3_OPEN_OPTIONS_PROPERTY, Set.of()));
+        then(config.getOpenOptions()).isEmpty();
+
+        // set `preventConcurrentOverwrite`
+        var option1 = S3OpenOption.preventConcurrentOverwrite();
+        var option2 = S3OpenOption.putOnlyIfModified();
+        var newOptions = Set.of(option1, option2);
+        then(config.withOpenOptions(newOptions)).isSameAs(config);
+        then(config.getOpenOptions()).hasSize(2);
+        config.getOpenOptions().forEach(o -> {
+            then(o).isInstanceOfAny(option1.getClass(), option2.getClass());
+            then(o).isNotInstanceOf(S3OpenOption.useTransferManager().getClass());
+        });
+    }
+
+    @Test
+    public void withAndGetOpenOptions_duplicateCheck() {
+        thenThrownBy(() -> config.withOpenOptions(List.of(S3OpenOption.useTransferManager(), S3OpenOption.useTransferManager())))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageStartingWith("Duplicate key software.amazon.nio.spi.s3.S3UseTransferManager");
+        thenThrownBy(() -> config.withOpenOptions(List.of(S3OpenOption.preventConcurrentOverwrite(), S3OpenOption.preventConcurrentOverwrite())))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageStartingWith("Duplicate key software.amazon.nio.spi.s3.S3PreventConcurrentOverwrite");
+    }
+
+    @Test
+    public void streamingMultipartUploadDefaultValues() {
+        then(config.isStreamingMultipartUploadEnabled()).isFalse();
+        then(config.getMultipartPartSize()).isEqualTo(S3_SPI_WRITE_MULTIPART_PART_SIZE_DEFAULT);
+        then(config.getMultipartPartSize()).isEqualTo(8L * 1024 * 1024);
+    }
+
+    @Test
+    public void streamingMultipartUploadEnvVarOverride() throws Exception {
+        withEnvironmentVariable("S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD", "true")
+            .and("S3_SPI_WRITE_MULTIPART_PART_SIZE", "16777216")
+            .execute(() -> {
+                var c = new S3NioSpiConfiguration();
+                then(c.isStreamingMultipartUploadEnabled()).isTrue();
+                then(c.getMultipartPartSize()).isEqualTo(16777216L);
+            });
+    }
+
+    @Test
+    public void streamingMultipartUploadSystemPropertyOverride() throws Exception {
+        withEnvironmentVariable("S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD", "false")
+            .execute(() -> {
+                restoreSystemProperties(() -> {
+                    System.setProperty(S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_PROPERTY, "true");
+                    System.setProperty(S3_SPI_WRITE_MULTIPART_PART_SIZE_PROPERTY, "10485760");
+                    var c = new S3NioSpiConfiguration();
+                    then(c.isStreamingMultipartUploadEnabled()).isTrue();
+                    then(c.getMultipartPartSize()).isEqualTo(10485760L);
+                });
+            });
+    }
+
+    @Test
+    public void streamingMultipartUploadProgrammaticOverride() {
+        Map<String, String> overridesMap = new HashMap<>();
+        overridesMap.put(S3_SPI_WRITE_STREAMING_MULTIPART_UPLOAD_PROPERTY, "true");
+        overridesMap.put(S3_SPI_WRITE_MULTIPART_PART_SIZE_PROPERTY, "20971520");
+        var c = new S3NioSpiConfiguration(overridesMap);
+        then(c.isStreamingMultipartUploadEnabled()).isTrue();
+        then(c.getMultipartPartSize()).isEqualTo(20971520L);
+    }
+
+    @Test
+    public void getOpenOptionsIncludesStreamingWhenEnabled() {
+        config.withStreamingMultipartUpload(true);
+        var options = config.getOpenOptions();
+        then(options).anyMatch(o -> o.getClass().getName().contains("S3StreamingMultipartUpload"));
+    }
+
+    @Test
+    public void getOpenOptionsExcludesStreamingWhenDisabled() {
+        config.withStreamingMultipartUpload(false);
+        var options = config.getOpenOptions();
+        then(options).noneMatch(o -> o.getClass().getName().contains("S3StreamingMultipartUpload"));
+    }
+
+    @Test
+    public void invalidPartSizeLogsWarningAndUsesDefault() {
+        config.put(S3_SPI_WRITE_MULTIPART_PART_SIZE_PROPERTY, "not-a-number");
+        then(config.getMultipartPartSize()).isEqualTo(S3_SPI_WRITE_MULTIPART_PART_SIZE_DEFAULT);
+    }
+
+    @Test
+    public void withStreamingMultipartUploadFluentSetter() {
+        then(config.withStreamingMultipartUpload(true)).isSameAs(config);
+        then(config.isStreamingMultipartUploadEnabled()).isTrue();
+        then(config.withStreamingMultipartUpload(false)).isSameAs(config);
+        then(config.isStreamingMultipartUploadEnabled()).isFalse();
+    }
+
+    @Test
+    public void withMultipartPartSizeFluentSetter() {
+        long validSize = 10 * 1024 * 1024L; // 10 MiB
+        then(config.withMultipartPartSize(validSize)).isSameAs(config);
+        then(config.getMultipartPartSize()).isEqualTo(validSize);
+    }
+
+    @Test
+    public void withMultipartPartSizeValidation() {
+        long tooSmall = 4 * 1024 * 1024L; // 4 MiB (below 5 MiB minimum)
+        assertThatCode(() -> config.withMultipartPartSize(tooSmall))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("partSize must be at least 5 MiB");
+
+        long tooLarge = 6L * 1024 * 1024 * 1024; // 6 GiB (above 5 GiB maximum)
+        assertThatCode(() -> config.withMultipartPartSize(tooLarge))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("partSize must not exceed 5 GiB");
     }
 
 }

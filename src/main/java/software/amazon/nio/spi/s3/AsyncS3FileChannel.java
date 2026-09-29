@@ -37,7 +37,12 @@ public class AsyncS3FileChannel extends AsynchronousFileChannel {
     @Override
     public void force(boolean metaData) throws IOException {
         if (byteChannel.getWriteDelegate() != null) {
-            ((S3WritableByteChannel) byteChannel.getWriteDelegate()).force();
+            var delegate = byteChannel.getWriteDelegate();
+            if (delegate instanceof S3WritableByteChannel) {
+                ((S3WritableByteChannel) delegate).force();
+            } else if (delegate instanceof S3StreamingMultipartUploadChannel) {
+                ((S3StreamingMultipartUploadChannel) delegate).force();
+            }
         }
     }
 

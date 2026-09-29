@@ -289,28 +289,31 @@ class S3Path implements Path {
      */
     @Override
     public boolean startsWith(Path other) {
-			if (!this.fileSystem.equals(other.getFileSystem())) {
-				return false;
-			}
+        if (this.equals(other)) {
+            return true;
+        }
+        if (!this.fileSystem.equals(other.getFileSystem())) {
+            return false;
+        }
 
-			if (this.isAbsolute() != other.isAbsolute()) {
-				return false;
-			}
+        if (this.isAbsolute() != other.isAbsolute()) {
+            return false;
+        }
 
-			if (other.getNameCount() > this.getNameCount()) {
-				return false;
-			}
+        if (other.getNameCount() > this.getNameCount()) {
+            return false;
+        }
 
-			for (int i = 0; i < other.getNameCount(); i++) {
-				String a = normalizeName(this.getName(i));
-				String b = normalizeName(other.getName(i));
+        for (int i = 0; i < other.getNameCount(); i++) {
+            String a = normalizeName(this.getName(i));
+            String b = normalizeName(other.getName(i));
 
-				if (!a.equals(b)) {
-					return false;
-				}
-			}
+            if (!a.equals(b)) {
+                return false;
+            }
+        }
 
-			return true;
+        return true;
     }
 
     /**
@@ -352,31 +355,34 @@ class S3Path implements Path {
      */
     @Override
     public boolean endsWith(Path other) {
-			if (!this.fileSystem.equals(other.getFileSystem())) {
-				return false;
-			}
+        if (this.equals(other)) {
+            return true;
+        }
+        if (!this.fileSystem.equals(other.getFileSystem())) {
+            return false;
+        }
 
-			if (other.isAbsolute()) {
-				return this.equals(other);
-			}
+        if (other.isAbsolute()) {
+            return this.equals(other);
+        }
 
-			int otherCount = other.getNameCount();
-			int thisCount = this.getNameCount();
+        int otherCount = other.getNameCount();
+        int thisCount = this.getNameCount();
 
-			if (otherCount > thisCount) {
-				return false;
-			}
+        if (otherCount > thisCount) {
+            return false;
+        }
 
-			for (int i = 1; i <= otherCount; i++) {
-				String a = normalizeName(this.getName(thisCount - i));
-				String b = normalizeName(other.getName(otherCount - i));
+        for (int i = 1; i <= otherCount; i++) {
+            String a = normalizeName(this.getName(thisCount - i));
+            String b = normalizeName(other.getName(otherCount - i));
 
-				if (!a.equals(b)) {
-					return false;
-				}
-			}
+            if (!a.equals(b)) {
+                return false;
+            }
+        }
 
-			return true;
+        return true;
     }
 
     /**

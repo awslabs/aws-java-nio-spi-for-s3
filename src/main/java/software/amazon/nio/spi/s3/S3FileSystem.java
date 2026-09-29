@@ -18,15 +18,17 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import org.slf4j.Logger;
@@ -53,7 +55,7 @@ public class S3FileSystem extends FileSystem {
     private final String bucketName;
     private final S3FileSystemProvider provider;
     private boolean open = true;
-    private final Set<S3SeekableByteChannel> openChannels = new HashSet<>();
+    private final Set<S3SeekableByteChannel> openChannels = ConcurrentHashMap.newKeySet();
 
     // private S3AsyncClient client;
     private final S3NioSpiConfiguration configuration;
@@ -146,22 +148,35 @@ public class S3FileSystem extends FileSystem {
     }
 
     /**
+     * Creates a new set of {@link OpenOption}s that contain file system wide configured options.
+     *
+     * @return integrity check implementation
+     */
+    Set<? extends OpenOption> appendConfiguredOpenOptions(Set<? extends OpenOption> options) {
+        var newOptions = ConcurrentHashMap.<OpenOption>newKeySet();
+        newOptions.addAll(options);
+        integrityCheck().ifPresent(newOptions::add);
+        configuration.getOpenOptions().forEach(newOptions::add);
+        return newOptions;
+    }
+
+    /**
      * Returns the implementation for creating a checksum to check the integrity of an object uploaded to S3.
      *
      * @return integrity check implementation
      */
-    S3ObjectIntegrityCheck integrityCheck() {
+    Optional<S3ObjectIntegrityCheck> integrityCheck() {
         var algorithm = configuration.getIntegrityCheckAlgorithm();
         if (algorithm.equalsIgnoreCase("CRC32")) {
-            return new Crc32FileIntegrityCheck();
+            return Optional.of(new Crc32FileIntegrityCheck());
         }
         if (algorithm.equalsIgnoreCase("CRC32C")) {
-            return new Crc32cFileIntegrityCheck();
+            return Optional.of(new Crc32cFileIntegrityCheck());
         }
         if (algorithm.equalsIgnoreCase("CRC64NVME")) {
-            return new Crc64nvmeFileIntegrityCheck();
+            return Optional.of(new Crc64nvmeFileIntegrityCheck());
         }
-        return DisabledFileIntegrityCheck.INSTANCE;
+        return Optional.empty();
     }
 
     /**

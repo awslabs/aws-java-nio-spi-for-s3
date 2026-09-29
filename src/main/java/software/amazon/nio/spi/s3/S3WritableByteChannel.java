@@ -17,8 +17,6 @@ import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 class S3WritableByteChannel implements SeekableByteChannel {
@@ -46,15 +44,18 @@ class S3WritableByteChannel implements SeekableByteChannel {
             var fileSystemProvider = (S3FileSystemProvider) path.getFileSystem().provider();
 
             if (options.contains(StandardOpenOption.CREATE_NEW) && fileSystemProvider.exists(client, path)) {
-                throw new FileAlreadyExistsException("File at path:" + path + " already exists");
+                throw new FileAlreadyExistsException(path.toString());
             }
 
             tempFile = path.getFileSystem().createTempFile(path);
-            if (!options.contains(StandardOpenOption.CREATE_NEW)) {
+            if (!options.contains(StandardOpenOption.CREATE_NEW)
+                && !options.contains(S3AssumeObjectNotExists.INSTANCE)) {
                 s3TransferUtil.downloadToLocalFile(path, tempFile, options);
             }
 
-            channel = Files.newByteChannel(this.tempFile, removeCreateNew(options));
+            var localOptions = S3OpenOption.removeAll(options);
+            localOptions.remove(StandardOpenOption.CREATE_NEW);
+            channel = Files.newByteChannel(this.tempFile, localOptions);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException("Could not open the path:" + path, e);
@@ -62,13 +63,6 @@ class S3WritableByteChannel implements SeekableByteChannel {
             throw new IOException("Could not open the path:" + path, e);
         }
         this.open = true;
-    }
-
-    private @NonNull Set<? extends OpenOption> removeCreateNew(Set<? extends OpenOption> options) {
-        return options.stream()
-            .filter(o -> o != StandardOpenOption.CREATE_NEW)
-            .filter(o -> !(o instanceof S3OpenOption))
-            .collect(Collectors.toSet());
     }
 
     @Override
