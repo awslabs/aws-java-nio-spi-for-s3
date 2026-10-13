@@ -61,7 +61,6 @@ import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.Bucket;
 import software.amazon.awssdk.services.s3.model.BucketAlreadyExistsException;
 import software.amazon.awssdk.services.s3.model.BucketAlreadyOwnedByYouException;
 import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm;
@@ -174,15 +173,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         var bucketName = config.getBucketName();
 
         try (var client = new S3ClientProvider(config).configureCrtClient().build()) {
-            List<Bucket> bucketList = client.listBuckets().get().buckets();
-            boolean bucketExists = false;
-            for (Bucket bucket : bucketList) {
-                if (bucket.name().equals(bucketName)) {
-                    bucketExists = true;
-                    break;
-                }
-            }
-            if (!bucketExists) {
+            if (!bucketExists(client, bucketName)) {
                 var createBucketResponse = client.createBucket(
                         bucketBuilder -> bucketBuilder.bucket(bucketName).acl(envMap.getOrDefault("acl", "").toString())
                                 .grantFullControl(envMap.getOrDefault("grantFullControl", "").toString())
@@ -232,6 +223,36 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     S3FileSystem getOrCreateFileSystem(String key, S3NioSpiConfiguration config) {
         return FS_CACHE.computeIfAbsent(key, (k) -> new S3FileSystem(this, config));
+    }
+
+    /**
+     * Checks via HeadBucket whether the bucket exists. Unlike ListBuckets this only needs {@code s3:ListBucket}
+     * on this bucket instead of {@code s3:ListAllMyBuckets} on the whole account.
+     *
+     * @param client     the client to send the request with
+     * @param bucketName the bucket to check
+     * @return true if the bucket exists and is accessible, false if it does not exist
+     * @throws AccessDeniedException if access to the bucket is denied
+     * @throws ExecutionException    if HeadBucket fails for any other reason
+     */
+    boolean bucketExists(S3AsyncClient client, String bucketName)
+            throws AccessDeniedException, ExecutionException, InterruptedException, TimeoutException {
+        try {
+            client.headBucket(request -> request.bucket(bucketName)).get(30, TimeUnit.SECONDS);
+            return true;
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof S3Exception) {
+                var statusCode = ((S3Exception) e.getCause()).statusCode();
+                if (statusCode == 404) {
+                    return false;
+                }
+                if (statusCode == 403) {
+                    throw new AccessDeniedException("Access to bucket '" + bucketName + "' denied", null,
+                            e.getCause().getMessage());
+                }
+            }
+            throw e;
+        }
     }
 
     /**
