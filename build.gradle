@@ -11,7 +11,7 @@ plugins {
     id 'java-library'
     id 'signing'
     id 'maven-publish'
-    id 'org.jreleaser' version '1.24.0'
+    id 'org.jreleaser' version '1.26.0'
     id 'jacoco'
     id 'jvm-test-suite'
     id 'jacoco-report-aggregation'
@@ -64,7 +64,7 @@ sourceSets {
 dependencies {
     implementation 'io.reactivex.rxjava3:rxjava:3.1.12'
 
-    implementation platform('software.amazon.awssdk:bom:2.46.9')
+    implementation platform('software.amazon.awssdk:bom:2.46.21')
 
     implementation('software.amazon.awssdk:s3') {
         exclude group: 'software.amazon.awssdk', module: 'apache-client'
@@ -72,12 +72,12 @@ dependencies {
     implementation('software.amazon.awssdk:s3-transfer-manager') {
         exclude group: 'software.amazon.awssdk', module: 'apache-client'
     }
-    implementation 'software.amazon.awssdk.crt:aws-crt:0.47.0'
-    implementation 'org.slf4j:slf4j-api:2.0.18'
+    implementation 'software.amazon.awssdk.crt:aws-crt:0.47.2'
+    implementation 'org.slf4j:slf4j-api:2.0.20'
     implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
 
     examplesImplementation project
-    examplesImplementation 'org.slf4j:slf4j-api:2.0.18'
+    examplesImplementation 'org.slf4j:slf4j-api:2.0.20'
 }
 
 publishing {
@@ -173,7 +173,7 @@ testing {
                 implementation('org.testcontainers:testcontainers-junit-jupiter:2.0.5')
                 implementation('org.testcontainers:testcontainers-localstack:2.0.5')
                 implementation('org.testcontainers:testcontainers:2.0.5')
-                implementation(platform('software.amazon.awssdk:bom:2.46.9'))
+                implementation(platform('software.amazon.awssdk:bom:2.46.21'))
                 implementation('software.amazon.awssdk:s3')
             }
         }
@@ -192,7 +192,7 @@ testing {
                 implementation('org.mockito:mockito-junit-jupiter:5.23.0')
                 implementation('com.github.stefanbirkner:system-lambda:1.2.1')
                 implementation('net.jqwik:jqwik:1.9.3')
-                runtimeOnly('ch.qos.logback:logback-classic:1.5.37')
+                runtimeOnly('ch.qos.logback:logback-classic:1.5.38')
             }
         }
     }
