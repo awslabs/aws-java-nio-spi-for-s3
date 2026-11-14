@@ -455,8 +455,13 @@ public class S3FileChannel extends FileChannel {
         if (position < 0) {
             throw new IllegalArgumentException("file position must be non-negative");
         }
-        byteChannel.position(position);
-        return byteChannel.read(dst);
+        synchronized (byteChannel) {
+            var originalPosition = byteChannel.position();
+            byteChannel.position(position);
+            var bytesRead = byteChannel.read(dst);
+            byteChannel.position(originalPosition);
+            return bytesRead;
+        }
     }
 
     /**

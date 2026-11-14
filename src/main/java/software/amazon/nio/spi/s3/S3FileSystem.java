@@ -85,15 +85,9 @@ public class S3FileSystem extends FileSystem {
         configuration = (config == null) ? new S3NioSpiConfiguration() : config;
         bucketName = configuration.getBucketName();
 
-        // This is quite questionable and may be removed in future versions:
-        provider.setConfiguration(config);
-        // The configuration field in {@code S3FileSystemProvider} is used for certain tasks
-        // that are implemented there.
-        // But those tasks are in service of {@code S3FileSystem} instances.
-        // So if there are multiple ones with different configurations, the provider will use
-        // the one that has been set by the last created filesystem, overriding potentially
-        // different values in older {@code S3FileSystem} instances.
-        //
+        // Each S3FileSystem owns its configuration. Provider operations that need configuration
+        // (e.g. API timeouts) read it from the target path's file system via getConfiguration(),
+        // so there is no shared provider-level configuration to keep in sync.
         // See https://github.com/awslabs/aws-java-nio-spi-for-s3/issues/597
 
         logger.debug("creating FileSystem for '{}://{}'", provider.getScheme(), bucketName);
@@ -252,14 +246,14 @@ public class S3FileSystem extends FileSystem {
     }
 
     /**
-     * An S3 bucket has no partitions, size limits or limits on the number of objects stored so there are no FileStores.
+     * An S3 bucket has no partitions or volumes; this file system exposes a single
+     * {@link FileStore} representing the bucket itself.
      *
-     * @return An immutable empty set
+     * @return An immutable set containing the single bucket-backed {@code FileStore}
      */
     @Override
-    @SuppressWarnings("unchecked")
     public Iterable<FileStore> getFileStores() {
-        return Collections.EMPTY_SET;
+        return Collections.singleton(new S3FileStore(bucketName));
     }
 
     /**
@@ -537,21 +531,27 @@ public class S3FileSystem extends FileSystem {
         if (path.isDirectory()) {
             throw new IllegalArgumentException("path must be a file");
         }
-        String filename = path.getFileName().toString();
-        if (path.getNameCount() == 1) {
-            Path newPath = temporaryDirectory.resolve(filename);
-            newPath = Files.exists(newPath)
-                ? temporaryDirectory.resolve(filename + "-" + System.nanoTime())
-                : newPath;
-            return Files.createFile(newPath);
+
+        // Sanitize the original filename for use as a temp-file prefix (must not contain path separators).
+        var filename = path.getFileName().toString();
+        var prefix = filename.replaceAll("[^a-zA-Z0-9._-]", "_");
+
+        // Derive the local directory relative to the temporary directory. We build it from the object
+        // key (not path.getParent(), which may be absolute) so the temp file always lives under
+        // temporaryDirectory regardless of whether the input path is absolute or relative.
+        var directory = temporaryDirectory;
+        if (path.getNameCount() > 1) {
+            var key = path.getKey();
+            var lastSeparator = key.lastIndexOf(PATH_SEPARATOR);
+            if (lastSeparator > 0) {
+                directory = temporaryDirectory.resolve(key.substring(0, lastSeparator));
+            }
+            Files.createDirectories(directory);
         }
-        Path parent = temporaryDirectory.resolve(path.getParent().toString());
-        Files.createDirectories(parent);
-        Path newPath = parent.resolve(filename);
-        newPath = Files.exists(newPath)
-            ? parent.resolve(filename + "-" + System.nanoTime())
-            : newPath;
-        return Files.createFile(newPath);
+
+        // Atomically create a uniquely-named temp file to avoid a check-then-act (TOCTOU) race that
+        // could otherwise throw FileAlreadyExistsException under concurrent writes to the same key.
+        return Files.createTempFile(directory, prefix, ".tmp");
     }
 
     /**

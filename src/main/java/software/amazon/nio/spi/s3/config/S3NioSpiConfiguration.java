@@ -27,9 +27,27 @@ import software.amazon.nio.spi.s3.S3OpenOption;
 import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
 /**
- * Object to hold configuration of the S3 NIO SPI
+ * Object to hold configuration of the S3 NIO SPI.
+ *
+ * <p>The supported public API is the {@code withXxx(...)} fluent setters, the {@code getXxx()}
+ * getters, the {@link #withOverrides(Map)} bulk setter, and the read-only {@link #asMap()} snapshot.
+ * Values may be supplied as {@code String}s or as already-typed objects (for example an
+ * {@link AwsCredentials} or {@link AwsCredentialsProvider}); string values for numeric/boolean
+ * properties are parsed lazily by the getters.
+ *
+ * <p>Configuration is resolved with the following precedence, highest to lowest:
+ * <ol>
+ *   <li>Programmatic values ({@code withXxx(...)}, the {@code env} map passed to
+ *       {@code newFileSystem(URI, Map)}, and values parsed from the URI)</li>
+ *   <li>Java system properties (for example {@code -Daws.region})</li>
+ *   <li>Environment variables (for example {@code AWS_REGION})</li>
+ *   <li>Built-in defaults</li>
+ * </ol>
+ *
+ * <p>Note that as of 3.0 this class no longer extends {@link HashMap}; direct map mutation is not
+ * part of the supported contract.
  */
-public class S3NioSpiConfiguration extends HashMap<String, Object> {
+public class S3NioSpiConfiguration {
 
     public static final String AWS_REGION_PROPERTY = "aws.region";
     public static final String AWS_ACCESS_KEY_PROPERTY = "aws.accessKeyId";
@@ -165,7 +183,21 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
 
     private static final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
 
+    /**
+     * Keys that are read from environment variables and system properties even though they carry no
+     * built-in default. They are only stored when actually present, so an unset {@code aws.region}
+     * leaves {@link #getRegion()} {@code null} (allowing the AWS SDK default region provider chain to
+     * resolve it) and an unset endpoint stays empty.
+     */
+    private static final Set<String> ADDITIONAL_ENV_SCAN_KEYS =
+        Set.of(AWS_REGION_PROPERTY, S3_SPI_ENDPOINT_PROPERTY);
+
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    /**
+     * Backing store for the resolved configuration values.
+     */
+    private final Map<String, Object> properties = new HashMap<>();
 
     private String bucketName;
 
@@ -202,21 +234,32 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         put(S3_OPEN_OPTIONS_PROPERTY, Set.of(S3OpenOption.useTransferManager()));
 
         //
-        // With the below we pick existing environment variables and system
-        // properties as overrides of the default aws-nio specific properties.
-        // We do not pick aws generic properties like aws.region or
-        // aws.accessKeyId, leaving the framework and the underlying AWS client
-        // the possibility to use the standard behaviour.
+        // With the below we pick environment variables and system properties as overrides of the
+        // default aws-nio specific properties. We also read the standard AWS 'aws.region' key and the
+        // 's3.spi.endpoint' key from env/sysprops (even though they have no built-in default) so that
+        // AWS_REGION / -Daws.region and S3_SPI_ENDPOINT / -Ds3.spi.endpoint are visible in the
+        // configuration and can be overridden per file system. These keys are only stored when
+        // actually present, so an unset region leaves getRegion() null and lets the underlying AWS
+        // client use its standard region provider chain.
+        //
+        // Credentials (aws.accessKeyId / aws.secretAccessKey) are intentionally NOT read here: the AWS
+        // SDK default credential provider chain already resolves them, and reading them into the
+        // config would shadow profile/SSO/container credentials.
         //
 
+        // The set of keys to scan is the seeded defaults plus the additional AWS/endpoint keys.
+        // Snapshot it so that inserting a previously-absent key does not disturb the iteration.
+        var scanKeys = new java.util.HashSet<>(keySet());
+        scanKeys.addAll(ADDITIONAL_ENV_SCAN_KEYS);
+
         //add env var overrides if present
-        keySet().stream()
+        scanKeys.stream()
             .map(key -> Pair.of(key,
                 Optional.ofNullable(System.getenv().get(this.convertPropertyNameToEnvVar(key)))))
             .forEach(pair -> pair.right().ifPresent(val -> put(pair.left(), val)));
 
         //add System props as overrides if present
-        keySet().forEach(
+        scanKeys.forEach(
             key -> Optional.ofNullable(System.getProperty(key)).ifPresent(val -> put(key, val))
         );
 
@@ -232,6 +275,34 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
         Objects.requireNonNull(overrides);
         overrides.stringPropertyNames()
             .forEach(key -> put(key, overrides.getProperty(key)));
+    }
+
+    //
+    // Internal map accessors. These replace the previous {@code extends HashMap} behavior; the map
+    // is intentionally private so that the only supported mutation path is the withXxx setters.
+    //
+    private Object put(String key, Object value) {
+        return properties.put(key, value);
+    }
+
+    private Object get(String key) {
+        return properties.get(key);
+    }
+
+    private Object getOrDefault(String key, Object defaultValue) {
+        return properties.getOrDefault(key, defaultValue);
+    }
+
+    private boolean containsKey(String key) {
+        return properties.containsKey(key);
+    }
+
+    private Object remove(String key) {
+        return properties.remove(key);
+    }
+
+    private Set<String> keySet() {
+        return properties.keySet();
     }
 
     /**
@@ -546,6 +617,38 @@ public class S3NioSpiConfiguration extends HashMap<String, Object> {
     public S3NioSpiConfiguration withMultipartFallbackEnabled(boolean enabled) {
         put(S3_SPI_WRITE_MULTIPART_FALLBACK_PROPERTY, String.valueOf(enabled));
         return this;
+    }
+
+    /**
+     * Applies a map of overrides to this configuration at the highest precedence tier. Each entry is
+     * stored verbatim: {@code String} values for numeric/boolean properties are parsed lazily by the
+     * corresponding getters, and already-typed objects (for example an {@link AwsCredentials} under
+     * {@code s3.spi.credentials}, an {@link AwsCredentialsProvider} under
+     * {@code s3.spi.credentials.provider}, or a {@code Set<S3OpenOption>} under {@code s3.open-options})
+     * pass through unchanged.
+     *
+     * <p>This is the seam used by {@code newFileSystem(URI, env)} to merge the caller-supplied
+     * environment map into the file-system configuration.
+     *
+     * @param overrides the overrides to apply; ignored if null
+     * @return this instance
+     */
+    public S3NioSpiConfiguration withOverrides(Map<String, ?> overrides) {
+        if (overrides != null) {
+            overrides.forEach(this::put);
+        }
+        return this;
+    }
+
+    /**
+     * Returns an unmodifiable snapshot of the resolved configuration values for inspection. The
+     * {@code bucketName} is not part of this map (use {@link #getBucketName()}). Mutating the
+     * configuration must be done through the {@code withXxx(...)} setters, not through this map.
+     *
+     * @return an immutable snapshot of the underlying property map
+     */
+    public Map<String, Object> asMap() {
+        return java.util.Collections.unmodifiableMap(new HashMap<>(properties));
     }
 
     /**

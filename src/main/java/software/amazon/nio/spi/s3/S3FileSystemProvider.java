@@ -17,7 +17,9 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.AccessMode;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.CopyOption;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileStore;
@@ -28,6 +30,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.NotDirectoryException;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.ProviderMismatchException;
@@ -96,18 +99,21 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * Constant for the S3 scheme "s3"
      */
     static final String SCHEME = "s3";
+    // Instance registry for all live S3FileSystem views, keyed by file-system key (bucket).
+    // Both getPath (lazy) and newFileSystem populate this so that a single instance per key is
+    // shared. See getOrCreateFileSystem. FileSystemAlreadyExistsException (newFileSystem) and
+    // FileSystemNotFoundException (getFileSystem) are gated purely on membership of this cache,
+    // whether an entry was created explicitly by newFileSystem or lazily by getPath / Paths.get.
     private static final Map<String, S3FileSystem> FS_CACHE = new ConcurrentHashMap<>();
 
     /**
-     * This variable holds the configuration for the S3 NIO Service Provider Interface (SPI).
-     * It is used to manage and handle the configuration details required for interaction
-     * with S3 NIO services.
-     *
-     * @deprecated This variable is deprecated and may be removed in future versions.
-     *             Consider using updated configuration mechanisms if available.
+     * The env-map keys that configure the {@code createBucket} request itself rather than the file
+     * system configuration. These are consumed directly by {@link #newFileSystem(URI, Map)} and are
+     * not merged into the {@link S3NioSpiConfiguration}.
      */
-    @Deprecated
-    protected S3NioSpiConfiguration configuration = new S3NioSpiConfiguration();
+    private static final Set<String> BUCKET_CREATION_KEYS = Set.of(
+        "acl", "grantFullControl", "grantRead", "grantReadACP", "grantWrite", "grantWriteACP",
+        "locationConstraint");
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
@@ -168,12 +174,26 @@ public class S3FileSystemProvider extends FileSystemProvider {
         var envMap = (env != null) ? (Map<String, Object>) env : Collections.<String, Object>emptyMap();
 
         var info = fileSystemInfo(uri);
+
+        // Contract: FileSystemAlreadyExistsException is thrown if a file system for this URI already
+        // exists in this JVM -- whether it was created by a previous newFileSystem call or lazily
+        // materialized by getPath / Paths.get. Gate on the instance cache, before any remote side
+        // effect, so a duplicate call fails fast.
+        if (FS_CACHE.containsKey(info.key())) {
+            throw new FileSystemAlreadyExistsException(
+                "a file system for '" + info.key() + "' already exists");
+        }
+
         var config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
         if (info.accessKey() != null) {
             config.withCredentials(info.accessKey(), info.accessSecret());
         }
-        var bucketName = config.getBucketName();
+        // Merge the caller-supplied env map (minus the bucket-creation-only keys) into the
+        // configuration at the highest precedence, so region, credentials, endpoint, timeouts, etc.
+        // supplied via newFileSystem's env take effect (and override URI-derived values).
+        config.withOverrides(configOverridesFrom(envMap));
 
+        var bucketName = config.getBucketName();
         try (var client = new S3ClientProvider(config).configureCrtClient().build()) {
             var createBucketResponse = client.createBucket(
                     bucketBuilder -> bucketBuilder.bucket(bucketName)
@@ -196,12 +216,18 @@ public class S3FileSystemProvider extends FileSystemProvider {
             logger.debug("Create bucket response {}", createBucketResponse.toString());
 
         } catch (ExecutionException e) {
-            if (e.getCause() instanceof BucketAlreadyOwnedByYouException ||
-                    e.getCause() instanceof BucketAlreadyExistsException) {
-                throw (FileSystemAlreadyExistsException) new FileSystemAlreadyExistsException(e.getCause().getMessage())
-                        .initCause(e.getCause());
+            var cause = e.getCause();
+            if (cause instanceof BucketAlreadyOwnedByYouException) {
+                // The backing store is already provisioned and owned by us -- analogous to opening
+                // an existing backing file. Proceed with the cached FileSystem so that a persistent
+                // bucket can be reused across JVM runs (see PR #770).
+                logger.debug("Bucket '{}' already exists and is owned by you; reusing it", bucketName);
+            } else if (cause instanceof BucketAlreadyExistsException) {
+                // Owned by another account -- an access/ownership failure, not "FS already exists".
+                throw new IOException("bucket '" + bucketName
+                    + "' already exists and is owned by another account", cause);
             } else {
-                throw new IOException(e.getMessage(), e.getCause());
+                throw new IOException(e.getMessage(), cause);
             }
         } catch (InterruptedException | TimeoutException | SdkException e) {
             if (e instanceof InterruptedException) {
@@ -210,15 +236,38 @@ public class S3FileSystemProvider extends FileSystemProvider {
             throw new IOException(e.getMessage(), e);
         }
 
-        // Add the new filesystem to the cache with the configuration used to create it.
-        // This ensures that any configuration (credentials, endpoint, etc.) is preserved
-        // when the filesystem is later retrieved via getFileSystem().
-        return getOrCreateFileSystem(info.key(), config);
+        // Register the instance for this key with the configuration used to create it, preserving any
+        // credentials/endpoint/region when it is later retrieved via getFileSystem(). If another
+        // thread materialized a view for this key in the meantime, honor the already-exists contract.
+        var newFs = new S3FileSystem(this, config);
+        var existing = FS_CACHE.putIfAbsent(info.key(), newFs);
+        if (existing != null) {
+            try {
+                newFs.close();
+            } catch (IOException | RuntimeException ignore) {
+                logger.debug("failed to close redundant file system instance", ignore);
+            }
+            throw new FileSystemAlreadyExistsException(
+                "a file system for '" + info.key() + "' already exists");
+        }
+        return newFs;
+    }
+
+    /**
+     * Returns the subset of {@code env} entries that should be merged into the file-system
+     * configuration, i.e. every entry whose key is not a bucket-creation-only key.
+     */
+    private static Map<String, Object> configOverridesFrom(Map<String, Object> env) {
+        return env.entrySet().stream()
+            .filter(e -> !BUCKET_CREATION_KEYS.contains(e.getKey()))
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     /**
      * Gets an existing filesystem from the cache or creates a new one with the given configuration.
-     * This ensures that the filesystem is always cached with the configuration that was used to create it.
+     * This is the side-effect-free instance registry shared by {@link #getPath(URI)} (lazy views)
+     * and {@link #newFileSystem(URI, Map)}. It does <b>not</b> provision an S3 bucket and does not
+     * mark the key as explicitly created.
      *
      * @param key    the cache key (typically the bucket name)
      * @param config the configuration to use if a new filesystem needs to be created
@@ -264,11 +313,13 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public FileSystem getFileSystem(URI uri) {
         var info = fileSystemInfo(uri);
-        var config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
-        if (info.accessKey() != null) {
-            config.withCredentials(info.accessKey(), info.accessSecret());
+        var fs = FS_CACHE.get(info.key());
+        if (fs == null) {
+            throw new FileSystemNotFoundException("no file system for '" + info.key()
+                + "'; call newFileSystem(URI, env) first, or use Paths.get(URI) / getPath(URI) to "
+                + "obtain a path (which creates a file system view on demand)");
         }
-        return getOrCreateFileSystem(info.key(), config);
+        return fs;
     }
 
     /**
@@ -300,7 +351,16 @@ public class S3FileSystemProvider extends FileSystemProvider {
     @Override
     public Path getPath(URI uri) throws IllegalArgumentException, FileSystemNotFoundException, SecurityException {
         Objects.requireNonNull(uri);
-        return getFileSystem(uri).getPath(uri.getScheme() + ":/" + uri.getPath());
+        // getPath materializes a file-system view on demand (the headline Paths.get(URI) ergonomic)
+        // without provisioning a bucket and without marking the key as explicitly created. This is
+        // why getFileSystem can throw FileSystemNotFoundException while Paths.get still works.
+        var info = fileSystemInfo(uri);
+        var config = new S3NioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
+        if (info.accessKey() != null) {
+            config.withCredentials(info.accessKey(), info.accessSecret());
+        }
+        var fs = getOrCreateFileSystem(info.key(), config);
+        return fs.getPath(uri.getScheme() + ":/" + uri.getPath());
     }
 
     /**
@@ -366,6 +426,19 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         var dirName = s3Path.toAbsolutePath().getKey();
         if (!s3Path.isDirectory()) {
+            // The contract requires NotDirectoryException when the path is a regular file. A path
+            // without a trailing separator that resolves to an existing object is such a file; a
+            // path that is merely a prefix (no object at the exact key) is treated as a directory.
+            try {
+                if (!dirName.isEmpty() && exists(s3Path.getFileSystem().client(), s3Path)) {
+                    throw new NotDirectoryException(s3Path.toString());
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted while checking " + s3Path, e);
+            } catch (TimeoutException e) {
+                throw new IOException("Timed out while checking " + s3Path, e);
+            }
             dirName = dirName + PATH_SEPARATOR;
         }
 
@@ -407,11 +480,18 @@ public class S3FileSystemProvider extends FileSystemProvider {
             directoryKey = directoryKey + PATH_SEPARATOR;
         }
 
-        var timeOut = configuration.getTimeoutLow();
+        var timeOut = s3Directory.getFileSystem().getConfiguration().getTimeoutLow();
         final var unit = MINUTES;
+        final var s3Client = s3Directory.getFileSystem().client();
 
         try {
-            s3Directory.getFileSystem().client().putObject(
+            // Contract: createDirectory must fail if an entry of that name already exists. In S3
+            // this means either a directory marker object at the key or any object under the
+            // prefix (a non-empty virtual directory).
+            if (prefixExists(s3Client, s3Directory.bucketName(), directoryKey, timeOut, unit)) {
+                throw new FileAlreadyExistsException(s3Directory.toString());
+            }
+            s3Client.putObject(
                 PutObjectRequest.builder()
                     .bucket(s3Directory.bucketName())
                     .key(directoryKey)
@@ -429,10 +509,28 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     * Deletes a file. This method works in exactly the  manner specified by the
-     * {@link Files#delete} method.
+     * Returns {@code true} if any object exists at or beneath the given prefix.
+     */
+    private static boolean prefixExists(S3AsyncClient s3Client, String bucketName, String prefix, long timeOut, TimeUnit unit)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        var response = s3Client.listObjectsV2(
+            ListObjectsV2Request.builder().bucket(bucketName).prefix(prefix).maxKeys(1).build()
+        ).get(timeOut, unit);
+        return (response.hasContents() && !response.contents().isEmpty())
+            || (response.hasCommonPrefixes() && !response.commonPrefixes().isEmpty());
+    }
+
+    /**
+     * Deletes a file. This method works in exactly the manner specified by the
+     * {@link Files#delete} method: it throws {@link NoSuchFileException} if the file does not
+     * exist, and {@link DirectoryNotEmptyException} if the path is a non-empty directory. To
+     * delete a directory and all of its contents, delete the contained objects first (for example
+     * with a {@code Files.walkFileTree} deletion visitor) or use {@link Files#deleteIfExists} in a
+     * bottom-up traversal.
      *
      * @param path the path to the file to delete
+     * @throws NoSuchFileException       if the file does not exist
+     * @throws DirectoryNotEmptyException if the path is a directory and it is not empty
      */
     @Override
     public void delete(Path path) throws IOException {
@@ -442,22 +540,35 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         final var s3Client = s3Path.getFileSystem().client();
 
-        var timeOut = configuration.getTimeoutLow();
+        var timeOut = s3Path.getFileSystem().getConfiguration().getTimeoutLow();
         final var unit = MINUTES;
         try {
-            var keys = s3Path.isDirectory() ?
-                    getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit)
-                    : List.of(List.of(ObjectIdentifier.builder().key(prefix).build()));
-
-            for (var keyList : keys) {
-                s3Client.deleteObjects(DeleteObjectsRequest.builder()
-                        .bucket(bucketName)
-                        .delete(Delete.builder()
-                            .objects(keyList)
-                            .build())
-                        .build())
-                    .get(timeOut, unit);
+            List<List<ObjectIdentifier>> keys;
+            if (s3Path.isDirectory()) {
+                var batches = getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit);
+                // A directory is "empty" if it contains only its own marker object (the key
+                // itself). Anything else means the directory is not empty and must not be
+                // silently removed.
+                var containedCount = batches.stream()
+                    .flatMap(List::stream)
+                    .filter(id -> !id.key().equals(prefix))
+                    .count();
+                if (containedCount > 0) {
+                    throw new DirectoryNotEmptyException(s3Path.toString());
+                }
+                if (batches.isEmpty()) {
+                    // Neither a marker object nor any contained object exists.
+                    throw new NoSuchFileException(s3Path.toString());
+                }
+                keys = batches;
+            } else {
+                if (!exists(s3Client, s3Path)) {
+                    throw new NoSuchFileException(s3Path.toString());
+                }
+                keys = List.of(List.of(ObjectIdentifier.builder().key(prefix).build()));
             }
+
+            deleteKeyBatches(s3Client, bucketName, keys, timeOut, unit);
         } catch (TimeoutException e) {
             throw logAndGenerateExceptionOnTimeOut(logger, "delete", timeOut, unit);
         } catch (ExecutionException e) {
@@ -465,6 +576,50 @@ public class S3FileSystemProvider extends FileSystemProvider {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Recursively removes an object or a directory tree without the {@code delete} contract's
+     * existence / non-empty checks. Used by {@link #move(Path, Path, CopyOption...)}, where the
+     * source subtree has just been copied and must be removed wholesale.
+     */
+    private void deleteRecursively(S3Path s3Path) throws IOException {
+        final var prefix = s3Path.toRealPath(NOFOLLOW_LINKS).getKey();
+        final var bucketName = s3Path.bucketName();
+        final var s3Client = s3Path.getFileSystem().client();
+        var timeOut = s3Path.getFileSystem().getConfiguration().getTimeoutLow();
+        final var unit = MINUTES;
+        try {
+            var keys = s3Path.isDirectory()
+                ? getContainedObjectBatches(s3Client, bucketName, prefix, timeOut, unit)
+                : List.of(List.of(ObjectIdentifier.builder().key(prefix).build()));
+            deleteKeyBatches(s3Client, bucketName, keys, timeOut, unit);
+        } catch (TimeoutException e) {
+            throw logAndGenerateExceptionOnTimeOut(logger, "delete", timeOut, unit);
+        } catch (ExecutionException e) {
+            throw new IOException(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void deleteKeyBatches(
+        S3AsyncClient s3Client,
+        String bucketName,
+        List<List<ObjectIdentifier>> keys,
+        long timeOut,
+        TimeUnit unit
+    ) throws InterruptedException, ExecutionException, TimeoutException {
+        for (var keyList : keys) {
+            s3Client.deleteObjects(DeleteObjectsRequest.builder()
+                    .bucket(bucketName)
+                    .delete(Delete.builder()
+                        .objects(keyList)
+                        .build())
+                    .build())
+                .get(timeOut, unit);
         }
     }
 
@@ -496,7 +651,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         final var s3Client = s3SourcePath.getFileSystem().client();
         final var sourceBucket = s3SourcePath.bucketName();
 
-        final var timeOut = configuration.getTimeoutHigh();
+        final var timeOut = s3SourcePath.getFileSystem().getConfiguration().getTimeoutHigh();
         final var unit = MINUTES;
 
         var fileExistsAndCannotReplace = cannotReplaceAndFileExistsCheck(options, s3Client);
@@ -543,8 +698,18 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public void move(Path source, Path target, CopyOption... options) throws IOException {
+        // S3 has no atomic rename; move is implemented as copy + delete. If the caller demands an
+        // atomic move we cannot honor it and must say so rather than silently performing a
+        // non-atomic move.
+        if (Arrays.asList(options).contains(StandardCopyOption.ATOMIC_MOVE)) {
+            throw new AtomicMoveNotSupportedException(source.toString(), target.toString(),
+                "S3 does not support atomic moves");
+        }
         this.copy(source, target, options);
-        this.delete(source);
+        // Like copy, move removes the whole source subtree (a documented variance from the default
+        // provider). Use the recursive helper rather than delete(), whose contract refuses to
+        // remove a non-empty directory.
+        this.deleteRecursively(checkPath(source));
     }
 
     /**
@@ -576,14 +741,17 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     * S3 buckets don't have partitions or volumes so there are no file stores
+     * Returns the {@link FileStore} representing the S3 bucket that contains the given path.
+     * <br>
+     * An S3 bucket has no partitions or volumes, but the {@code Files.getFileStore} contract
+     * requires a non-null store, so a bucket-backed {@link S3FileStore} is returned.
      *
      * @param path the path to the file
-     * @return {@code null} always
+     * @return the file store for the bucket, never {@code null}
      */
     @Override
     public FileStore getFileStore(Path path) {
-        return null;
+        return new S3FileStore(checkPath(path).bucketName());
     }
 
     /**
@@ -658,17 +826,23 @@ public class S3FileSystemProvider extends FileSystemProvider {
      */
     @Override
     public void checkAccess(Path path, AccessMode... modes) throws IOException {
-        // warn if AccessModes includes WRITE or EXECUTE
+        final var s3Path = checkPath(path.toRealPath(NOFOLLOW_LINKS));
+
+        // Enforce the requested access modes. S3 objects are never executable, and write access is
+        // denied when the file system is read-only. Read access (and mere existence) is verified by
+        // the head/list call below.
         for (var mode : modes) {
-            if (mode == AccessMode.WRITE || mode == AccessMode.EXECUTE) {
-                logger.warn("checkAccess: AccessMode '{}' is currently not checked by S3FileSystemProvider", mode);
+            if (mode == AccessMode.EXECUTE) {
+                throw new AccessDeniedException(s3Path.toString(), null, "S3 objects are not executable");
+            }
+            if (mode == AccessMode.WRITE && s3Path.getFileSystem().isReadOnly()) {
+                throw new AccessDeniedException(s3Path.toString(), null, "the file system is read-only");
             }
         }
 
-        final var s3Path = checkPath(path.toRealPath(NOFOLLOW_LINKS));
         final var response = getCompletableFutureForHead(s3Path);
 
-        var timeOut = configuration.getTimeoutLow();
+        var timeOut = s3Path.getFileSystem().getConfiguration().getTimeoutLow();
         var unit = MINUTES;
 
         try {
@@ -764,7 +938,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @param type    the {@code Class} of the file attributes required
      *                to read. Supported types are {@code BasicFileAttributes}
      * @param options options indicating how symbolic links are handled
-     * @return the file attributes or {@code null} if {@code path} is inferred to be a directory.
+     * @return the file attributes; for a path inferred to be a directory the returned attributes
+     *         report {@link BasicFileAttributes#isDirectory()} as {@code true}.
      */
     @Override
     public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
@@ -773,7 +948,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         if (type.equals(BasicFileAttributes.class)) {
             @SuppressWarnings("unchecked")
-            var a = (A) S3BasicFileAttributes.get(s3Path, Duration.ofMinutes(configuration.getTimeoutLow()));
+            var a = (A) S3BasicFileAttributes.get(s3Path,
+                Duration.ofMinutes(s3Path.getFileSystem().getConfiguration().getTimeoutLow()));
             return a;
         } else {
             throw new UnsupportedOperationException("cannot read attributes of type: " + type);
@@ -789,8 +965,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @param attributes the comma separated attributes to read. May be prefixed with "s3:"
      * @param options    ignored, S3 has no links
      * @return a map of the attributes returned; may be empty. The map's keys
-     * are the attribute names, its values are the attribute values. Returns an empty map if {@code attributes} is empty,
-     * or if {@code path} is inferred to be a directory.
+     * are the attribute names, its values are the attribute values. Returns an empty map if {@code attributes} is empty.
+     * For a path inferred to be a directory the returned map reports {@code isDirectory} as {@code true}.
      * @throws UnsupportedOperationException if the attribute view is not available
      * @throws IllegalArgumentException      if no attributes are specified or an unrecognized attributes is
      *                                       specified
@@ -805,12 +981,13 @@ public class S3FileSystemProvider extends FileSystemProvider {
         Objects.requireNonNull(attributes);
         var s3Path = checkPath(path);
 
-        if (s3Path.isDirectory() || attributes.trim().isEmpty()) {
+        if (attributes.trim().isEmpty()) {
             return Collections.emptyMap();
         }
 
         var attributesFilter = attributesFilterFor(attributes);
-        return S3BasicFileAttributes.get(s3Path, Duration.ofMinutes(configuration.getTimeoutLow())).asMap(attributesFilter);
+        return S3BasicFileAttributes.get(s3Path,
+            Duration.ofMinutes(s3Path.getFileSystem().getConfiguration().getTimeoutLow())).asMap(attributesFilter);
     }
 
     /**
@@ -822,19 +999,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException("s3 file attributes cannot be modified by this class");
-    }
-
-    /**
-     * Set custom configuration. This configuration is referred to for API timeouts.
-     *
-     * @param configuration    The new configuration containing the timeout info
-     *
-     * @deprecated This method is deprecated and may be removed in future versions.
-     *
-     */
-    @Deprecated
-    public void setConfiguration(S3NioSpiConfiguration configuration) {
-        this.configuration = configuration;
     }
 
     /**
@@ -877,41 +1041,33 @@ public class S3FileSystemProvider extends FileSystemProvider {
                                                               Set<? extends OpenOption> options,
                                                               ExecutorService executor,
                                                               FileAttribute<?>... attrs) throws IOException {
-        S3FileSystem fs = (S3FileSystem) getFileSystem(path.toUri());
+        S3Path p = checkPath(path);
+        S3FileSystem fs = p.getFileSystem();
         S3AsyncClient s3Client = fs.client();
-        var byteChannel = new S3SeekableByteChannel((S3Path) path, s3Client, fs.appendConfiguredOpenOptions(options));
+        var byteChannel = new S3SeekableByteChannel(p, s3Client, fs.appendConfiguredOpenOptions(options));
         return new AsyncS3FileChannel(byteChannel);
     }
 
     void closeFileSystem(FileSystem fs) {
+        // Evict the cache entry atomically so concurrent close() calls for the same instance are
+        // idempotent (see https://github.com/awslabs/aws-java-nio-spi-for-s3/issues/773). This
+        // method is invoked from S3FileSystem.close(), which already closes the channels and flips
+        // the open flag, so we must not close fs again here (that would recurse). Removing the cache
+        // entry allows a new file system to be created for the same URI after this one is closed
+        // (permitted, and provider-dependent, per the contract).
         for (var key : FS_CACHE.keySet()) {
-            if (fs == FS_CACHE.get(key)) {
-                try (FileSystem closeable = FS_CACHE.remove(key)) {
-                    closeFileSystemIfOpen(closeable);
-                    return;
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+            if (FS_CACHE.remove(key, fs)) {
+                return;
             }
-        }
-        try {
-            closeFileSystemIfOpen(fs);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 
-    private void closeFileSystemIfOpen(FileSystem fs) throws IOException {
-        if (fs.isOpen()) {
-            fs.close();
-        }
-    }
 
 
     boolean exists(S3AsyncClient s3Client, S3Path path) throws InterruptedException, TimeoutException {
         try {
             s3Client.headObject(HeadObjectRequest.builder().bucket(path.bucketName()).key(path.getKey()).build())
-                .get(configuration.getTimeoutLow(), MINUTES);
+                .get(path.getFileSystem().getConfiguration().getTimeoutLow(), MINUTES);
             return true;
         } catch (NoSuchKeyException e) {
             return false;

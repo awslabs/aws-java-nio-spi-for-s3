@@ -180,10 +180,15 @@ class S3Path implements Path {
         if (this.equals(getRoot()) || size < 1) {
             return null;
         }
-        if (pathRepresentation.isAbsolute() && size == 1) {
-            return getRoot();
+        if (size == 1) {
+            // A single-element absolute path (e.g. "/foo") has the root as its parent; a
+            // single-element relative path (e.g. "foo") has no parent.
+            return isAbsolute() ? getRoot() : null;
         }
-        return subpath(0, getNameCount() - 1);
+        var parent = subpath(0, size - 1);
+        // subpath always returns a relative path; the parent of an absolute path must remain
+        // absolute (see https://github.com/awslabs/aws-java-nio-spi-for-s3/issues/772).
+        return isAbsolute() ? parent.toAbsolutePath() : parent;
     }
 
     /**
@@ -295,8 +300,11 @@ class S3Path implements Path {
         if (other.getNameCount() == 0) {
             return true;
         }
+        // subpath() always yields a relative path, so compare this path's leading name
+        // subsequence against the other path reduced to its own relative name subsequence. This
+        // keeps the comparison correct now that equals() no longer normalizes absoluteness away.
         return this.getNameCount() >= other.getNameCount() &&
-            this.subpath(0, other.getNameCount()).equals(other);
+            this.subpath(0, other.getNameCount()).equals(other.subpath(0, other.getNameCount()));
     }
 
     /**
@@ -396,32 +404,41 @@ class S3Path implements Path {
         }
 
         var directory = pathRepresentation.isDirectory();
+        var absolute = this.isAbsolute();
 
         final var elements = pathRepresentation.elements();
         final var realElements = new LinkedList<String>();
-
-        if (this.isAbsolute()) {
-            realElements.add(PATH_SEPARATOR);
-        }
 
         for (var element : elements) {
             if (element.equals(".")) {
                 continue;
             }
             if (element.equals("..")) {
-                if (!realElements.isEmpty()) {
+                if (!realElements.isEmpty() && !realElements.getLast().equals("..")) {
+                    // Cancel the preceding non-".." name.
                     realElements.removeLast();
+                } else if (!absolute) {
+                    // A leading ".." in a relative path cannot be eliminated because the
+                    // location it refers to is unknown; it must be preserved.
+                    realElements.addLast("..");
                 }
+                // For an absolute path a leading ".." refers to the (non-existent) parent of the
+                // root and is simply dropped, keeping the path absolute.
                 continue;
             }
-
-            if (directory) {
-                realElements.addLast(element + "/");
-            } else {
-                realElements.addLast(element);
-            }
+            realElements.addLast(element);
         }
-        return S3Path.getPath(fileSystem, String.join(PATH_SEPARATOR, realElements));
+
+        // Reassemble the path, applying the root component and the directory marker exactly once
+        // so that absoluteness and "directory" inference are preserved.
+        var joined = String.join(PATH_SEPARATOR, realElements);
+        if (absolute) {
+            joined = PATH_SEPARATOR + joined;
+        }
+        if (directory && !realElements.isEmpty() && !joined.endsWith(PATH_SEPARATOR)) {
+            joined = joined + PATH_SEPARATOR;
+        }
+        return S3Path.getPath(fileSystem, joined);
     }
 
     /**
@@ -499,7 +516,13 @@ class S3Path implements Path {
      */
     @Override
     public S3Path resolveSibling(Path other) {
-        return getParent().resolve(other);
+        var s3Other = checkPath(other);
+        var parent = getParent();
+        // Per the contract: if this path has no parent, or other is absolute, return other.
+        if (parent == null || s3Other.isAbsolute()) {
+            return s3Other;
+        }
+        return parent.resolve(s3Other);
     }
 
     /**
@@ -514,7 +537,7 @@ class S3Path implements Path {
      */
     @Override
     public S3Path resolveSibling(String other) {
-        return getParent().resolve(other);
+        return resolveSibling(from(other));
     }
 
     /**
@@ -558,75 +581,39 @@ class S3Path implements Path {
             return otherPath;
         }
 
-        var nameCount = this.getNameCount();
-        var otherNameCount = otherPath.getNameCount();
+        // Compare bare name elements (no trailing separators, no normalization) so the shared
+        // prefix is counted correctly (see the JDK Path.relativize contract and example).
+        final var thisElements = this.pathRepresentation.elements();
+        final var otherElements = otherPath.pathRepresentation.elements();
 
-        var limit = Math.min(nameCount, otherNameCount);
-        var differenceCount = getDifferenceCount(otherPath, limit);
-
-        var parentDirCount = nameCount - differenceCount;
-        if (differenceCount < otherNameCount) {
-            return getRelativePathFromDifference(otherPath, otherNameCount, differenceCount, parentDirCount);
+        var common = 0;
+        final var limit = Math.min(thisElements.size(), otherElements.size());
+        while (common < limit && thisElements.get(common).equals(otherElements.get(common))) {
+            common++;
         }
 
-        var relativePath = new char[parentDirCount * 3 - 1];
-        var index = 0;
-        while (parentDirCount > 0) {
-            relativePath[index++] = '.';
-            relativePath[index++] = '.';
-            if (parentDirCount > 1) {
-                relativePath[index++] = '/';
+        final var up = thisElements.size() - common;
+
+        // The trailing portion of the other path preserves its own "directory" inference.
+        var remaining = (common < otherElements.size())
+            ? otherPath.subpath(common, otherElements.size())
+            : null;
+
+        var result = new StringBuilder();
+        for (var i = 0; i < up; i++) {
+            if (i > 0) {
+                result.append(PATH_SEPARATOR);
             }
-            parentDirCount--;
+            result.append("..");
         }
-
-        return new S3Path(getFileSystem(), new PosixLikePathRepresentation(relativePath));
-    }
-
-    private S3Path getRelativePathFromDifference(S3Path otherPath, int otherNameCount, int differenceCount, int parentDirCount) {
-        Objects.requireNonNull(otherPath);
-        var remainingSubPath = otherPath.subpath(differenceCount, otherNameCount);
-
-        if (parentDirCount == 0) {
-            return remainingSubPath;
-        }
-
-        // we need to pop up some directories (each of which needs three characters ../) then append the remaining sub-path
-        var relativePathSize = parentDirCount * 3 + remainingSubPath.pathRepresentation.toString().length();
-
-        if (otherPath.isEmpty()) {
-            relativePathSize--;
-        }
-
-        var relativePath = new char[relativePathSize];
-        var index = 0;
-        while (parentDirCount > 0) {
-            relativePath[index++] = '.';
-            relativePath[index++] = '.';
-            if (otherPath.isEmpty()) {
-                if (parentDirCount > 1) {
-                    relativePath[index++] = '/';
-                }
-            } else {
-                relativePath[index++] = '/';
+        if (remaining != null) {
+            if (result.length() > 0) {
+                result.append(PATH_SEPARATOR);
             }
-            parentDirCount--;
+            result.append(remaining);
         }
-        System.arraycopy(remainingSubPath.pathRepresentation.chars(), 0, relativePath, index,
-            remainingSubPath.pathRepresentation.chars().length);
 
-        return new S3Path(getFileSystem(), new PosixLikePathRepresentation(relativePath));
-    }
-
-    private int getDifferenceCount(Path other, int limit) {
-        var i = 0;
-        while (i < limit) {
-            if (!this.getName(i).equals(other.getName(i))) {
-                break;
-            }
-            i++;
-        }
-        return i;
+        return from(result.toString());
     }
 
     private boolean isEmpty() {
@@ -814,8 +801,9 @@ class S3Path implements Path {
         if (o.fileSystem != this.fileSystem) {
             throw new ClassCastException("compared S3 paths must be from the same bucket");
         }
-        return this.toRealPath(NOFOLLOW_LINKS).toString().compareTo(
-            o.toRealPath(NOFOLLOW_LINKS).toString());
+        // Compare the abstract path strings, consistent with equals(). The Path contract requires
+        // this comparison to be purely lexical and not to eliminate "." / ".." names.
+        return this.pathRepresentation.toString().compareTo(o.pathRepresentation.toString());
     }
 
     /**
@@ -834,10 +822,13 @@ class S3Path implements Path {
             return true;
         }
 
+        // Per the Path contract, equality is based on the abstract path (and its associated file
+        // system) and does NOT eliminate redundant "." / ".." names or treat a relative path as
+        // equal to an absolute one. Callers wanting "same object" semantics should use
+        // Files.isSameFile / toRealPath explicitly.
         return other instanceof S3Path
             && Objects.equals(((S3Path) other).bucketName(), this.bucketName())
-            && Objects.equals(((S3Path) other).toRealPath(NOFOLLOW_LINKS).pathRepresentation,
-            this.toRealPath(NOFOLLOW_LINKS).pathRepresentation);
+            && Objects.equals(((S3Path) other).pathRepresentation, this.pathRepresentation);
     }
 
     /**
@@ -851,7 +842,7 @@ class S3Path implements Path {
      */
     @Override
     public int hashCode() {
-        return this.bucketName().hashCode() + toRealPath(NOFOLLOW_LINKS).pathRepresentation.hashCode();
+        return this.bucketName().hashCode() + pathRepresentation.hashCode();
     }
 
     /**
@@ -902,29 +893,21 @@ class S3Path implements Path {
     }
 
     private final class S3PathIterator implements Iterator<Path> {
-        final boolean isAbsolute;
         final boolean hasTrailingSeparator;
-        boolean first;
         private final Iterator<String> delegate;
 
         private S3PathIterator(Iterator<String> delegate, boolean isAbsolute, boolean hasTrailingSeparator) {
             this.delegate = delegate;
-            this.isAbsolute = isAbsolute;
             this.hasTrailingSeparator = hasTrailingSeparator;
-            first = true;
         }
 
         @Override
         public Path next() {
+            // Per the Path contract the root component is not returned by the iterator, so we do
+            // not prepend the leading separator for absolute paths. Trailing separators are
+            // retained to preserve this library's S3 "directory" inference, consistent with
+            // getName(int)/subpath(int, int).
             var pathString = delegate.next();
-            if (isAbsolute() && first) {
-                first = false;
-                pathString = PATH_SEPARATOR + pathString;
-                if (!hasNext() && hasTrailingSeparator) {
-                    pathString = pathString + PATH_SEPARATOR;
-                }
-            }
-
             if (hasNext() || hasTrailingSeparator) {
                 pathString = pathString + PATH_SEPARATOR;
             }

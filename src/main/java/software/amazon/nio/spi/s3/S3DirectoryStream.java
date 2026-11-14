@@ -13,6 +13,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
@@ -25,6 +26,8 @@ import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 class S3DirectoryStream implements DirectoryStream<Path> {
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
     private final Iterator<Path> iterator;
+    private final AtomicBoolean iteratorReturned = new AtomicBoolean(false);
+    private volatile boolean closed = false;
 
     S3DirectoryStream(S3FileSystem fs, String bucketName, String finalDirName, Filter<? super Path> filter) {
         final var listObjectsV2Publisher = fs.client().listObjectsV2Paginator(req -> req
@@ -40,11 +43,19 @@ class S3DirectoryStream implements DirectoryStream<Path> {
     @Override
     @NonNull
     public Iterator<Path> iterator() {
+        // Per the DirectoryStream contract, iterator() may be invoked only once.
+        if (closed) {
+            throw new IllegalStateException("the directory stream is closed");
+        }
+        if (!iteratorReturned.compareAndSet(false, true)) {
+            throw new IllegalStateException("iterator() has already been called on this directory stream");
+        }
         return iterator;
     }
 
     @Override
     public void close() {
+        closed = true;
     }
 
     /**

@@ -47,12 +47,6 @@ public class S3ClientProvider {
     }
 
     /**
-     * Default asynchronous client using the "<a href="https://s3.us-east-1.amazonaws.com">...</a>" endpoint
-     */
-    @Deprecated
-    protected S3AsyncClient universalClient;
-
-    /**
      * Configuration
      */
     protected final S3NioSpiConfiguration configuration;

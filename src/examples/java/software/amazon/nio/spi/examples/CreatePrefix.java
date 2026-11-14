@@ -30,11 +30,13 @@ public class CreatePrefix {
         // read the file content to stdout
         System.out.println("File content: " + Files.readString(filePath));
 
-        // delete the file
+        // Delete the file first. As of 3.0, Files.delete follows the NIO contract: deleting a
+        // non-empty directory throws DirectoryNotEmptyException, so the prefix must be emptied
+        // before it can be removed.
         Files.delete(filePath);
         System.out.println("Deleted: " + filePath);
 
-        // delete the prefix
+        // Now that the prefix is empty its directory marker can be deleted.
         Files.delete(pathCreated);
         System.out.println("Deleted: " + pathCreated);
     }

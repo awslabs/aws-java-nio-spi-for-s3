@@ -46,14 +46,21 @@ public class S3NioSpiConfigurationTest {
     }
 
     @Test
-    public void constructors() {
-        then(config).isInstanceOf(Map.class);
+    public void constructors() throws Exception {
+        then(config.asMap()).isNotNull();
         then(config.getMaxFragmentNumber()).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_NUMBER_DEFAULT);
         then(config.getMaxFragmentSize()).isEqualTo(S3_SPI_READ_MAX_FRAGMENT_SIZE_DEFAULT);
         then(config.getEndpointProtocol()).isEqualTo("https");
         then(config.getEndpoint()).isEmpty();
         then(config.getBucketName()).isNull();
-        then(config.getRegion()).isNull();
+        // Region is null only when neither aws.region system property nor AWS_REGION env var is set.
+        // The build sets -Daws.region for the test JVM (and the shell may export AWS_REGION), so
+        // clear both to assert the unset invariant.
+        restoreSystemProperties(() -> {
+            System.clearProperty(AWS_REGION_PROPERTY);
+            withEnvironmentVariable("AWS_REGION", null).execute(() ->
+                then(new S3NioSpiConfiguration().getRegion()).isNull());
+        });
         then(config.getCredentials()).isNull();
         then(config.getCredentialsProvider()).isNull();
         then(config.getForcePathStyle()).isFalse();
@@ -95,8 +102,15 @@ public class S3NioSpiConfigurationTest {
     }
 
     @Test
-    public void withAndGetRegion() {
-        then(new S3NioSpiConfiguration().getRegion()).isNull();
+    public void withAndGetRegion() throws Exception {
+        // With no aws.region system property or AWS_REGION env var, region is null (the build sets
+        // -Daws.region for the test JVM and the shell may export AWS_REGION, so clear both to assert
+        // the unset invariant).
+        restoreSystemProperties(() -> {
+            System.clearProperty(AWS_REGION_PROPERTY);
+            withEnvironmentVariable("AWS_REGION", null).execute(() ->
+                then(new S3NioSpiConfiguration().getRegion()).isNull());
+        });
 
         var env = new Properties();
         env.setProperty(AWS_REGION_PROPERTY, "region1");
@@ -108,6 +122,86 @@ public class S3NioSpiConfigurationTest {
         then(C.withRegion(" \t ").getRegion()).isNull();
         then(C.withRegion("").getRegion()).isNull();
         then(C.withRegion(null).getRegion()).isNull();
+    }
+
+    @Test
+    public void regionReadFromEnvVar() throws Exception {
+        restoreSystemProperties(() -> {
+            System.clearProperty(AWS_REGION_PROPERTY);
+            withEnvironmentVariable("AWS_REGION", "eu-west-1").execute(() ->
+                then(new S3NioSpiConfiguration().getRegion()).isEqualTo("eu-west-1"));
+        });
+    }
+
+    @Test
+    public void regionReadFromSystemProperty() throws Exception {
+        restoreSystemProperties(() -> {
+            System.setProperty(AWS_REGION_PROPERTY, "ap-south-1");
+            then(new S3NioSpiConfiguration().getRegion()).isEqualTo("ap-south-1");
+        });
+    }
+
+    @Test
+    public void systemPropertyRegionOverridesEnvRegion() throws Exception {
+        restoreSystemProperties(() -> {
+            withEnvironmentVariable("AWS_REGION", "eu-west-1").execute(() -> {
+                System.setProperty(AWS_REGION_PROPERTY, "ap-south-1");
+                then(new S3NioSpiConfiguration().getRegion()).isEqualTo("ap-south-1");
+            });
+        });
+    }
+
+    @Test
+    public void endpointReadFromEnvAndSystemProperty() throws Exception {
+        withEnvironmentVariable("S3_SPI_ENDPOINT", "endpoint-from-env.example.com:9000").execute(() ->
+            then(new S3NioSpiConfiguration().getEndpoint()).isEqualTo("endpoint-from-env.example.com:9000"));
+
+        restoreSystemProperties(() -> {
+            System.setProperty(S3_SPI_ENDPOINT_PROPERTY, "endpoint-from-sysprop.example.com:9001");
+            then(new S3NioSpiConfiguration().getEndpoint()).isEqualTo("endpoint-from-sysprop.example.com:9001");
+        });
+    }
+
+    @Test
+    public void credentialsNotReadFromEnvironment() throws Exception {
+        // The AWS SDK default credential provider chain handles aws.accessKeyId / aws.secretAccessKey;
+        // this library deliberately does not read them into its configuration.
+        restoreSystemProperties(() -> {
+            System.clearProperty(AWS_ACCESS_KEY_PROPERTY);
+            System.clearProperty(AWS_SECRET_ACCESS_KEY_PROPERTY);
+            withEnvironmentVariable("AWS_ACCESS_KEY_ID", "AKIAEXAMPLE")
+                .and("AWS_SECRET_ACCESS_KEY", "secretexample")
+                .execute(() -> then(new S3NioSpiConfiguration().getCredentials()).isNull());
+        });
+    }
+
+    @Test
+    public void withOverridesAppliesEnvMapAtHighestPrecedence() {
+        var credentials = AwsBasicCredentials.create("k", "s");
+        var overrides = Map.of(
+            AWS_REGION_PROPERTY, "sa-east-1",
+            S3_SPI_TIMEOUT_LOW_PROPERTY, "9",
+            S3_SPI_CREDENTIALS_PROPERTY, credentials);
+
+        then(config.withOverrides(overrides)).isSameAs(config);
+        then(config.getRegion()).isEqualTo("sa-east-1");
+        then(config.getTimeoutLow()).isEqualTo(9L);
+        // typed objects pass through untouched
+        then(config.getCredentials()).isSameAs(credentials);
+
+        // null is a no-op
+        then(config.withOverrides(null)).isSameAs(config);
+    }
+
+    @Test
+    public void asMapIsUnmodifiableSnapshot() {
+        var snapshot = config.asMap();
+        assertThrows(UnsupportedOperationException.class, () -> snapshot.put("x", "y"));
+
+        // mutating the config afterwards does not affect the earlier snapshot
+        config.withTimeoutLow(42L);
+        then(snapshot).doesNotContainEntry(S3_SPI_TIMEOUT_LOW_PROPERTY, "42");
+        then(config.asMap()).containsEntry(S3_SPI_TIMEOUT_LOW_PROPERTY, "42");
     }
 
     @Test
@@ -259,7 +353,7 @@ public class S3NioSpiConfigurationTest {
     public void getCredentialsProviderWithWrongTypeOfObject() {
 
         final AwsCredentials C1 = AwsBasicCredentials.create("key1", "secret1");
-        config.put(S3_SPI_CREDENTIALS_PROVIDER_PROPERTY, "IAmNotAProvider");
+        config.withOverrides(Map.of(S3_SPI_CREDENTIALS_PROVIDER_PROPERTY, "IAmNotAProvider"));
         then(config.getCredentialsProvider()).isNull();
 
         then(config.withCredentials(C1)).isSameAs(config);
@@ -296,9 +390,9 @@ public class S3NioSpiConfigurationTest {
     
     @Test
     public void withAndGetForcePathStyle() {
-        then(config).contains(entry(S3_SPI_FORCE_PATH_STYLE_PROPERTY, "false"));
+        then(config.asMap()).containsEntry(S3_SPI_FORCE_PATH_STYLE_PROPERTY, "false");
         then(config.withForcePathStyle(true)).isSameAs(config);
-        then(config).contains(entry(S3_SPI_FORCE_PATH_STYLE_PROPERTY, "true"));
+        then(config.asMap()).containsEntry(S3_SPI_FORCE_PATH_STYLE_PROPERTY, "true");
         then(config.getForcePathStyle()).isTrue();
         then(config.withForcePathStyle(false).getForcePathStyle()).isFalse();
 
@@ -309,41 +403,41 @@ public class S3NioSpiConfigurationTest {
         map.remove(S3_SPI_FORCE_PATH_STYLE_PROPERTY); // same S3NioSpiConfiguration on purpose
         then(config.getForcePathStyle()).isTrue();
         then(config.withForcePathStyle(null).getForcePathStyle()).isFalse();
-        then(config).doesNotContainKey(S3_SPI_FORCE_PATH_STYLE_PROPERTY);
+        then(config.asMap()).doesNotContainKey(S3_SPI_FORCE_PATH_STYLE_PROPERTY);
     }
 
     @Test
     public void withAndGetTimeoutLow() {
-        then(config).contains(entry(S3_SPI_TIMEOUT_LOW_PROPERTY, "1"));
+        then(config.asMap()).containsEntry(S3_SPI_TIMEOUT_LOW_PROPERTY, "1");
         then(config.withTimeoutLow(4L)).isSameAs(config);
-        then(config).contains(entry(S3_SPI_TIMEOUT_LOW_PROPERTY, "4"));
+        then(config.asMap()).containsEntry(S3_SPI_TIMEOUT_LOW_PROPERTY, "4");
         then(config.getTimeoutLow()).isEqualTo(4L);
         then(config.withTimeoutLow(5L).getTimeoutLow()).isEqualTo(5L);
     }
 
     @Test
     public void withAndGetTimeoutMedium() {
-        then(config).contains(entry(S3_SPI_TIMEOUT_MEDIUM_PROPERTY, "3"));
+        then(config.asMap()).containsEntry(S3_SPI_TIMEOUT_MEDIUM_PROPERTY, "3");
         then(config.withTimeoutMedium(5L)).isSameAs(config);
-        then(config).contains(entry(S3_SPI_TIMEOUT_MEDIUM_PROPERTY, "5"));
+        then(config.asMap()).containsEntry(S3_SPI_TIMEOUT_MEDIUM_PROPERTY, "5");
         then(config.getTimeoutMedium()).isEqualTo(5L);
         then(config.withTimeoutMedium(6L).getTimeoutMedium()).isEqualTo(6L);
     }
 
     @Test
     public void withAndGetTimeoutHigh() {
-        then(config).contains(entry(S3_SPI_TIMEOUT_HIGH_PROPERTY, "5"));
+        then(config.asMap()).containsEntry(S3_SPI_TIMEOUT_HIGH_PROPERTY, "5");
         then(config.withTimeoutHigh(7L)).isSameAs(config);
-        then(config).contains(entry(S3_SPI_TIMEOUT_HIGH_PROPERTY, "7"));
+        then(config.asMap()).containsEntry(S3_SPI_TIMEOUT_HIGH_PROPERTY, "7");
         then(config.getTimeoutHigh()).isEqualTo(7L);
         then(config.withTimeoutHigh(8L).getTimeoutHigh()).isEqualTo(8L);
     }
 
     @Test
     public void withAndGetIntegrityCheckAlgorithm() throws Exception {
-        then(config).contains(entry(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, "disabled"));
+        then(config.asMap()).containsEntry(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, "disabled");
         then(config.withIntegrityCheckAlgorithm("CRC32C")).isSameAs(config);
-        then(config).contains(entry(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, "CRC32C"));
+        then(config.asMap()).containsEntry(S3_INTEGRITY_CHECK_ALGORITHM_PROPERTY, "CRC32C");
         then(config.getIntegrityCheckAlgorithm()).isEqualTo("CRC32C");
         then(config.withIntegrityCheckAlgorithm("CRC64NVME").getIntegrityCheckAlgorithm()).isEqualTo("CRC64NVME");
 
@@ -371,12 +465,12 @@ public class S3NioSpiConfigurationTest {
     @Test
     public void withAndGetOpenOptions() {
         // by default `useTransferManager` is set
-        then(config).contains(entry(S3_OPEN_OPTIONS_PROPERTY, Set.of(S3OpenOption.useTransferManager())));
+        then(config.asMap()).containsEntry(S3_OPEN_OPTIONS_PROPERTY, Set.of(S3OpenOption.useTransferManager()));
         then(config.getOpenOptions()).containsExactly(S3OpenOption.useTransferManager());
 
         // clear all default open options
         then(config.withOpenOptions(Set.of())).isSameAs(config);
-        then(config).contains(entry(S3_OPEN_OPTIONS_PROPERTY, Set.of()));
+        then(config.asMap()).containsEntry(S3_OPEN_OPTIONS_PROPERTY, Set.of());
         then(config.getOpenOptions()).isEmpty();
 
         // set `preventConcurrentOverwrite`
@@ -459,7 +553,7 @@ public class S3NioSpiConfigurationTest {
 
     @Test
     public void invalidPartSizeLogsWarningAndUsesDefault() {
-        config.put(S3_SPI_WRITE_MULTIPART_PART_SIZE_PROPERTY, "not-a-number");
+        config.withOverrides(Map.of(S3_SPI_WRITE_MULTIPART_PART_SIZE_PROPERTY, "not-a-number"));
         then(config.getMultipartPartSize()).isEqualTo(S3_SPI_WRITE_MULTIPART_PART_SIZE_DEFAULT);
     }
 

@@ -81,6 +81,33 @@ class S3WritableByteChannelTest {
     }
 
     @Test
+    @DisplayName("DELETE_ON_CLOSE must not upload the object to S3 on close")
+    void deleteOnCloseDoesNotUploadToS3() throws Exception {
+        var provider = mock(S3FileSystemProvider.class);
+        var fs = mock(S3FileSystem.class);
+        when(fs.provider()).thenReturn(provider);
+        var tempFile = Files.createTempFile("", "");
+        when(fs.createTempFile(any(S3Path.class))).thenReturn(tempFile);
+        var file = S3Path.getPath(fs, "somefile");
+        var client = mock(S3AsyncClient.class);
+        // With CREATE (not CREATE_NEW) and no S3AssumeObjectNotExists, the constructor downloads
+        // the current object first.
+        when(client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class)))
+            .thenReturn(completedFuture(GetObjectResponse.builder().build()));
+        var transferManager = new S3TransferUtil(client, null, null);
+
+        try (var channel = new S3WritableByteChannel(
+                file, client, transferManager, Set.of(CREATE, WRITE, StandardOpenOption.DELETE_ON_CLOSE))) {
+            channel.write(ByteBuffer.wrap(new byte[] {1, 2, 3}));
+        }
+
+        // The object must NOT be uploaded to S3 because DELETE_ON_CLOSE was requested.
+        verify(client, never()).putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class));
+        // The local temp file is removed.
+        assertThat(Files.exists(tempFile)).isFalse();
+    }
+
+    @Test
     @DisplayName("when file exists and constructor is invoked with option `CREATE_NEW` should throw FileAlreadyExistsException")
     void whenFileExistsAndCreateNewShouldThrowFileAlreadyExistsException() throws InterruptedException, TimeoutException, IOException {
         S3FileSystemProvider provider = mock();
@@ -232,7 +259,9 @@ class S3WritableByteChannelTest {
         ByteBuffer buffer = ByteBuffer.allocate(6);
         channel.read(buffer);
         assertThat(buffer.array()).contains(4, 5, 6, 7, 8, 9);
-        assertThatThrownBy(() -> channel.truncate(6)).isInstanceOf(UnsupportedOperationException.class);
+        // truncate is now supported on a writable channel and delegates to the local temp file.
+        assertThat(channel.truncate(6)).isSameAs(channel);
+        assertThat(channel.size()).isEqualTo(6);
     }
 
     @ParameterizedTest(name = "can be instantiated when file exists ({0}) and open options are {1}")

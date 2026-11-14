@@ -41,7 +41,7 @@ public class S3FileSystemTest {
     @BeforeEach
     public void init() {
         provider = new S3FileSystemProvider();
-        s3FileSystem = (S3FileSystem) provider.getFileSystem(s3Uri);
+        s3FileSystem = (S3FileSystem) provider.getPath(s3Uri).getFileSystem();
         s3FileSystem.clientProvider = new FixedS3ClientProvider(mockClient);
     }
 
@@ -104,7 +104,12 @@ public class S3FileSystemTest {
 
     @Test
     public void getFileStores() {
-        assertEquals(Collections.EMPTY_SET, s3FileSystem.getFileStores());
+        var stores = s3FileSystem.getFileStores().iterator();
+        assertTrue(stores.hasNext());
+        var store = stores.next();
+        assertEquals(s3FileSystem.bucketName(), store.name());
+        assertEquals("s3", store.type());
+        assertFalse(stores.hasNext());
     }
 
     @Test
@@ -135,21 +140,24 @@ public class S3FileSystemTest {
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("path must be a file");
 
-        var key1 = "file1";
-        var tempFile1 = s3FileSystem.createTempFile(S3Path.getPath(s3FileSystem, key1));
-        then(tempFile1).exists().isEqualTo(temporaryDirectory.resolve(key1));
+        // Temp files are created atomically with a unique name (a random suffix guarantees
+        // uniqueness), so they live directly under the temporary directory for top-level keys.
+        var tempFile1 = s3FileSystem.createTempFile(S3Path.getPath(s3FileSystem, "file1"));
+        then(tempFile1).exists().isRegularFile();
+        then(tempFile1.getParent()).isEqualTo(temporaryDirectory);
 
-        var key2 = "/file2";
-        var tempFile2 = s3FileSystem.createTempFile(S3Path.getPath(s3FileSystem, key2));
-        then(tempFile2).exists().isEqualTo(temporaryDirectory.resolve(key2.substring(1)));
+        var tempFile2 = s3FileSystem.createTempFile(S3Path.getPath(s3FileSystem, "/file2"));
+        then(tempFile2).exists().isRegularFile();
+        then(tempFile2.getParent()).isEqualTo(temporaryDirectory);
 
-        var key3 = "/dir1/dir2/file3";
-        var tempFile3 = s3FileSystem.createTempFile(S3Path.getPath(s3FileSystem, key3));
-        then(tempFile3).exists().isEqualTo(temporaryDirectory.resolve(key3.substring(1)));
+        // For nested keys the parent directory structure is mirrored beneath the temp directory.
+        var tempFile3 = s3FileSystem.createTempFile(S3Path.getPath(s3FileSystem, "/dir1/dir2/file3"));
+        then(tempFile3).exists().isRegularFile();
+        then(tempFile3.getParent()).isEqualTo(temporaryDirectory.resolve("dir1/dir2"));
 
-        var key4 = "dir1/dir2/file4";
-        var tempFile4 = s3FileSystem.createTempFile(S3Path.getPath(s3FileSystem, key4));
-        then(tempFile4).exists().isEqualTo(temporaryDirectory.resolve(key4));
+        var tempFile4 = s3FileSystem.createTempFile(S3Path.getPath(s3FileSystem, "dir1/dir2/file4"));
+        then(tempFile4).exists().isRegularFile();
+        then(tempFile4.getParent()).isEqualTo(temporaryDirectory.resolve("dir1/dir2"));
     }
 
     @DisplayName("An S3 object can be opened with multiple channels, so we need to enable multiple temporary files.")
@@ -159,19 +167,18 @@ public class S3FileSystemTest {
 
         var key = "somefile";
         var path = S3Path.getPath(s3FileSystem, key);
-        then(s3FileSystem.createTempFile(path))
-            .exists()
-            .isRegularFile()
-            .isEqualTo(temporaryDirectory.resolve(key));
 
-        var tempFile = s3FileSystem.createTempFile(path);
-        then(tempFile)
+        var first = s3FileSystem.createTempFile(path);
+        then(first).exists().isRegularFile();
+        then(first.getParent()).isEqualTo(temporaryDirectory);
+
+        // A second channel for the same key must get a distinct temp file, without any collision.
+        var second = s3FileSystem.createTempFile(path);
+        then(second)
             .exists()
             .isRegularFile()
-            .isNotEqualTo(temporaryDirectory.resolve(key));
-        then(tempFile.toString())
-            .startsWith(temporaryDirectory.resolve(key).toString())
-            .containsPattern("\\-\\d+$");
+            .isNotEqualTo(first);
+        then(second.getParent()).isEqualTo(temporaryDirectory);
     }
 
     private Path s3FileSystemTemporaryDirectory() throws IOException {

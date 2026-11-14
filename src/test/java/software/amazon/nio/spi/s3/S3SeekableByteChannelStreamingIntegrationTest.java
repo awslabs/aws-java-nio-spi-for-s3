@@ -69,7 +69,7 @@ public class S3SeekableByteChannelStreamingIntegrationTest {
     @BeforeEach
     void init() {
         var provider = new S3FileSystemProvider();
-        fs = (S3FileSystem) provider.getFileSystem(URI.create("s3://test-bucket"));
+        fs = (S3FileSystem) provider.getPath(URI.create("s3://test-bucket")).getFileSystem();
         fs.clientProvider(new FixedS3ClientProvider(mockClient));
         path = (S3Path) fs.getPath("/test-object");
     }

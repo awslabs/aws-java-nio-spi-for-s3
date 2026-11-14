@@ -40,7 +40,7 @@ class S3SeekableByteChannel implements SeekableByteChannel {
     private final ReadableByteChannel readDelegate;
     private final SeekableByteChannel writeDelegate;
 
-    private boolean closed;
+    private volatile boolean closed;
     private long size = -1L;
 
     S3SeekableByteChannel(
@@ -279,8 +279,13 @@ class S3SeekableByteChannel implements SeekableByteChannel {
      * @return This channel
      */
     @Override
-    public SeekableByteChannel truncate(long size) {
-        throw new UnsupportedOperationException("Currently not supported");
+    public SeekableByteChannel truncate(long size) throws IOException {
+        if (writeDelegate != null) {
+            writeDelegate.truncate(size);
+            return this;
+        }
+        // a read-only channel cannot be truncated
+        throw new NonWritableChannelException();
     }
 
     /**
